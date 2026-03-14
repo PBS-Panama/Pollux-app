@@ -152,7 +152,7 @@ const StreamsList = ({ className, video, type, onEpisodeSearch, ...props }) => {
                             <div className={styles['label']}>{t('NO_STREAM')}</div>
                             {
                                 showInstallAddonsButton ?
-                                    <Button className={styles['install-button-container']} title={t('ADDON_CATALOGUE_MORE')} href={'#/addons'}>
+                                    <Button className={styles['install-button-container']} title={t('ADDON_CATALOGUE_MORE')} href={'#/myexams'}>
                                         <Icon className={styles['icon']} name={'addons'} />
                                         <div className={styles['label']}>{t('ADDON_CATALOGUE_MORE')}</div>
                                     </Button>
@@ -196,7 +196,7 @@ const StreamsList = ({ className, video, type, onEpisodeSearch, ...props }) => {
                                     ))}
                                     {
                                         showInstallAddonsButton ?
-                                            <Button className={styles['install-button-container']} title={t('ADDON_CATALOGUE_MORE')} href={'#/addons'}>
+                                            <Button className={styles['install-button-container']} title={t('ADDON_CATALOGUE_MORE')} href={'#/myexams'}>
                                                 <Icon className={styles['icon']} name={'addons'} />
                                                 <div className={styles['label']}>{t('ADDON_CATALOGUE_MORE')}</div>
                                             </Button>

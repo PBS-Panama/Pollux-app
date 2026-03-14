@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Mexico: vertical tricolor green, white, red -->
+  <rect width="213.3" height="480" fill="#006847"/>
+  <rect x="213.3" width="213.4" height="480" fill="#fff"/>
+  <rect x="426.7" width="213.3" height="480" fill="#CE1126"/>
+  <!-- Simplified emblem: brown circle in center -->
+  <circle cx="320" cy="240" r="40" fill="#6D3A1E"/>
+</svg>

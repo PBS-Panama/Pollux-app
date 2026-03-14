@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Cuba: 5 stripes blue/white, red triangle left, white star -->
+  <rect width="640" height="96" fill="#002A8F"/>
+  <rect y="96" width="640" height="96" fill="#fff"/>
+  <rect y="192" width="640" height="96" fill="#002A8F"/>
+  <rect y="288" width="640" height="96" fill="#fff"/>
+  <rect y="384" width="640" height="96" fill="#002A8F"/>
+  <!-- Red triangle -->
+  <polygon points="0,0 260,240 0,480" fill="#CE1126"/>
+  <!-- White star -->
+  <polygon points="110,240 126,190 170,190 134,162 146,112 110,142 74,112 86,162 50,190 94,190" fill="#fff"/>
+</svg>

@@ -1,0 +1,482 @@
+// PBS Crewing Module - Seafarer Schedule styles
+
+@import (reference) '~@stremio/stremio-colors/less/stremio-colors.less';
+@import (reference) '~stremio/common/screen-sizes.less';
+
+.schedule-container {
+    height: calc(100% - var(--safe-area-inset-bottom));
+    background-color: transparent;
+}
+
+.schedule-page {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 1.5rem;
+    gap: 1.25rem;
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.12);
+        border-radius: 3px;
+    }
+}
+
+// ─── Status Card ────────────────────────────────────────────────────
+.status-card {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1.25rem;
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+
+    .status-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .status-vessel-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .status-vessel {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #ffffffee;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.65rem;
+        border-radius: 1rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #fff;
+    }
+
+    .status-info-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 0.25rem;
+    }
+
+    .status-info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .info-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #ffffff45;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #ffffffcc;
+        }
+    }
+
+    .status-progress {
+        flex: none;
+        width: 11rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+
+        .progress-ring {
+            position: relative;
+            width: 5.5rem;
+            height: 5.5rem;
+        }
+
+        .progress-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 6;
+        }
+
+        .progress-fill {
+            fill: none;
+            stroke-width: 6;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 600ms ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #ffffffee;
+        }
+
+        .progress-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #ffffff55;
+            text-align: center;
+        }
+    }
+}
+
+// ─── Stats Row ──────────────────────────────────────────────────────
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    .stat-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #ffffffee;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #ffffff50;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+}
+
+// ─── Rotation Timeline ──────────────────────────────────────────────
+.timeline-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    .timeline-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #ffffffee;
+        margin: 0;
+    }
+}
+
+.timeline-track {
+    display: flex;
+    flex-direction: row;
+    gap: 0.3rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+
+    &::-webkit-scrollbar { height: 4px; }
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+    }
+}
+
+.timeline-block {
+    flex: none;
+    min-width: 9rem;
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border: 1px solid transparent;
+    cursor: default;
+    transition: all 120ms ease;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    &.completed {
+        opacity: 0.5;
+    }
+
+    &.current {
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+    }
+
+    &.projected {
+        opacity: 0.6;
+        border-style: dashed;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .block-vessel {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .block-dates {
+        font-size: 0.65rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .block-days {
+        font-size: 0.6rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .block-current-label {
+        font-size: 0.55rem;
+        font-weight: 700;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 0.1rem;
+    }
+}
+
+// ─── Bottom two-column ──────────────────────────────────────────────
+.bottom-section {
+    display: grid;
+    grid-template-columns: 1fr 22rem;
+    gap: 1rem;
+}
+
+// ─── Sea Service Record ─────────────────────────────────────────────
+.service-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .service-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #ffffffee;
+        margin: 0;
+    }
+}
+
+.service-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th, td {
+        text-align: left;
+        padding: 0.55rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    th {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #ffffff40;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    td {
+        color: #ffffffbb;
+        font-weight: 500;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    .row-current td {
+        color: #ffffffee;
+        font-weight: 600;
+    }
+
+    .type-dot {
+        display: inline-block;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        margin-right: 0.4rem;
+    }
+
+    .days-cell {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+// ─── Port Calls ─────────────────────────────────────────────────────
+.ports-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .ports-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #ffffffee;
+        margin: 0;
+    }
+}
+
+.port-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.port-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.5rem;
+    border-radius: 0.35rem;
+    transition: background-color 100ms ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .port-flag {
+        flex: none;
+        width: 1.5rem;
+        height: 1.1rem;
+        border-radius: 0.15rem;
+        object-fit: cover;
+    }
+
+    .port-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        min-width: 0;
+    }
+
+    .port-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #ffffffcc;
+    }
+
+    .port-purpose {
+        font-size: 0.7rem;
+        color: #ffffff50;
+    }
+
+    .port-dates {
+        flex: none;
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        gap: 0.05rem;
+    }
+
+    .port-eta {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #ffffffaa;
+    }
+
+    .port-etd {
+        font-size: 0.65rem;
+        color: #ffffff45;
+    }
+}
+
+// ─── Link button ────────────────────────────────────────────────────
+.link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.3rem;
+    background: transparent;
+    color: #ffffffaa;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 120ms ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #fff;
+    }
+}
+
+// ─── Mobile ─────────────────────────────────────────────────────────
+@media only screen and (max-width: @minimum) {
+    .schedule-page {
+        padding: 1rem;
+    }
+
+    .status-card {
+        flex-direction: column;
+
+        .status-progress {
+            width: 100%;
+            flex-direction: row;
+            justify-content: flex-start;
+            gap: 1rem;
+
+            .progress-ring {
+                width: 4rem;
+                height: 4rem;
+            }
+        }
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .bottom-section {
+        grid-template-columns: 1fr;
+    }
+}

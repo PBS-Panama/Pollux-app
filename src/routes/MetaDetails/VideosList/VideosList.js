@@ -11,6 +11,43 @@ const SeasonsBar = require('./SeasonsBar');
 const { default: EpisodePicker } = require('../EpisodePicker');
 const styles = require('./styles');
 
+const { CREW_ALL_DOCS, CREW_DOC_CATEGORIES } = require('stremio/common/crewDocData');
+
+// Hash function for deterministic per-crew randomization
+const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); };
+
+// Minimum docs per category so no crew member has an empty tab
+const CREW_DOC_MINIMUMS = { 1: 3, 2: 3, 3: 2, 4: 2, 5: 2 };
+
+// Deterministic document selection per crew member
+const getCrewDocs = (crewHash, category) => {
+    const pool = CREW_ALL_DOCS[category] || [];
+    const minDocs = CREW_DOC_MINIMUMS[category] || 2;
+
+    // Pick docs: each has ~65% chance based on hash
+    const picked = [];
+    const skipped = [];
+    pool.forEach((doc, i) => {
+        const h = ((crewHash * 31 + i * 17 + category * 7) >>> 0) % 100;
+        if (h < 65) picked.push(doc);
+        else skipped.push(doc);
+    });
+
+    // Guarantee minimum count
+    let idx = 0;
+    while (picked.length < minDocs && idx < skipped.length) {
+        picked.push(skipped[idx++]);
+    }
+
+    // Vary issue dates ±180 days per crew member
+    return picked.map((doc, i) => {
+        const base = new Date(doc.baseDate).getTime();
+        const offsetDays = ((crewHash + i * 13) % 361) - 180;
+        const varied = new Date(base + offsetDays * 86400000);
+        return { title: doc.title, issued: varied.toISOString().split('T')[0] };
+    });
+};
+
 const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, selectedVideoId, toggleNotifications }) => {
     const { core } = useServices();
     const profile = useProfile();
@@ -24,48 +61,34 @@ const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, 
             :
             [];
     }, [metaItem]);
-    const seasons = React.useMemo(() => {
-        return videos
-            .map(({ season }) => season)
-            .filter((season, index, seasons) => {
-                return season !== null &&
-                    !isNaN(season) &&
-                    typeof season === 'number' &&
-                    seasons.indexOf(season) === index;
-            })
-            .sort((a, b) => (a || Number.MAX_SAFE_INTEGER) - (b || Number.MAX_SAFE_INTEGER));
-    }, [videos]);
+    // PBS Crewing: hash from crew member name for deterministic doc distribution
+    const crewHash = React.useMemo(() => {
+        const name = metaItem?.content?.content?.name || '';
+        return hashStr(name);
+    }, [metaItem]);
+    // PBS Crewing: always show 5 document categories
+    const seasons = CREW_DOC_CATEGORIES;
     const selectedSeason = React.useMemo(() => {
-        if (seasons.includes(season)) {
-            return season;
-        }
-
-        const video = videos?.find((video) => video.id === libraryItem?.state.video_id);
-
-        if (video && video.season && seasons.includes(video.season)) {
-            return video.season;
-        }
-
-        const nonSpecialSeasons = seasons.filter((season) => season !== 0);
-        if (nonSpecialSeasons.length > 0) {
-            return nonSpecialSeasons[0];
-        }
-
-        if (seasons.length > 0) {
-            return seasons[0];
-        }
-
-        return null;
-    }, [seasons, season, videos, libraryItem]);
+        if (CREW_DOC_CATEGORIES.includes(season)) return season;
+        return 1; // default to Main Docs
+    }, [season]);
+    // PBS Crewing: per-crew randomized documents for the selected category
     const videosForSeason = React.useMemo(() => {
-        return videos
-            .filter((video) => {
-                return selectedSeason === null || video.season === selectedSeason;
-            })
-            .sort((a, b) => {
-                return a.episode - b.episode;
-            });
-    }, [videos, selectedSeason]);
+        const docs = getCrewDocs(crewHash, selectedSeason);
+        return docs.map((doc, i) => ({
+            id: `crew-doc-${selectedSeason}-${i}`,
+            title: doc.title,
+            thumbnail: null,
+            season: selectedSeason,
+            episode: i + 1,
+            released: new Date(doc.issued),
+            upcoming: false,
+            watched: false,
+            progress: null,
+            deepLinks: null,
+            scheduled: false,
+        }));
+    }, [selectedSeason, crewHash]);
 
     const seasonWatched = React.useMemo(() => {
         return videosForSeason.every((video) => video.watched);
@@ -121,36 +144,22 @@ const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, 
                         </div>
                     </React.Fragment>
                     :
-                    metaItem.content.type === 'Err' || videosForSeason.length === 0 ?
+                    metaItem.content.type === 'Err' ?
                         <div className={styles['message-container']}>
-                            <EpisodePicker className={styles['episode-picker']} onSubmit={onSeasonSearch} />
                             <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
-                            <div className={styles['label']}>{t('ERR_NO_VIDEOS_FOR_META')}</div>
+                            <div className={styles['label']}>{'No documents available'}</div>
                         </div>
                         :
                         <React.Fragment>
-                            {
-                                showNotificationsToggle && libraryItem ?
-                                    <Toggle className={styles['notifications-toggle']} checked={!libraryItem.state.noNotif} onClick={toggleNotifications}>
-                                        {t('DETAIL_RECEIVE_NOTIF_SERIES')}
-                                    </Toggle>
-                                    :
-                                    null
-                            }
-                            {
-                                seasons.length > 0 ?
-                                    <SeasonsBar
-                                        className={styles['seasons-bar']}
-                                        season={selectedSeason}
-                                        seasons={seasons}
-                                        onSelect={seasonOnSelect}
-                                    />
-                                    :
-                                    null
-                            }
+                            <SeasonsBar
+                                className={styles['seasons-bar']}
+                                season={selectedSeason}
+                                seasons={seasons}
+                                onSelect={seasonOnSelect}
+                            />
                             <SearchBar
                                 className={styles['search-bar']}
-                                title={t('SEARCH_VIDEOS')}
+                                title={'Search documents...'}
                                 value={search}
                                 onChange={searchInputOnChange}
                             />

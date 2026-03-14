@@ -1,81 +1,83 @@
 // Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: multi-select checkbox filters with client-side filtering
 
 const React = require('react');
-const { useTranslate } = require('stremio/common');
-
-const mapSelectableInputs = (discover, t) => {
-    const selectedType = discover.selectable.types.find(({ selected }) => selected);
-    const typeSelect = {
-        options: discover.selectable.types
-            .map(({ type, deepLinks }) => ({
-                value: deepLinks.discover,
-                label: t.stringWithPrefix(type, 'TYPE_')
-            })),
-        value: selectedType
-            ? selectedType.deepLinks.discover
-            : undefined,
-        title: discover.selected !== null
-            ? () => t.stringWithPrefix(discover.selected.request.path.type, 'TYPE_')
-            : t.string('SELECT_TYPE'),
-        onSelect: (value) => {
-            window.location = value;
-        }
-    };
-    const catalogSelect = {
-        options: discover.selectable.catalogs
-            .map(({ id, name, addon, deepLinks }) => ({
-                value: deepLinks.discover,
-                label: t.catalogTitle({ addon, id, name }),
-                title: `${name} (${addon.manifest.name})`
-            })),
-        value: discover.selectable.catalogs
-            .filter(({ selected }) => selected)
-            .map(({ deepLinks }) => deepLinks.discover),
-        title: discover.selected !== null
-            ? () => {
-                const selectableCatalog = discover.selectable.catalogs
-                    .find(({ id }) => id === discover.selected.request.path.id);
-                return selectableCatalog ? t.catalogTitle(selectableCatalog, false) : discover.selected.request.path.id;
-            }
-            :
-            t.string('SELECT_CATALOG'),
-        onSelect: (value) => {
-            window.location =value;
-        }
-    };
-    const extraSelects = discover.selectable.extra.map(({ name, isRequired, options }) => {
-        const selectedExtra = options.find(({ selected }) => selected);
-        return {
-            isRequired: isRequired,
-            options: options.map(({ value, deepLinks }) => ({
-                label: typeof value === 'string' ? t.string(value) : t.string('NONE'),
-                value: JSON.stringify({
-                    href: deepLinks.discover,
-                    value
-                })
-            })),
-            value: JSON.stringify({
-                href: selectedExtra.deepLinks.discover,
-                value: selectedExtra.value,
-            }),
-            title: options.some(({ selected, value }) => selected && value === null) ?
-                () => t.string(name.toUpperCase())
-                : t.string(selectedExtra.value),
-            onSelect: (value) => {
-                const { href } = JSON.parse(value);
-                window.location = href;
-            }
-        };
-    });
-    return [[typeSelect, catalogSelect, ...extraSelects], discover.selectable.nextPage];
-};
+const { getCrewDepartment, getCrewRank, getCrewNationality,
+    STCW_DEPARTMENTS, STCW_RANKS, NATIONALITIES_AMERICAS } = require('stremio/common/crewData');
 
 const useSelectableInputs = (discover) => {
-    const t = useTranslate();
-    const selectableInputs = React.useMemo(() => {
-        return mapSelectableInputs(discover, t);
-    }, [discover.selected, discover.selectable]);
-    return selectableInputs;
+    // State: sets of selected values for each filter category
+    const [selectedDepts, setSelectedDepts] = React.useState(new Set());
+    const [selectedRanks, setSelectedRanks] = React.useState(new Set());
+    const [selectedNats, setSelectedNats] = React.useState(new Set());
+
+    // Toggle helpers
+    const toggleDept = React.useCallback((value) => {
+        setSelectedDepts((prev) => {
+            const next = new Set(prev);
+            next.has(value) ? next.delete(value) : next.add(value);
+            return next;
+        });
+    }, []);
+    const toggleRank = React.useCallback((value) => {
+        setSelectedRanks((prev) => {
+            const next = new Set(prev);
+            next.has(value) ? next.delete(value) : next.add(value);
+            return next;
+        });
+    }, []);
+    const toggleNat = React.useCallback((value) => {
+        setSelectedNats((prev) => {
+            const next = new Set(prev);
+            next.has(value) ? next.delete(value) : next.add(value);
+            return next;
+        });
+    }, []);
+
+    // Build selector objects with multicheck props
+    const deptInput = React.useMemo(() => ({
+        title: () => 'Department',
+        options: STCW_DEPARTMENTS.map((label) => ({ label, value: label })),
+        multicheck: true,
+        selectedValues: selectedDepts,
+        onToggle: toggleDept,
+        onSelect: () => {},
+        value: undefined,
+    }), [selectedDepts, toggleDept]);
+
+    const rankInput = React.useMemo(() => ({
+        title: () => 'Rank',
+        options: STCW_RANKS.map((label) => ({ label, value: label })),
+        multicheck: true,
+        selectedValues: selectedRanks,
+        onToggle: toggleRank,
+        onSelect: () => {},
+        value: undefined,
+    }), [selectedRanks, toggleRank]);
+
+    const natInput = React.useMemo(() => ({
+        title: () => 'Nationality',
+        options: NATIONALITIES_AMERICAS.map((label) => ({ label, value: label })),
+        multicheck: true,
+        selectedValues: selectedNats,
+        onToggle: toggleNat,
+        onSelect: () => {},
+        value: undefined,
+    }), [selectedNats, toggleNat]);
+
+    const selectInputs = React.useMemo(() => [deptInput, rankInput, natInput], [deptInput, rankInput, natInput]);
+
+    // Client-side filter: AND across categories, OR within a category
+    const filterItem = React.useCallback((originalName) => {
+        if (selectedDepts.size > 0 && !selectedDepts.has(getCrewDepartment(originalName))) return false;
+        if (selectedRanks.size > 0 && !selectedRanks.has(getCrewRank(originalName))) return false;
+        if (selectedNats.size > 0 && !selectedNats.has(getCrewNationality(originalName))) return false;
+        return true;
+    }, [selectedDepts, selectedRanks, selectedNats]);
+
+    const hasNextPage = discover.selectable?.nextPage;
+
+    return [selectInputs, hasNextPage, filterItem];
 };
 
 module.exports = useSelectableInputs;

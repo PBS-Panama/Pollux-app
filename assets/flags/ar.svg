@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Argentina: light blue, white, light blue horizontal -->
+  <rect width="640" height="160" fill="#74ACDF"/>
+  <rect y="160" width="640" height="160" fill="#fff"/>
+  <rect y="320" width="640" height="160" fill="#74ACDF"/>
+  <!-- Sun of May (simplified) -->
+  <circle cx="320" cy="240" r="26" fill="#F6B40E"/>
+  <circle cx="320" cy="240" r="18" fill="#F6B40E" stroke="#85340A" stroke-width="1"/>
+</svg>

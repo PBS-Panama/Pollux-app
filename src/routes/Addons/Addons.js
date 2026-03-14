@@ -1,321 +1,182 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module - STCW Exams & IMO Courses
 
 const React = require('react');
-const PropTypes = require('prop-types');
-const classnames = require('classnames');
-const { useTranslation } = require('react-i18next');
-const { default: Icon } = require('@stremio/stremio-icons/react');
-const { usePlatform, useBinaryState, withCoreSuspender } = require('stremio/common');
-const { AddonDetailsModal, Button, Image, MainNavBars, ModalDialog, SearchBar, SharePrompt, TextInput, MultiselectMenu } = require('stremio/components');
-const { useServices } = require('stremio/services');
-const useToast = require('stremio/common/Toast/useToast');
-const Addon = require('./Addon');
-const useInstalledAddons = require('./useInstalledAddons');
-const useRemoteAddons = require('./useRemoteAddons');
-const useAddonDetailsTransportUrl = require('./useAddonDetailsTransportUrl');
-const useSelectableInputs = require('./useSelectableInputs');
+const { useState, useMemo, useCallback, useRef } = React;
+const { MainNavBars, MultiselectMenu } = require('stremio/components');
+const { EXAMS, STCW_LEVELS, EXAM_DEPARTMENTS } = require('../Calendar/examData');
 const styles = require('./styles');
-const { AddonPlaceholder } = require('./AddonPlaceholder');
 
-const Addons = ({ urlParams, queryParams }) => {
-    const { t } = useTranslation();
-    const platform = usePlatform();
-    const { core } = useServices();
-    const toast = useToast();
-    const installedAddons = useInstalledAddons(urlParams);
-    const remoteAddons = useRemoteAddons(urlParams);
-    const [addonDetailsTransportUrl, setAddonDetailsTransportUrl] = useAddonDetailsTransportUrl(urlParams, queryParams);
-    const selectInputs = useSelectableInputs(installedAddons, remoteAddons);
-    const [filtersModalOpen, openFiltersModal, closeFiltersModal] = useBinaryState(false);
-    const [addAddonModalOpen, openAddAddonModal, closeAddAddonModal] = useBinaryState(false);
-    const addAddonUrlInputRef = React.useRef(null);
-    const addAddonOnSubmit = React.useCallback(() => {
-        if (addAddonUrlInputRef.current !== null) {
-            try {
-                let url = new URL(addAddonUrlInputRef.current.value).toString();
-                setAddonDetailsTransportUrl(url);
-            } catch (e) {
-                toast.show({
-                    type: 'error',
-                    title: `Failed to parse addon url: ${addAddonUrlInputRef.current.value}`,
-                    timeout: 10000
-                });
-                console.error('Failed to parse addon url:', e);
-            }
+const LEVEL_COLORS = {
+    'All Levels': '#6b7280',
+    'Ratings': '#2563eb',
+    'OOW': '#d97706',
+    'Management': '#dc2626',
+};
+
+const SCROLL_AMOUNT = 300;
+
+const Addons = () => {
+    const [selectedLevel, setSelectedLevel] = useState(null);
+    const [selectedDept, setSelectedDept] = useState(null);
+    const [expandedId, setExpandedId] = useState(null);
+    const [booked, setBooked] = useState(new Set());
+    const listRef = useRef(null);
+
+    // MultiselectMenu inputs (single-select mode)
+    // onSelect receives the raw value directly (string), not an event object
+    const levelInput = useMemo(() => ({
+        title: () => selectedLevel || 'Select STCW Level',
+        options: STCW_LEVELS.map((label) => ({ label, value: label })),
+        onSelect: (val) => setSelectedLevel(val),
+        value: selectedLevel,
+    }), [selectedLevel]);
+
+    const deptInput = useMemo(() => ({
+        title: () => selectedDept || 'Select Department',
+        options: EXAM_DEPARTMENTS.map((label) => ({ label, value: label })),
+        onSelect: (val) => setSelectedDept(val),
+        value: selectedDept,
+    }), [selectedDept]);
+
+    const hasFilter = selectedLevel !== null || selectedDept !== null;
+
+    const filtered = useMemo(() => {
+        if (!hasFilter) return [];
+        return EXAMS.filter((exam) => {
+            // "All Levels" shows ONLY exams tagged as "All Levels", not Ratings/OOW/Management
+            if (selectedLevel && exam.level !== selectedLevel) return false;
+            if (selectedDept && selectedDept !== 'All Departments' && !exam.departments.includes(selectedDept)) return false;
+            return true;
+        });
+    }, [selectedLevel, selectedDept, hasFilter]);
+
+    const toggleExpand = useCallback((id) => {
+        setExpandedId((prev) => (prev === id ? null : id));
+    }, []);
+
+    const toggleBook = useCallback((e, id) => {
+        e.stopPropagation();
+        setBooked((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }, []);
+
+    const scrollUp = useCallback(() => {
+        if (listRef.current) {
+            listRef.current.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' });
         }
-    }, [setAddonDetailsTransportUrl]);
-    const addAddonModalButtons = React.useMemo(() => {
-        return [
-            {
-                className: styles['cancel-button'],
-                label: t('BUTTON_CANCEL'),
-                props: {
-                    onClick: closeAddAddonModal
-                }
-            },
-            {
-                label: t('ADDON_ADD'),
-                props: {
-                    onClick: addAddonOnSubmit
-                }
-            }
-        ];
-    }, [addAddonOnSubmit]);
-    const [search, setSearch] = React.useState('');
-    const searchInputOnChange = React.useCallback((event) => {
-        setSearch(event.currentTarget.value);
     }, []);
-    const [sharedAddon, setSharedAddon] = React.useState(null);
-    const clearSharedAddon = React.useCallback(() => {
-        setSharedAddon(null);
+
+    const scrollDown = useCallback(() => {
+        if (listRef.current) {
+            listRef.current.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' });
+        }
     }, []);
-    const onAddonShare = React.useCallback((event) => {
-        setSharedAddon(event.dataset.addon);
-    }, []);
-    const onAddonInstall = React.useCallback((event) => {
-        core.transport.dispatch({
-            action: 'Ctx',
-            args: {
-                action: 'InstallAddon',
-                args: event.dataset.addon,
-            }
-        });
-    }, []);
-    const onAddonUninstall = React.useCallback((event) => {
-        core.transport.dispatch({
-            action: 'Ctx',
-            args: {
-                action: 'UninstallAddon',
-                args: event.dataset.addon,
-            }
-        });
-    }, []);
-    const onAddonConfigure = React.useCallback((event) => {
-        platform.openExternal(event.dataset.addon.transportUrl.replace('manifest.json', 'configure'));
-    }, []);
-    const onAddonOpen = React.useCallback((event) => {
-        setAddonDetailsTransportUrl(event.dataset.addon.transportUrl);
-    }, [setAddonDetailsTransportUrl]);
-    const closeAddonDetails = React.useCallback(() => {
-        setAddonDetailsTransportUrl(null);
-    }, [setAddonDetailsTransportUrl]);
-    const searchFilterPredicate = React.useCallback((addon) => {
-        return search.length === 0 ||
-            (
-                (typeof addon.manifest.name === 'string' && addon.manifest.name.toLowerCase().includes(search.toLowerCase())) ||
-                (typeof addon.manifest.description === 'string' && addon.manifest.description.toLowerCase().includes(search.toLowerCase()))
-            );
-    }, [search]);
-    const renderLogoFallback = React.useCallback(() => (
-        <Icon className={styles['icon']} name={'addons'} />
-    ), []);
-    React.useLayoutEffect(() => {
-        closeAddAddonModal();
-        setSearch('');
-        clearSharedAddon();
-    }, [urlParams, queryParams]);
+
     return (
-        <MainNavBars className={styles['addons-container']} route={'addons'}>
-            <div className={styles['addons-content']}>
-                <div className={styles['selectable-inputs-container']}>
-                    {selectInputs.map((selectInput, index) => (
-                        <MultiselectMenu
-                            {...selectInput}
-                            key={index}
-                            className={styles['select-input-container']}
-                        />
-                    ))}
-                    <div className={styles['spacing']} />
-                    <Button className={styles['add-button-container']} title={t('ADD_ADDON')} onClick={openAddAddonModal}>
-                        <Icon className={styles['icon']} name={'add'} />
-                        <div className={styles['add-button-label']}>{t('ADD_ADDON')}</div>
-                    </Button>
-                    <SearchBar
-                        className={styles['search-bar']}
-                        title={t('ADDON_SEARCH')}
-                        value={search}
-                        onChange={searchInputOnChange}
-                    />
-                    <Button className={styles['filter-button']} title={t('ALL_FILTERS')} onClick={openFiltersModal}>
-                        <Icon className={styles['filter-icon']} name={'filters'} />
-                    </Button>
+        <MainNavBars className={styles['addons-container']} route={'myexams'}>
+            <div className={styles['exams-page']}>
+                <div className={styles['exams-header']}>
+                    <h1 className={styles['exams-title']}>STCW Exams &amp; IMO Courses</h1>
+                    <p className={styles['exams-subtitle']}>
+                        {hasFilter
+                            ? `${filtered.length} course${filtered.length !== 1 ? 's' : ''} available`
+                            : 'Select a STCW Level or Department to browse courses'}
+                    </p>
                 </div>
-                {
-                    installedAddons.selected !== null ?
-                        installedAddons.selectable.types.length === 0 ?
-                            <div className={styles['message-container']}>
-                                {t('NO_ADDONS')}
-                            </div>
-                            :
-                            installedAddons.catalog.length === 0 ?
-                                <div className={styles['message-container']}>
-                                    {t('NO_ADDONS_FOR_TYPE')}
-                                </div>
-                                :
-                                <div className={styles['addons-list-container']}>
-                                    {
-                                        installedAddons.catalog
-                                            .filter(searchFilterPredicate)
-                                            .map((addon, index) => (
-                                                <Addon
-                                                    key={index}
-                                                    className={classnames(styles['addon'], 'animation-fade-in')}
-                                                    id={addon.manifest.id}
-                                                    name={addon.manifest.name}
-                                                    version={addon.manifest.version}
-                                                    logo={addon.manifest.logo}
-                                                    description={addon.manifest.description}
-                                                    types={addon.manifest.types}
-                                                    behaviorHints={addon.manifest.behaviorHints}
-                                                    installed={addon.installed}
-                                                    onInstall={onAddonInstall}
-                                                    onUninstall={onAddonUninstall}
-                                                    onConfigure={onAddonConfigure}
-                                                    onOpen={onAddonOpen}
-                                                    onShare={onAddonShare}
-                                                    dataset={{ addon }}
-                                                />
-                                            ))
-                                    }
-                                </div>
-                        :
-                        remoteAddons.selected !== null ?
-                            remoteAddons.catalog.content.type === 'Err' ?
-                                <div className={styles['message-container']}>
-                                    {remoteAddons.catalog.content.content}
-                                </div>
-                                :
-                                remoteAddons.catalog.content.type === 'Loading' ?
-                                    <div className={styles['addons-list-container']}>
-                                        {Array.from({ length: 6 }).map((_, index) => (
-                                            <AddonPlaceholder key={index} className={styles['addon']} />
-                                        ))}
-                                    </div>
-                                    :
-                                    <div className={styles['addons-list-container']}>
-                                        {
-                                            remoteAddons.catalog.content.content
-                                                .filter(searchFilterPredicate)
-                                                .map((addon, index) => (
-                                                    <Addon
-                                                        key={index}
-                                                        className={classnames(styles['addon'], 'animation-fade-in')}
-                                                        id={addon.manifest.id}
-                                                        name={addon.manifest.name}
-                                                        version={addon.manifest.version}
-                                                        logo={addon.manifest.logo}
-                                                        description={addon.manifest.description}
-                                                        types={addon.manifest.types}
-                                                        behaviorHints={addon.manifest.behaviorHints}
-                                                        installed={addon.installed}
-                                                        onInstall={onAddonInstall}
-                                                        onUninstall={onAddonUninstall}
-                                                        onConfigure={onAddonConfigure}
-                                                        onOpen={onAddonOpen}
-                                                        onShare={onAddonShare}
-                                                        dataset={{ addon }}
-                                                    />
-                                                ))
-                                        }
-                                    </div>
-                            :
-                            <div className={styles['addons-list-container']}>
-                                {Array.from({ length: 6 }).map((_, index) => (
-                                    <AddonPlaceholder key={index} className={styles['addon']} />
-                                ))}
-                            </div>
-                }
-            </div>
-            {
-                filtersModalOpen ?
-                    <ModalDialog title={t('ADDONS_FILTERS')} className={styles['filters-modal']} onCloseRequest={closeFiltersModal}>
-                        {selectInputs.map((selectInput, index) => (
-                            <MultiselectMenu
-                                {...selectInput}
-                                key={index}
-                                className={styles['select-input-container']}
-                            />
-                        ))}
-                    </ModalDialog>
-                    :
-                    null
-            }
-            {
-                addAddonModalOpen ?
-                    <ModalDialog
-                        className={styles['add-addon-modal-container']}
-                        title={t('ADD_ADDON')}
-                        buttons={addAddonModalButtons}
-                        onCloseRequest={closeAddAddonModal}>
-                        <div className={styles['notice']}>{t('ADD_ADDON_DESCRIPTION')}</div>
-                        <TextInput
-                            ref={addAddonUrlInputRef}
-                            className={styles['addon-url-input']}
-                            type={'text'}
-                            placeholder={t('PASTE_ADDON_URL')}
-                            autoFocus={true}
-                            onSubmit={addAddonOnSubmit}
-                        />
-                    </ModalDialog>
-                    :
-                    null
-            }
-            {
-                sharedAddon !== null ?
-                    <ModalDialog
-                        className={styles['share-modal-container']}
-                        title={t('SHARE_ADDON')}
-                        onCloseRequest={clearSharedAddon}>
-                        <div className={styles['title-container']}>
-                            <Image
-                                className={styles['logo']}
-                                src={sharedAddon.manifest.logo}
-                                alt={' '}
-                                renderFallback={renderLogoFallback}
-                            />
-                            <div className={styles['name-container']}>
-                                <span className={styles['name']}>{typeof sharedAddon.manifest.name === 'string' && sharedAddon.manifest.name.length > 0 ? sharedAddon.manifest.name : sharedAddon.manifest.id}</span>
-                                {
-                                    typeof sharedAddon.manifest.version === 'string' && sharedAddon.manifest.version.length > 0 ?
-                                        <span className={styles['version']}>{t('ADDON_VERSION_SHORT', { version: sharedAddon.manifest.version })}</span>
-                                        :
-                                        null
-                                }
-                            </div>
-                        </div>
-                        <SharePrompt
-                            className={styles['share-prompt-container']}
-                            url={sharedAddon.transportUrl}
-                        />
-                    </ModalDialog>
-                    :
-                    null
-            }
-            {
-                typeof addonDetailsTransportUrl === 'string' ?
-                    <AddonDetailsModal
-                        transportUrl={addonDetailsTransportUrl}
-                        onCloseRequest={closeAddonDetails}
+
+                <div className={styles['exams-filters']}>
+                    <MultiselectMenu
+                        {...levelInput}
+                        className={styles['filter-dropdown']}
                     />
-                    :
-                    null
-            }
+                    <MultiselectMenu
+                        {...deptInput}
+                        className={styles['filter-dropdown']}
+                    />
+                </div>
+
+                <div className={styles['exam-list-wrapper']}>
+                    {hasFilter && filtered.length > 0 && (
+                        <button className={styles['scroll-button-up']} onClick={scrollUp}>
+                            &#9650;
+                        </button>
+                    )}
+
+                    <div className={styles['exam-list']} ref={listRef}>
+                        {filtered.map((exam) => {
+                            const isExpanded = expandedId === exam.id;
+                            const isBooked = booked.has(exam.id);
+                            return (
+                                <div
+                                    key={exam.id}
+                                    className={`${styles['exam-card']} ${isExpanded ? styles['expanded'] : ''}`}
+                                    onClick={() => toggleExpand(exam.id)}
+                                >
+                                    <div className={styles['exam-card-main']}>
+                                        <div className={styles['exam-badges']}>
+                                            <span
+                                                className={styles['exam-level-badge']}
+                                                style={{ backgroundColor: LEVEL_COLORS[exam.level] || '#6b7280' }}
+                                            >
+                                                {exam.level}
+                                            </span>
+                                            <span className={styles['exam-code-badge']}>{exam.code}</span>
+                                            <span className={styles['exam-stcw-badge']}>{exam.stcwRef}</span>
+                                        </div>
+                                        <div className={styles['exam-info']}>
+                                            <h3 className={styles['exam-name']}>{exam.name}</h3>
+                                            <div className={styles['exam-depts']}>
+                                                {exam.departments.map((d) => (
+                                                    <span key={d} className={styles['exam-dept-tag']}>{d}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className={styles['exam-actions']}>
+                                            <button
+                                                className={`${styles['book-button']} ${isBooked ? styles['booked'] : ''}`}
+                                                onClick={(e) => toggleBook(e, exam.id)}
+                                            >
+                                                {isBooked ? '✓ Booked' : 'Book Exam'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {isExpanded && (
+                                        <div className={styles['exam-details']}>
+                                            <p className={styles['exam-description']}>{exam.description}</p>
+                                            <div className={styles['exam-meta']}>
+                                                <span><strong>Duration:</strong> {exam.duration}</span>
+                                                <span><strong>Validity:</strong> {exam.validity}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        {!hasFilter && (
+                            <div className={styles['no-results']}>
+                                Use the filters above to find STCW courses and IMO exams.
+                            </div>
+                        )}
+                        {hasFilter && filtered.length === 0 && (
+                            <div className={styles['no-results']}>
+                                No courses match the selected filters.
+                            </div>
+                        )}
+                    </div>
+
+                    {hasFilter && filtered.length > 0 && (
+                        <button className={styles['scroll-button-down']} onClick={scrollDown}>
+                            &#9660;
+                        </button>
+                    )}
+                </div>
+            </div>
         </MainNavBars>
     );
 };
 
-Addons.propTypes = {
-    urlParams: PropTypes.shape({
-        path: PropTypes.string,
-        transportUrl: PropTypes.string,
-        catalogId: PropTypes.string,
-        type: PropTypes.string
-    }),
-    queryParams: PropTypes.instanceOf(URLSearchParams)
-};
-
-const AddonsFallback = () => (
-    <MainNavBars className={styles['addons-container']} route={'addons'} />
-);
-
-module.exports = withCoreSuspender(Addons, AddonsFallback);
+module.exports = Addons;

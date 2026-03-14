@@ -16,7 +16,7 @@ const withProtectedRoutes = (Component) => {
         }, [profile]);
         const onRouteChange = React.useCallback((routeConfig) => {
             if (profile.auth !== null && routeConfig.component === Intro) {
-                window.location.replace('#/');
+                window.location.replace('#/company-dashboard');
                 return true;
             }
         }, [profile]);

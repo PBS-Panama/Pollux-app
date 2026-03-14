@@ -12,6 +12,9 @@ const useProfile = require('stremio/common/useProfile');
 const VideoPlaceholder = require('./VideoPlaceholder');
 const styles = require('./styles');
 
+// PBS Crewing Module: corporate default profile image
+const CREW_DEFAULT_POSTER = 'images/profileimg.png';
+
 const Video = ({ className, id, title, thumbnail, season, episode, released, upcoming, watched, progress, scheduled, seasonWatched, selected, deepLinks, onMarkVideoAsWatched, onMarkSeasonAsWatched, ...props }) => {
     const routeFocused = useRouteFocused();
     const profile = useProfile();
@@ -91,14 +94,9 @@ const Video = ({ className, id, title, thumbnail, season, episode, released, upc
                         <div className={styles['thumbnail-container']}>
                             <Image
                                 className={classnames(styles['thumbnail'], { [styles['blurred']]: blurThumbnail })}
-                                src={thumbnail}
+                                src={CREW_DEFAULT_POSTER}
                                 alt={' '}
-                                renderFallback={() => (
-                                    <Icon
-                                        className={styles['placeholder-icon']}
-                                        name={'symbol'}
-                                    />
-                                )}
+                                fallbackSrc={CREW_DEFAULT_POSTER}
                             />
                             {
                                 progress !== null && !isNaN(progress) && progress > 0 ?
@@ -122,7 +120,7 @@ const Video = ({ className, id, title, thumbnail, season, episode, released, upc
                         {
                             released instanceof Date && !isNaN(released.getTime()) ?
                                 <div className={styles['released-container']}>
-                                    {released.toLocaleString(profile.settings.interfaceLanguage, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                    {'Expires: ' + released.toLocaleString(profile.settings.interfaceLanguage, { year: 'numeric', month: 'short', day: 'numeric' })}
                                 </div>
                                 :
                                 scheduled ?

@@ -163,7 +163,7 @@ const Intro = ({ queryParams }) => {
             dispatch({ type: 'error', error: t('MUST_ACCEPT_TERMS') });
             return;
         }
-        window.location = '#/';
+        window.location = '#/company-dashboard';
     }, [state.termsAccepted]);
     const signup = React.useCallback(() => {
         if (typeof state.email !== 'string' || state.email.length === 0 || !emailRef.current.validity.valid) {
@@ -273,7 +273,7 @@ const Intro = ({ queryParams }) => {
                 case 'UserAuthenticated': {
                     closeLoaderModal();
                     if (routeFocused) {
-                        window.location = '#/';
+                        window.location = '#/company-dashboard';
                     }
                     break;
                 }

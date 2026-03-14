@@ -10,10 +10,15 @@ type Props = {
     option: MultiselectMenuOption;
     selectedValue?: any;
     onSelect: (value: any) => void;
+    multicheck?: boolean;
+    isChecked?: boolean;
 };
 
-const Option = forwardRef<HTMLButtonElement, Props>(({ option, selectedValue, onSelect }, ref) => {
-    const selected = useMemo(() => option?.value === selectedValue, [option, selectedValue]);
+const Option = forwardRef<HTMLButtonElement, Props>(({ option, selectedValue, onSelect, multicheck, isChecked }, ref) => {
+    const selected = useMemo(() => {
+        if (multicheck) return isChecked ?? false;
+        return option?.value === selectedValue;
+    }, [option, selectedValue, multicheck, isChecked]);
 
     const handleClick = useCallback(() => {
         onSelect(option.value);
@@ -27,9 +32,16 @@ const Option = forwardRef<HTMLButtonElement, Props>(({ option, selectedValue, on
             onClick={handleClick}
             aria-selected={selected}
         >
+            {
+                multicheck ?
+                    <div className={classNames(styles['checkbox'], { [styles['checked']]: selected })}>
+                        { selected ? <Icon name={'checkmark'} className={styles['checkbox-icon']} /> : null }
+                    </div>
+                    : null
+            }
             <div className={styles['label']}>{ option.label }</div>
             {
-                selected && !option.level ?
+                selected && !option.level && !multicheck ?
                     <div className={styles['icon']} />
                     : null
             }

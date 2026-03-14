@@ -9,11 +9,13 @@ const { Button, MultiselectMenu } = require('stremio/components');
 const SeasonsBarPlaceholder = require('./SeasonsBarPlaceholder');
 const styles = require('./styles');
 
+const { CREW_DOC_LABELS } = require('stremio/common/crewDocData');
+
 const SeasonsBar = ({ className, seasons, season, onSelect }) => {
     const options = React.useMemo(() => {
         return seasons.map((season) => ({
             value: String(season),
-            label: season > 0 ? t('SEASON_NUMBER', { season }) : t('SPECIAL')
+            label: CREW_DOC_LABELS[season] || (season > 0 ? t('SEASON_NUMBER', { season }) : t('SPECIAL'))
         }));
     }, [seasons]);
     const selectedSeason = React.useMemo(() => {
@@ -63,7 +65,7 @@ const SeasonsBar = ({ className, seasons, season, onSelect }) => {
             <MultiselectMenu
                 className={styles['seasons-popup-label-container']}
                 options={options}
-                title={season > 0 ? t('SEASON_NUMBER', { season }) : t('SPECIAL')}
+                title={CREW_DOC_LABELS[season] || (season > 0 ? t('SEASON_NUMBER', { season }) : t('SPECIAL'))}
                 value={selectedSeason}
                 onSelect={seasonOnSelect}
             />

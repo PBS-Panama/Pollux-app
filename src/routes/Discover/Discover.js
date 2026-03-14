@@ -18,7 +18,7 @@ const Discover = ({ urlParams, queryParams }) => {
     const { t } = useTranslation();
     const { core } = useServices();
     const [discover, loadNextPage] = useDiscover(urlParams, queryParams);
-    const [selectInputs, hasNextPage] = useSelectableInputs(discover);
+    const [selectInputs, hasNextPage, filterItem] = useSelectableInputs(discover);
     const [inputsModalOpen, openInputsModal, closeInputsModal] = useBinaryState(false);
     const [addonModalOpen, openAddonModal, closeAddonModal] = useBinaryState(false);
     const [selectedMetaItemIndex, setSelectedMetaItemIndex] = React.useState(0);
@@ -40,14 +40,16 @@ const Discover = ({ urlParams, queryParams }) => {
             }
         }
     }, [hasNextPage, loadNextPage]);
+    const filteredItems = React.useMemo(() => {
+        if (discover.catalog === null || discover.catalog.content.type !== 'Ready') return [];
+        return discover.catalog.content.content.filter((item) => filterItem(item.name));
+    }, [discover.catalog, filterItem]);
+    React.useEffect(() => {
+        setSelectedMetaItemIndex(0);
+    }, [filterItem]);
     const selectedMetaItem = React.useMemo(() => {
-        return discover.catalog !== null &&
-            discover.catalog.content.type === 'Ready' &&
-            discover.catalog.content.content[selectedMetaItemIndex] ?
-            discover.catalog.content.content[selectedMetaItemIndex]
-            :
-            null;
-    }, [discover.catalog, selectedMetaItemIndex]);
+        return filteredItems[selectedMetaItemIndex] ?? null;
+    }, [filteredItems, selectedMetaItemIndex]);
     const addToLibrary = React.useCallback(() => {
         if (selectedMetaItem === null) {
             return;
@@ -98,11 +100,11 @@ const Discover = ({ urlParams, queryParams }) => {
         setSelectedMetaItemIndex(0);
     }, [discover.selected]);
     return (
-        <MainNavBars className={styles['discover-container']} route={'discover'}>
+        <MainNavBars className={styles['discover-container']} route={'companyCrewdb'}>
             <div className={styles['discover-content']}>
                 <div className={styles['catalog-container']}>
                     <div className={styles['selectable-inputs-container']}>
-                        {selectInputs.map(({ title, options, value, onSelect }, index) => (
+                        {selectInputs.map(({ title, options, value, onSelect, multicheck, selectedValues, onToggle }, index) => (
                             <MultiselectMenu
                                 key={index}
                                 className={styles['select-input']}
@@ -110,6 +112,9 @@ const Discover = ({ urlParams, queryParams }) => {
                                 options={options}
                                 value={value}
                                 onSelect={onSelect}
+                                multicheck={multicheck}
+                                selectedValues={selectedValues}
+                                onToggle={onToggle}
                             />
                         ))}
                         <div className={styles['filter-container']}>
@@ -156,23 +161,29 @@ const Discover = ({ urlParams, queryParams }) => {
                                         ))}
                                     </div>
                                     :
-                                    <div ref={metasContainerRef} className={classnames(styles['meta-items-container'], 'animation-fade-in')} onScroll={onScroll} onFocusCapture={metaItemsOnFocusCapture}>
-                                        {discover.catalog.content.content.map((metaItem, index) => (
-                                            <MetaItem
-                                                key={index}
-                                                className={classnames({ 'selected': selectedMetaItemIndex === index })}
-                                                type={metaItem.type}
-                                                name={metaItem.name}
-                                                poster={metaItem.poster}
-                                                posterShape={metaItem.posterShape}
-                                                playname={selectedMetaItemIndex === index}
-                                                deepLinks={metaItem.deepLinks}
-                                                watched={metaItem.watched}
-                                                data-index={index}
-                                                onClick={metaItemOnClick}
-                                            />
-                                        ))}
-                                    </div>
+                                    filteredItems.length === 0 ?
+                                        <div className={styles['message-container']}>
+                                            <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
+                                            <div className={styles['message-label']}>{'No crew members match the selected filters'}</div>
+                                        </div>
+                                        :
+                                        <div ref={metasContainerRef} className={classnames(styles['meta-items-container'], 'animation-fade-in')} onScroll={onScroll} onFocusCapture={metaItemsOnFocusCapture}>
+                                            {filteredItems.map((metaItem, index) => (
+                                                <MetaItem
+                                                    key={index}
+                                                    className={classnames({ 'selected': selectedMetaItemIndex === index })}
+                                                    type={metaItem.type}
+                                                    name={metaItem.name}
+                                                    poster={metaItem.poster}
+                                                    posterShape={metaItem.posterShape}
+                                                    playname={selectedMetaItemIndex === index}
+                                                    deepLinks={metaItem.deepLinks}
+                                                    watched={metaItem.watched}
+                                                    data-index={index}
+                                                    onClick={metaItemOnClick}
+                                                />
+                                            ))}
+                                        </div>
                     }
                 </div>
                 {
@@ -206,7 +217,7 @@ const Discover = ({ urlParams, queryParams }) => {
             {
                 inputsModalOpen ?
                     <ModalDialog title={t('CATALOG_FILTERS')} className={styles['selectable-inputs-modal']} onCloseRequest={closeInputsModal}>
-                        {selectInputs.map(({ title, options, value, onSelect }, index) => (
+                        {selectInputs.map(({ title, options, value, onSelect, multicheck, selectedValues, onToggle }, index) => (
                             <MultiselectMenu
                                 key={index}
                                 className={styles['select-input']}
@@ -214,6 +225,9 @@ const Discover = ({ urlParams, queryParams }) => {
                                 options={options}
                                 value={value}
                                 onSelect={onSelect}
+                                multicheck={multicheck}
+                                selectedValues={selectedValues}
+                                onToggle={onToggle}
                             />
                         ))}
                     </ModalDialog>
@@ -240,7 +254,7 @@ Discover.propTypes = {
 };
 
 const DiscoverFallback = () => (
-    <MainNavBars className={styles['discover-container']} route={'discover'} />
+    <MainNavBars className={styles['discover-container']} route={'companyCrewdb'} />
 );
 
 module.exports = withCoreSuspender(Discover, DiscoverFallback);

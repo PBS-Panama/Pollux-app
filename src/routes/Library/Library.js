@@ -1,135 +1,168 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: Seafarer Document Upload page
 
 const React = require('react');
-const { useTranslation } = require('react-i18next');
-const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const NotFound = require('stremio/routes/NotFound');
-const { useProfile, useNotifications, routesRegexp, useOnScrollToBottom, withCoreSuspender } = require('stremio/common');
-const { DelayedRenderer, Chips, Image, MainNavBars, LibItem, MultiselectMenu } = require('stremio/components');
+const { default: Icon } = require('@stremio/stremio-icons/react');
+const { useProfile, withCoreSuspender } = require('stremio/common');
+const { default: Button } = require('stremio/components/Button');
+const { MainNavBars, MultiselectMenu } = require('stremio/components');
 const { default: Placeholder } = require('./Placeholder');
-const useLibrary = require('./useLibrary');
-const useSelectableInputs = require('./useSelectableInputs');
+const useDocumentUpload = require('./useDocumentUpload');
 const styles = require('./styles');
 
-const SCROLL_TO_BOTTOM_TRESHOLD = 400;
-
-function withModel(Library) {
-    const withModel = ({ urlParams, queryParams }) => {
-        const model = React.useMemo(() => {
-            return typeof urlParams.path === 'string' ?
-                urlParams.path.match(routesRegexp.library.regexp) ?
-                    'library'
-                    :
-                    urlParams.path.match(routesRegexp.continuewatching.regexp) ?
-                        'continue_watching'
-                        :
-                        null
-                :
-                null;
-        }, [urlParams.path]);
-        if (model === null) {
-            return (
-                <NotFound />
-            );
-        }
-
-        return (
-            <Library
-                key={model}
-                model={model}
-                urlParams={urlParams}
-                queryParams={queryParams}
-            />
-        );
-    };
-    withModel.displayName = 'withModel';
-    return withModel;
-}
-
-const Library = ({ model, urlParams, queryParams }) => {
-    const { t } = useTranslation();
+const Library = () => {
     const profile = useProfile();
-    const notifications = useNotifications();
-    const [library, loadNextPage] = useLibrary(model, urlParams, queryParams);
-    const [typeSelect, sortChips, hasNextPage] = useSelectableInputs(library);
-    const scrollContainerRef = React.useRef(null);
-    const onScrollToBottom = React.useCallback(() => {
-        if (hasNextPage) {
-            loadNextPage();
+    const {
+        categories,
+        categoryLabels,
+        selectedCategory,
+        setSelectedCategory,
+        documentOptions,
+        selectedDocName,
+        setSelectedDocName,
+        uploadedDocs,
+        addUpload,
+        removeUpload,
+    } = useDocumentUpload();
+
+    // Local drag-and-drop state
+    const [isDragOver, setIsDragOver] = React.useState(false);
+
+    const onDragOver = React.useCallback((event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragOver(true);
+    }, []);
+
+    const onDragLeave = React.useCallback((event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragOver(false);
+    }, []);
+
+    const onDrop = React.useCallback((event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragOver(false);
+        if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+            const file = event.dataTransfer.files[0];
+            addUpload(file.name);
         }
-    }, [hasNextPage, loadNextPage]);
-    const onScroll = useOnScrollToBottom(onScrollToBottom, SCROLL_TO_BOTTOM_TRESHOLD);
-    React.useLayoutEffect(() => {
-        if (scrollContainerRef.current !== null && library.selected && library.selected.request.page === 1 && library.catalog.length !== 0) {
-            scrollContainerRef.current.scrollTop = 0;
-        }
-    }, [profile.auth, library.selected]);
-    React.useEffect(() => {
-        if (!library.selected?.type && typeSelect.value) {
-            window.location = typeSelect.value;
-        }
-    }, [typeSelect.value, library.selected]);
+    }, [addUpload]);
+
+    const onDocSelect = React.useCallback((value) => {
+        setSelectedDocName(value);
+    }, []);
+
+    // Filter uploads for current category
+    const filteredUploads = React.useMemo(() => {
+        return uploadedDocs.filter((doc) => doc.category === selectedCategory);
+    }, [uploadedDocs, selectedCategory]);
+
     return (
-        <MainNavBars className={styles['library-container']} route={model}>
+        <MainNavBars className={styles['library-container']} route={'myfiles'}>
             {
-                profile.auth !== null ?
-                    <div className={styles['library-content']}>
-                        <div className={styles['selectable-inputs-container']}>
-                            <MultiselectMenu {...typeSelect} className={styles['select-input-container']} />
-                            <Chips {...sortChips} className={styles['select-input-container']} />
-                        </div>
-                        {
-                            library.selected === null ?
-                                <DelayedRenderer delay={500}>
-                                    <div className={styles['message-container']}>
-                                        <Image
-                                            className={styles['image']}
-                                            src={require('/assets/images/empty.png')}
-                                            alt={' '}
-                                        />
-                                        <div className={styles['message-label']}>{model === 'library' ? t('LIBRARY_NOT_LOADED') : t('BOARD_CONTINUE_WATCHING_NOT_LOADED')}</div>
-                                    </div>
-                                </DelayedRenderer>
-                                :
-                                library.catalog.length === 0 ?
-                                    <div className={styles['message-container']}>
-                                        <Image
-                                            className={styles['image']}
-                                            src={require('/assets/images/empty.png')}
-                                            alt={' '}
-                                        />
-                                        <div className={styles['message-label']}>{model === 'library' ? t('LIBRARY_EMPTY') : t('BOARD_CONTINUE_WATCHING_EMPTY')}</div>
-                                    </div>
-                                    :
-                                    <div ref={scrollContainerRef} className={classnames(styles['meta-items-container'], 'animation-fade-in')} onScroll={onScroll}>
-                                        {
-                                            library.catalog.map((libItem, index) => (
-                                                <LibItem {...libItem} notifications={notifications} removable={model === 'library'} key={index} />
-                                            ))
-                                        }
-                                    </div>
-                        }
+                <div className={styles['library-content']}>
+                    {/* Left sidebar: category list */}
+                    <div className={styles['category-sidebar']}>
+                        <div className={styles['sidebar-title']}>{'Document Categories'}</div>
+                        {categories.map((catId) => (
+                            <Button
+                                key={catId}
+                                className={classnames(styles['category-item'], {
+                                    [styles['active']]: catId === selectedCategory
+                                })}
+                                onClick={() => setSelectedCategory(catId)}
+                            >
+                                <div className={classnames(styles['category-dot'], {
+                                    [styles['active']]: catId === selectedCategory
+                                })} />
+                                <div className={styles['category-label']}>
+                                    {categoryLabels[catId]}
+                                </div>
+                            </Button>
+                        ))}
                     </div>
-                    :
-                    <Placeholder />
+
+                    {/* Right content area */}
+                    <div className={styles['upload-area']}>
+                        {/* Document selector + drop zone */}
+                        <div className={styles['upload-controls']}>
+                            <MultiselectMenu
+                                className={styles['doc-select']}
+                                title={selectedDocName || 'Select document type...'}
+                                options={documentOptions}
+                                value={selectedDocName}
+                                onSelect={onDocSelect}
+                            />
+                            <div
+                                className={classnames(styles['drop-zone'], {
+                                    [styles['drag-over']]: isDragOver,
+                                    [styles['disabled']]: !selectedDocName,
+                                })}
+                                onDragOver={onDragOver}
+                                onDragLeave={onDragLeave}
+                                onDrop={onDrop}
+                            >
+                                <Icon className={styles['drop-icon']} name={'cloud-upload'} />
+                                <div className={styles['drop-label']}>
+                                    {!selectedDocName
+                                        ? 'Select a document type first'
+                                        : 'Drag & drop file here'}
+                                </div>
+                                {selectedDocName ? (
+                                    <div className={styles['drop-sublabel']}>
+                                        {'Uploading: ' + selectedDocName}
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        {/* Uploaded documents list */}
+                        <div className={styles['uploads-list']}>
+                            <div className={styles['uploads-title']}>
+                                {'Uploaded Documents' + (filteredUploads.length > 0 ? ' (' + filteredUploads.length + ')' : '')}
+                            </div>
+                            {filteredUploads.length === 0 ? (
+                                <div className={styles['uploads-empty']}>
+                                    {'No documents uploaded in this category'}
+                                </div>
+                            ) : (
+                                filteredUploads.map((doc) => (
+                                    <div key={doc.id} className={styles['upload-row']}>
+                                        <div className={styles['upload-info']}>
+                                            <div className={styles['upload-doc-name']}>
+                                                {doc.documentName}
+                                            </div>
+                                            <div className={styles['upload-file-name']}>
+                                                {doc.fileName}
+                                            </div>
+                                            <div className={styles['upload-date']}>
+                                                {new Date(doc.uploadedAt).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                        <div className={styles['upload-status']}>
+                                            {doc.status}
+                                        </div>
+                                        <Button
+                                            className={styles['upload-remove']}
+                                            onClick={() => removeUpload(doc.id)}
+                                        >
+                                            <Icon name={'close'} className={styles['remove-icon']} />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
             }
         </MainNavBars>
     );
 };
 
-Library.propTypes = {
-    model: PropTypes.oneOf(['library', 'continue_watching']),
-    urlParams: PropTypes.shape({
-        type: PropTypes.string
-    }),
-    queryParams: PropTypes.instanceOf(URLSearchParams)
-};
-
-const LibraryFallback = ({ model }) => (
-    <MainNavBars className={styles['library-container']} route={model} />
+const LibraryFallback = () => (
+    <MainNavBars className={styles['library-container']} route={'myfiles'} />
 );
 
-LibraryFallback.propTypes = Library.propTypes;
-
-module.exports = withModel(withCoreSuspender(Library, LibraryFallback));
+module.exports = withCoreSuspender(Library, LibraryFallback);

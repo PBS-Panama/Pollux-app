@@ -12,7 +12,12 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const packageJson = require('./package.json');
 
-const COMMIT_HASH = execSync('git rev-parse HEAD').toString().trim();
+let COMMIT_HASH;
+try {
+    COMMIT_HASH = execSync('git rev-parse HEAD').toString().trim();
+} catch {
+    COMMIT_HASH = 'build';
+}
 
 const THREAD_LOADER = {
     loader: 'thread-loader',
@@ -230,6 +235,7 @@ module.exports = (env, argv) => ({
             patterns: [
                 { from: 'assets/favicons', to: 'favicons' },
                 { from: 'assets/images', to: 'images' },
+                { from: 'assets/flags', to: 'flags' },
                 { from: 'assets/screenshots/*.webp', to: 'screenshots/[name][ext]' },
                 { from: '.well-known', to: '.well-known' },
                 { from: 'manifest.json', to: 'manifest.json' },

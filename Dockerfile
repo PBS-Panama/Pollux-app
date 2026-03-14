@@ -1,5 +1,5 @@
-# Stremio Node 20.x
-# the node version for running Stremio Web
+# PBS Crewing Module
+# Node 20 Alpine + pnpm multi-stage build
 ARG NODE_VERSION=20-alpine
 FROM node:$NODE_VERSION AS base
 
@@ -10,32 +10,35 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 RUN apk add --no-cache git
 
-# Meta
-LABEL Description="Stremio Web" Vendor="Smart Code OOD" Version="1.0.0"
+LABEL Description="PBS Crewing Module" Vendor="Dominius" Version="1.0.0"
 
-RUN mkdir -p /var/www/stremio-web
-WORKDIR /var/www/stremio-web
+RUN mkdir -p /app
+WORKDIR /app
 
-# Setup app
+# Stage 1: Install dependencies & build
 FROM base AS app
 
-COPY package.json pnpm-lock.yaml /var/www/stremio-web
+COPY package.json pnpm-lock.yaml /app/
 RUN pnpm i --frozen-lockfile
 
-COPY . /var/www/stremio-web
+COPY . /app/
 RUN pnpm build
 
-# Setup server
+# Stage 2: Production server dependencies
 FROM base AS server
 
 RUN pnpm i express@4
 
-# Finalize
+# Stage 3: Final image — static server only
 FROM base
 
-COPY http_server.js /var/www/stremio-web
-COPY --from=server /var/www/stremio-web/node_modules /var/www/stremio-web/node_modules
-COPY --from=app /var/www/stremio-web/build /var/www/stremio-web/build
+COPY http_server.js /app/
+COPY --from=server /app/node_modules /app/node_modules
+COPY --from=app /app/build /app/build
 
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:8080/ || exit 1
+
 CMD ["node", "http_server.js"]

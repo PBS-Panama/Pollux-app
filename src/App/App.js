@@ -116,7 +116,7 @@ const App = () => {
                 if (protocol === CONSTANTS.PROTOCOL) {
                     if (hostname.length) {
                         const transportUrl = `https://${hostname}${pathname}`;
-                        window.location.href = `#/addons?addon=${encodeURIComponent(transportUrl)}`;
+                        window.location.href = `#/myexams?addon=${encodeURIComponent(transportUrl)}`;
                     } else {
                         window.location.href = `#${pathname}?${searchParams.toString()}`;
                     }
@@ -159,6 +159,7 @@ const App = () => {
             }
         };
         const onWindowFocus = () => {
+            if (!services.core.active || !services.core.transport) return;
             services.core.transport.dispatch({
                 action: 'Ctx',
                 args: {
@@ -185,7 +186,7 @@ const App = () => {
                 }
             });
         };
-        if (services.core.active) {
+        if (services.core.active && services.core.transport) {
             onWindowFocus();
             window.addEventListener('focus', onWindowFocus);
             services.core.transport.on('CoreEvent', onCoreEvent);
@@ -195,8 +196,8 @@ const App = () => {
                 .catch(console.error);
         }
         return () => {
-            if (services.core.active) {
-                window.removeEventListener('focus', onWindowFocus);
+            window.removeEventListener('focus', onWindowFocus);
+            if (services.core.transport) {
                 services.core.transport.off('CoreEvent', onCoreEvent);
             }
         };

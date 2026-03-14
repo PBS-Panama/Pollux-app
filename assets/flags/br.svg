@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Brazil: green background, yellow diamond, blue circle -->
+  <rect width="640" height="480" fill="#009739"/>
+  <polygon points="320,60 580,240 320,420 60,240" fill="#FEDD00"/>
+  <circle cx="320" cy="240" r="95" fill="#012169"/>
+</svg>

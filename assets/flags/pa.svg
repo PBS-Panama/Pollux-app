@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Panama: 4 quarters -->
+  <!-- Top-left: white with blue star -->
+  <rect width="320" height="240" fill="#fff"/>
+  <polygon points="160,80 172,120 214,120 180,146 192,186 160,160 128,186 140,146 106,120 148,120" fill="#072357"/>
+  <!-- Top-right: red -->
+  <rect x="320" width="320" height="240" fill="#D21034"/>
+  <!-- Bottom-left: blue -->
+  <rect y="240" width="320" height="240" fill="#072357"/>
+  <!-- Bottom-right: white with red star -->
+  <rect x="320" y="240" width="320" height="240" fill="#fff"/>
+  <polygon points="480,320 492,360 534,360 500,386 512,426 480,400 448,426 460,386 426,360 468,360" fill="#D21034"/>
+</svg>

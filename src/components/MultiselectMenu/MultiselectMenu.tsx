@@ -15,10 +15,13 @@ type Props = {
     options: MultiselectMenuOption[];
     value?: any;
     disabled?: boolean,
+    multicheck?: boolean;
+    selectedValues?: Set<string>;
     onSelect: (value: any) => void;
+    onToggle?: (value: string) => void;
 };
 
-const MultiselectMenu = ({ className, title, options, value, disabled, onSelect }: Props) => {
+const MultiselectMenu = ({ className, title, options, value, disabled, multicheck, selectedValues, onSelect, onToggle }: Props) => {
     const [menuOpen, , closeMenu, toggleMenu] = useBinaryState(false);
     const multiselectMenuRef = useOutsideClick(() => closeMenu());
     const [level, setLevel] = React.useState<number>(0);
@@ -26,8 +29,20 @@ const MultiselectMenu = ({ className, title, options, value, disabled, onSelect 
     const selectedOption = options.find((opt) => opt.value === value);
 
     const onOptionSelect = (selectedValue: string | number) => {
-        level ? setLevel(level + 1) : onSelect(selectedValue), closeMenu();
+        if (multicheck && onToggle) {
+            onToggle(String(selectedValue));
+        } else {
+            level ? setLevel(level + 1) : onSelect(selectedValue), closeMenu();
+        }
     };
+
+    const buttonLabel = React.useMemo(() => {
+        const base = typeof title === 'function' ? title() : title ?? selectedOption?.label;
+        if (multicheck && selectedValues && selectedValues.size > 0) {
+            return `${base} (${selectedValues.size})`;
+        }
+        return base;
+    }, [title, selectedOption, multicheck, selectedValues]);
 
     return (
         <div className={classNames(styles['multiselect-menu'], { [styles['active']]: menuOpen }, className)} ref={multiselectMenuRef}>
@@ -40,11 +55,7 @@ const MultiselectMenu = ({ className, title, options, value, disabled, onSelect 
                 aria-expanded={menuOpen}
             >
                 <div className={styles['label']}>
-                    {
-                        typeof title === 'function'
-                            ? title()
-                            : title ?? selectedOption?.label
-                    }
+                    {buttonLabel}
                 </div>
                 <Icon name={'caret-down'} className={classNames(styles['icon'], { [styles['open']]: menuOpen })} />
             </Button>
@@ -57,6 +68,8 @@ const MultiselectMenu = ({ className, title, options, value, disabled, onSelect 
                         onSelect={onOptionSelect}
                         menuOpen={menuOpen}
                         value={value}
+                        multicheck={multicheck}
+                        selectedValues={selectedValues}
                     />
                     : null
             }

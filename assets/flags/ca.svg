@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Canada: red, white with maple leaf, red -->
+  <rect width="160" height="480" fill="#FF0000"/>
+  <rect x="160" y="0" width="320" height="480" fill="#fff"/>
+  <rect x="480" y="0" width="160" height="480" fill="#FF0000"/>
+  <!-- Simplified maple leaf -->
+  <polygon points="320,80 328,160 380,140 356,180 400,180 348,220 364,280 320,248 276,280 292,220 240,180 284,180 260,140 312,160" fill="#FF0000"/>
+  <!-- Stem -->
+  <rect x="314" y="280" width="12" height="40" fill="#FF0000"/>
+</svg>

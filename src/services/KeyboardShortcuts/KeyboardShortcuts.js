@@ -25,22 +25,22 @@ function KeyboardShortcuts() {
             }
             case 'Digit2': {
                 event.preventDefault();
-                window.location = '#/discover';
+                window.location = '#/company-crewdb';
                 break;
             }
             case 'Digit3': {
                 event.preventDefault();
-                window.location = '#/library';
+                window.location = '#/myfiles';
                 break;
             }
             case 'Digit4': {
                 event.preventDefault();
-                window.location = '#/calendar';
+                window.location = '#/company-calendar';
                 break;
             }
             case 'Digit5': {
                 event.preventDefault();
-                window.location = '#/addons';
+                window.location = '#/myexams';
                 break;
             }
             case 'Digit6': {

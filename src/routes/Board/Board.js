@@ -48,7 +48,7 @@ const Board = () => {
     return (
         <div className={styles['board-container']}>
             <EventModal />
-            <MainNavBars className={styles['board-content-container']} route={'board'}>
+            <MainNavBars className={styles['board-content-container']} route={'companyDashboard'}>
                 <div ref={scrollContainerRef} className={styles['board-content']} onScroll={onScroll}>
                     {
                         continueWatchingPreview.items.length > 0 ?
@@ -113,7 +113,7 @@ const Board = () => {
 
 const BoardFallback = () => (
     <div className={styles['board-container']}>
-        <MainNavBars className={styles['board-content-container']} route={'board'} />
+        <MainNavBars className={styles['board-content-container']} route={'companyDashboard'} />
     </div>
 );
 

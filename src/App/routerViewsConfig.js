@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module - Route-to-Component mapping
 
 const routes = require('stremio/routes');
 const { routesRegexp } = require('stremio/common');
@@ -6,7 +6,7 @@ const { routesRegexp } = require('stremio/common');
 const routerViewsConfig = [
     [
         {
-            ...routesRegexp.board,
+            ...routesRegexp.companyDashboard,
             component: routes.Board
         }
     ],
@@ -16,24 +16,28 @@ const routerViewsConfig = [
             component: routes.Intro
         },
         {
-            ...routesRegexp.discover,
+            ...routesRegexp.companyCrewdb,
             component: routes.Discover
         },
         {
-            ...routesRegexp.library,
+            ...routesRegexp.myfiles,
             component: routes.Library
         },
         {
-            ...routesRegexp.calendar,
+            ...routesRegexp.companyCalendar,
             component: routes.Calendar
         },
         {
-            ...routesRegexp.continuewatching,
-            component: routes.Library
+            ...routesRegexp.calendar,
+            component: routes.SeafarerCalendar
         },
         {
             ...routesRegexp.search,
             component: routes.Search
+        },
+        {
+            ...routesRegexp.dashboard,
+            component: routes.Player
         }
     ],
     [
@@ -44,18 +48,12 @@ const routerViewsConfig = [
     ],
     [
         {
-            ...routesRegexp.addons,
+            ...routesRegexp.myexams,
             component: routes.Addons
         },
         {
             ...routesRegexp.settings,
             component: routes.Settings
-        }
-    ],
-    [
-        {
-            ...routesRegexp.player,
-            component: routes.Player
         }
     ]
 ];

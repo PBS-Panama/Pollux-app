@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Uruguay: 9 stripes white/blue, white canton with sun -->
+  <!-- 9 stripes, each ~53.3px -->
+  <rect width="640" height="480" fill="#fff"/>
+  <rect y="53" width="640" height="53" fill="#0038A8"/>
+  <rect y="160" width="640" height="53" fill="#0038A8"/>
+  <rect y="267" width="640" height="53" fill="#0038A8"/>
+  <rect y="373" width="640" height="54" fill="#0038A8"/>
+  <!-- White canton -->
+  <rect x="0" y="0" width="266" height="267" fill="#fff"/>
+  <!-- Sun of May (simplified) -->
+  <circle cx="133" cy="133" r="34" fill="#FCD116"/>
+  <!-- Sun rays (8 triangular rays) -->
+  <polygon points="133,70 139,98 127,98" fill="#FCD116"/>
+  <polygon points="133,196 139,168 127,168" fill="#FCD116"/>
+  <polygon points="70,133 98,127 98,139" fill="#FCD116"/>
+  <polygon points="196,133 168,127 168,139" fill="#FCD116"/>
+  <polygon points="88,88 106,103 97,112" fill="#FCD116"/>
+  <polygon points="178,88 160,103 169,112" fill="#FCD116"/>
+  <polygon points="88,178 106,163 97,154" fill="#FCD116"/>
+  <polygon points="178,178 160,163 169,154" fill="#FCD116"/>
+  <!-- Longer alternating rays -->
+  <polygon points="133,58 137,98 129,98" fill="#FCD116"/>
+  <polygon points="133,208 137,168 129,168" fill="#FCD116"/>
+  <polygon points="58,133 98,129 98,137" fill="#FCD116"/>
+  <polygon points="208,133 168,129 168,137" fill="#FCD116"/>
+  <polygon points="80,80 100,100 93,107" fill="#FCD116"/>
+  <polygon points="186,80 166,100 173,107" fill="#FCD116"/>
+  <polygon points="80,186 100,166 93,159" fill="#FCD116"/>
+  <polygon points="186,186 166,166 173,159" fill="#FCD116"/>
+  <!-- Sun face circle -->
+  <circle cx="133" cy="133" r="24" fill="#FCD116"/>
+</svg>

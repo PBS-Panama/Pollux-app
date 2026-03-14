@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- United States: simplified stripes + blue canton -->
+  <!-- 13 stripes, each ~36.9px -->
+  <rect width="640" height="480" fill="#fff"/>
+  <rect y="0" width="640" height="37" fill="#B22234"/>
+  <rect y="74" width="640" height="37" fill="#B22234"/>
+  <rect y="148" width="640" height="37" fill="#B22234"/>
+  <rect y="222" width="640" height="37" fill="#B22234"/>
+  <rect y="296" width="640" height="37" fill="#B22234"/>
+  <rect y="370" width="640" height="37" fill="#B22234"/>
+  <rect y="444" width="640" height="36" fill="#B22234"/>
+  <!-- Blue canton -->
+  <rect x="0" y="0" width="260" height="259" fill="#3C3B6E"/>
+  <!-- Simplified stars: 5 rows of small stars -->
+  <g fill="#fff">
+    <circle cx="22" cy="20" r="6"/><circle cx="58" cy="20" r="6"/><circle cx="94" cy="20" r="6"/><circle cx="130" cy="20" r="6"/><circle cx="166" cy="20" r="6"/><circle cx="202" cy="20" r="6"/>
+    <circle cx="40" cy="46" r="6"/><circle cx="76" cy="46" r="6"/><circle cx="112" cy="46" r="6"/><circle cx="148" cy="46" r="6"/><circle cx="184" cy="46" r="6"/>
+    <circle cx="22" cy="72" r="6"/><circle cx="58" cy="72" r="6"/><circle cx="94" cy="72" r="6"/><circle cx="130" cy="72" r="6"/><circle cx="166" cy="72" r="6"/><circle cx="202" cy="72" r="6"/>
+    <circle cx="40" cy="98" r="6"/><circle cx="76" cy="98" r="6"/><circle cx="112" cy="98" r="6"/><circle cx="148" cy="98" r="6"/><circle cx="184" cy="98" r="6"/>
+    <circle cx="22" cy="124" r="6"/><circle cx="58" cy="124" r="6"/><circle cx="94" cy="124" r="6"/><circle cx="130" cy="124" r="6"/><circle cx="166" cy="124" r="6"/><circle cx="202" cy="124" r="6"/>
+    <circle cx="40" cy="150" r="6"/><circle cx="76" cy="150" r="6"/><circle cx="112" cy="150" r="6"/><circle cx="148" cy="150" r="6"/><circle cx="184" cy="150" r="6"/>
+    <circle cx="22" cy="176" r="6"/><circle cx="58" cy="176" r="6"/><circle cx="94" cy="176" r="6"/><circle cx="130" cy="176" r="6"/><circle cx="166" cy="176" r="6"/><circle cx="202" cy="176" r="6"/>
+    <circle cx="40" cy="202" r="6"/><circle cx="76" cy="202" r="6"/><circle cx="112" cy="202" r="6"/><circle cx="148" cy="202" r="6"/><circle cx="184" cy="202" r="6"/>
+    <circle cx="22" cy="228" r="6"/><circle cx="58" cy="228" r="6"/><circle cx="94" cy="228" r="6"/><circle cx="130" cy="228" r="6"/><circle cx="166" cy="228" r="6"/><circle cx="202" cy="228" r="6"/>
+  </g>
+</svg>

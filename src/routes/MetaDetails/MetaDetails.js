@@ -89,30 +89,8 @@ const MetaDetails = ({ urlParams, queryParams }) => {
         window.location = searchVideoPath;
     }, [urlParams, window.location]);
 
-    const renderBackgroundImageFallback = React.useCallback(() => null, []);
-    const renderBackground = React.useMemo(() => !!(
-        metaPath &&
-        metaDetails?.metaItem &&
-        metaDetails.metaItem.content.type !== 'Loading' &&
-        typeof metaDetails.metaItem.content.content?.background === 'string' &&
-        metaDetails.metaItem.content.content.background.length > 0
-    ), [metaPath, metaDetails]);
-
     return (
         <div className={styles['metadetails-container']}>
-            {
-                renderBackground ?
-                    <div className={styles['background-image-layer']}>
-                        <Image
-                            className={styles['background-image']}
-                            src={metaDetails.metaItem.content.content.background}
-                            renderFallback={renderBackgroundImageFallback}
-                            alt={' '}
-                        />
-                    </div>
-                    :
-                    null
-            }
             <HorizontalNavBar
                 className={styles['nav-bar']}
                 backButton={true}
@@ -179,27 +157,20 @@ const MetaDetails = ({ urlParams, queryParams }) => {
                 }
                 <div className={styles['spacing']} />
                 {
-                    streamPath !== null ?
-                        <StreamsList
-                            className={styles['streams-list']}
-                            streams={metaDetails.streams}
-                            video={video}
-                            type={streamPath.type}
-                            onEpisodeSearch={handleEpisodeSearch}
+                    /* PBS Crewing: always show document categories (VideosList)
+                       instead of StreamsList for all content types */
+                    metaPath !== null ?
+                        <VideosList
+                            className={styles['videos-list']}
+                            metaItem={metaDetails.metaItem}
+                            libraryItem={metaDetails.libraryItem}
+                            season={season}
+                            selectedVideoId={metaDetails.libraryItem?.state?.video_id}
+                            seasonOnSelect={seasonOnSelect}
+                            toggleNotifications={toggleNotifications}
                         />
                         :
-                        metaPath !== null ?
-                            <VideosList
-                                className={styles['videos-list']}
-                                metaItem={metaDetails.metaItem}
-                                libraryItem={metaDetails.libraryItem}
-                                season={season}
-                                selectedVideoId={metaDetails.libraryItem?.state?.video_id}
-                                seasonOnSelect={seasonOnSelect}
-                                toggleNotifications={toggleNotifications}
-                            />
-                            :
-                            null
+                        null
                 }
             </div>
             {

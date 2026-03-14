@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Chile: white top, red bottom; blue square with white star top-left -->
+  <rect width="640" height="240" fill="#fff"/>
+  <rect y="240" width="640" height="240" fill="#D52B1E"/>
+  <!-- Blue canton -->
+  <rect width="213.3" height="240" fill="#0039A6"/>
+  <!-- White star in blue canton -->
+  <polygon points="106.7,60 118,100 160,100 126,126 138,166 106.7,140 75.4,166 87.4,126 53.4,100 95.4,100" fill="#fff"/>
+</svg>

@@ -13,9 +13,37 @@ const useBinaryState = require('stremio/common/useBinaryState');
 const { ICON_FOR_TYPE } = require('stremio/common/CONSTANTS');
 const styles = require('./styles');
 
+// PBS Crewing Module: corporate default profile image for all cards
+const CREW_DEFAULT_POSTER = 'images/profileimg.png';
+const { getCrewName, getCrewDepartment, getCrewRank, getCrewNationality, getCrewFlagPath } = require('stremio/common/crewData');
+const { togglePendingInterview, isPendingInterview } = require('stremio/common/crewStore');
+
 const MetaItem = React.memo(({ className, type, name, poster, posterShape, posterChangeCursor, progress, newVideos, options, deepLinks, dataset, optionOnSelect, onDismissClick, onPlayClick, watched, ...props }) => {
     const { t } = useTranslation();
     const [menuOpen, onMenuOpen, onMenuClose] = useBinaryState(false);
+    const crewName = React.useMemo(() => getCrewName(name), [name]);
+    const crewDepartment = React.useMemo(() => getCrewDepartment(name), [name]);
+    const crewRank = React.useMemo(() => getCrewRank(name), [name]);
+    const crewNationality = React.useMemo(() => getCrewNationality(name), [name]);
+    const crewFlagSrc = React.useMemo(() => getCrewFlagPath(crewNationality), [crewNationality]);
+    const crewId = name || '';
+    const [addedToList, setAddedToList] = React.useState(() => isPendingInterview(crewId));
+    // Listen for sync events from the detail panel button
+    React.useEffect(() => {
+        const handler = (e) => {
+            if (e.detail && e.detail.id === crewId) setAddedToList(e.detail.added);
+        };
+        window.addEventListener('pbs-pending-changed', handler);
+        return () => window.removeEventListener('pbs-pending-changed', handler);
+    }, [crewId]);
+    const onAddToList = React.useCallback((event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.nativeEvent.selectPrevented = true;
+        const crew = { id: crewId, name: crewName, department: crewDepartment, rank: crewRank, nationality: crewNationality };
+        const nowAdded = togglePendingInterview(crew);
+        setAddedToList(nowAdded);
+    }, [crewId, crewName, crewDepartment, crewRank, crewNationality]);
     const href = React.useMemo(() => {
         return deepLinks ?
             typeof deepLinks.player === 'string' ?
@@ -62,7 +90,7 @@ const MetaItem = React.memo(({ className, type, name, poster, posterShape, poste
         <Icon className={styles['icon']} name={'more-vertical'} />
     ), []);
     return (
-        <Button title={name} href={href} {...filterInvalidDOMProps(props)} className={classnames(className, styles['meta-item-container'], styles['poster-shape-poster'], styles[`poster-shape-${posterShape}`], { 'active': menuOpen })} onClick={metaItemOnClick}>
+        <Button title={crewName} href={href} {...filterInvalidDOMProps(props)} className={classnames(className, styles['meta-item-container'], styles['poster-shape-poster'], styles[`poster-shape-${posterShape}`], { 'active': menuOpen })} onClick={metaItemOnClick}>
             <div className={classnames(styles['poster-container'], { 'poster-change-cursor': posterChangeCursor })}>
                 {
                     onDismissClick ?
@@ -84,9 +112,9 @@ const MetaItem = React.memo(({ className, type, name, poster, posterShape, poste
                 <div className={styles['poster-image-layer']}>
                     <Image
                         className={styles['poster-image']}
-                        src={poster}
-                        alt={' '}
-                        renderFallback={renderPosterFallback}
+                        src={CREW_DEFAULT_POSTER}
+                        alt={name || ' '}
+                        fallbackSrc={CREW_DEFAULT_POSTER}
                     />
                 </div>
                 {
@@ -123,12 +151,64 @@ const MetaItem = React.memo(({ className, type, name, poster, posterShape, poste
                         :
                         null
                 }
+                {
+                    typeof crewName === 'string' && crewName.length > 0 ?
+                        <div className={styles['crew-overlay']}>
+                            <div className={styles['crew-overlay-row']}>
+                                <span className={styles['crew-overlay-label']}>{'DEPT'}</span>
+                                <span className={styles['crew-overlay-value']}>{crewDepartment}</span>
+                            </div>
+                            <div className={styles['crew-overlay-row']}>
+                                <span className={styles['crew-overlay-label']}>{'RANK'}</span>
+                                <span className={styles['crew-overlay-value']}>{crewRank}</span>
+                            </div>
+                        </div>
+                        :
+                        null
+                }
+                {
+                    typeof crewName === 'string' && crewName.length > 0 ?
+                        <div className={styles['crew-nationality-badge']}>
+                            <span className={styles['crew-nationality-text']}>{crewNationality}</span>
+                            {
+                                crewFlagSrc ?
+                                    <Image className={styles['crew-nationality-flag']} src={crewFlagSrc} alt={crewNationality} />
+                                    :
+                                    null
+                            }
+                        </div>
+                        :
+                        null
+                }
+                {
+                    typeof crewName === 'string' && crewName.length > 0 ?
+                        <div
+                            className={classnames(styles['add-to-list-btn'], { [styles['added']]: addedToList })}
+                            title={addedToList ? 'Remove from Interview List' : 'Add to Interview List'}
+                            onClick={onAddToList}
+                        >
+                            <svg viewBox="0 0 512 512" fill="none" stroke="currentColor" strokeWidth="32" strokeLinecap="round" strokeLinejoin="round" className={styles['add-to-list-icon']}>
+                                {addedToList
+                                    ? <polyline points="416,128 176,368 96,288" />
+                                    : <>
+                                        <line x1="80" y1="144" x2="336" y2="144" />
+                                        <line x1="80" y1="256" x2="288" y2="256" />
+                                        <line x1="80" y1="368" x2="240" y2="368" />
+                                        <line x1="368" y1="288" x2="368" y2="432" />
+                                        <line x1="296" y1="360" x2="440" y2="360" />
+                                    </>
+                                }
+                            </svg>
+                        </div>
+                        :
+                        null
+                }
             </div>
             {
-                (typeof name === 'string' && name.length > 0) || (Array.isArray(options) && options.length > 0) ?
+                (typeof crewName === 'string' && crewName.length > 0) || (Array.isArray(options) && options.length > 0) ?
                     <div className={styles['title-bar-container']}>
                         <div className={styles['title-label']}>
-                            {typeof name === 'string' && name.length > 0 ? name : ''}
+                            {typeof crewName === 'string' && crewName.length > 0 ? crewName : ''}
                         </div>
                         {
                             Array.isArray(options) && options.length > 0 ?

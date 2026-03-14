@@ -65,7 +65,7 @@ const EventModal = () => {
                     }
                     {
                         modal?.addon?.manifestUrl ?
-                            <Button className={styles['action-button']} href={`#/addons?addon=${encodeURIComponent(modal.addon.manifestUrl)}`} onClick={onClose}>
+                            <Button className={styles['action-button']} href={`#/myexams?addon=${encodeURIComponent(modal.addon.manifestUrl)}`} onClick={onClose}>
                                 <div className={styles['button-label']}>
                                     { t('INSTALL_ADDON') }
                                 </div>

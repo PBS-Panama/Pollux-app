@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Dominican Republic: white cross, blue TL & BR, red TR & BL -->
+  <rect width="640" height="480" fill="#fff"/>
+  <!-- Top-left blue -->
+  <rect x="0" y="0" width="290" height="210" fill="#002D62"/>
+  <!-- Top-right red -->
+  <rect x="350" y="0" width="290" height="210" fill="#CE1126"/>
+  <!-- Bottom-left red -->
+  <rect x="0" y="270" width="290" height="210" fill="#CE1126"/>
+  <!-- Bottom-right blue -->
+  <rect x="350" y="270" width="290" height="210" fill="#002D62"/>
+</svg>

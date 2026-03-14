@@ -1,5 +1,6 @@
 // Copyright (C) 2017-2024 Smart code 203358507
 
-import Calendar from './Calendar';
+const Calendar = require('./Calendar');
 
-export default Calendar;
+module.exports = Calendar;
+module.exports.default = Calendar;

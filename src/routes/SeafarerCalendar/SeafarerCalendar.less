@@ -1,0 +1,690 @@
+// PBS Crewing Module - Seafarer Calendar styles
+
+@import (reference) '~@stremio/stremio-colors/less/stremio-colors.less';
+@import (reference) '~stremio/common/screen-sizes.less';
+
+.seafarer-cal {
+    height: calc(100% - var(--safe-area-inset-bottom));
+    background-color: transparent;
+}
+
+.seafarer-page {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────
+.sidebar {
+    flex: none;
+    width: 24rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    overflow-y: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+    }
+}
+
+// ─── Calendar grid card ──────────────────────────────────────────────
+.cal-card {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+    padding: 1.1rem;
+
+    .cal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .cal-nav {
+        width: 2.2rem;
+        height: 2.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.06);
+        color: #ffffffaa;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 120ms ease;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+    }
+
+    .cal-title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .cal-month {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ffffffee;
+    }
+
+    .cal-year {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #ffffff60;
+    }
+
+    .cal-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        margin-bottom: 0.3rem;
+    }
+
+    .cal-wd {
+        text-align: center;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #ffffff40;
+        text-transform: uppercase;
+        padding: 0.3rem 0;
+    }
+
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.2rem;
+    }
+
+    .cal-blank {
+        aspect-ratio: 1;
+    }
+
+    .cal-day {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        border: none;
+        border-radius: 0.35rem;
+        background-color: transparent;
+        cursor: pointer;
+        transition: all 100ms ease;
+        position: relative;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        &.has-period {
+            border-radius: 0.25rem;
+        }
+
+        &.today {
+            .day-num {
+                color: var(--primary-accent-color);
+                font-weight: 700;
+            }
+        }
+
+        &.selected {
+            outline: 2px solid var(--primary-accent-color);
+            outline-offset: -1px;
+            .day-num { font-weight: 700; }
+        }
+    }
+
+    .day-num {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #ffffffcc;
+        line-height: 1;
+    }
+
+    .day-dots {
+        display: flex;
+        flex-direction: row;
+        gap: 0.1rem;
+    }
+
+    .day-dot {
+        width: 0.25rem;
+        height: 0.25rem;
+        border-radius: 50%;
+        flex: none;
+    }
+}
+
+// ─── Availability legend card ────────────────────────────────────────
+.legend-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    .legend-header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.3rem;
+    }
+
+    .legend-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #ffffffee;
+    }
+
+    .btn-set-period {
+        padding: 0.3rem 0.7rem;
+        border: 1px solid #d97706;
+        border-radius: 0.3rem;
+        background-color: transparent;
+        color: #d97706;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 120ms ease;
+
+        &:hover {
+            background-color: #d97706;
+            color: #fff;
+        }
+    }
+
+    .legend-empty {
+        font-size: 0.8rem;
+        color: #ffffff40;
+        padding: 0.4rem 0;
+    }
+
+    .period-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.3rem;
+        border-radius: 0.25rem;
+        transition: background-color 100ms ease;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+
+            .period-remove {
+                opacity: 1;
+            }
+        }
+    }
+
+    .period-dot {
+        flex: none;
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+    }
+
+    .period-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.05rem;
+        min-width: 0;
+    }
+
+    .period-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #ffffffcc;
+    }
+
+    .period-dates {
+        font-size: 0.7rem;
+        color: #ffffff55;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .period-remove {
+        flex: none;
+        width: 1.4rem;
+        height: 1.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 0.2rem;
+        cursor: pointer;
+        font-size: 0.65rem;
+        background-color: rgba(220, 38, 38, 0.1);
+        color: #f87171;
+        opacity: 0;
+        transition: all 100ms ease;
+
+        &:hover {
+            background-color: rgba(220, 38, 38, 0.3);
+        }
+    }
+}
+
+// ─── Certificate Alerts card ─────────────────────────────────────────
+.cert-alert-card {
+    background: rgba(220, 38, 38, 0.04);
+    border: 1px solid rgba(220, 38, 38, 0.12);
+    border-radius: 0.6rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .cert-alert-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #f87171;
+        margin-bottom: 0.2rem;
+    }
+
+    .cert-alert-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.3rem 0;
+    }
+
+    .cert-alert-dot {
+        flex: none;
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 50%;
+    }
+
+    .cert-alert-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.05rem;
+    }
+
+    .cert-alert-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #ffffffcc;
+    }
+
+    .cert-alert-days {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #f87171;
+    }
+}
+
+// ─── Main panel ──────────────────────────────────────────────────────
+.main-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .panel-header {
+        flex: none;
+        display: flex;
+        flex-direction: row;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 1.5rem 1.5rem 1rem;
+
+        .panel-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ffffffee;
+            margin: 0;
+        }
+
+        .panel-count {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #ffffff50;
+        }
+    }
+
+    .event-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 1.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+
+        &::-webkit-scrollbar { width: 5px; }
+        &::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+        }
+    }
+
+    .event-empty {
+        padding: 3rem 1rem;
+        text-align: center;
+        font-size: 1rem;
+        color: #ffffff40;
+    }
+}
+
+// ─── Event cards ─────────────────────────────────────────────────────
+.event-card {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 0.5rem;
+    padding: 1rem 1.1rem;
+    transition: background-color 120ms ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.07);
+    }
+
+    .event-card-header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.4rem;
+
+        .event-dot {
+            flex: none;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+        }
+
+        .event-day-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff55;
+        }
+
+        .event-cat {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .event-remove-btn {
+            margin-left: auto;
+            width: 1.6rem;
+            height: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.7rem;
+            background-color: rgba(220, 38, 38, 0.1);
+            color: #f87171;
+            opacity: 0;
+            transition: all 100ms ease;
+
+            &:hover {
+                background-color: rgba(220, 38, 38, 0.3);
+            }
+        }
+    }
+
+    &:hover .event-remove-btn {
+        opacity: 1;
+    }
+
+    .event-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #ffffffdd;
+        margin: 0 0 0.3rem;
+        line-height: 1.3;
+    }
+
+    .event-details {
+        font-size: 0.85rem;
+        color: #ffffff80;
+        line-height: 1.5;
+        margin: 0 0 0.2rem;
+    }
+
+    .interview-action {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        margin-top: 0.2rem;
+    }
+
+    .btn-confirm {
+        align-self: flex-start;
+        padding: 0.45rem 1rem;
+        border: none;
+        border-radius: 0.35rem;
+        background-color: #8b5cf6;
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 120ms ease;
+        margin-top: 0.3rem;
+
+        &:hover {
+            background-color: #a78bfa;
+        }
+    }
+
+    .confirmed-badge {
+        align-self: flex-start;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.35rem;
+        background-color: rgba(22, 163, 74, 0.15);
+        border: 1px solid rgba(22, 163, 74, 0.3);
+        color: #4ade80;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 0.3rem;
+    }
+}
+
+// ─── Modal ───────────────────────────────────────────────────────────
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    width: 28rem;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    background-color: #1e1e2e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+
+    .modal-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ffffffee;
+        margin: 0 0 1.25rem;
+    }
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+
+    .form-label {
+        flex: 1;
+    }
+}
+
+.form-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ffffff70;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.35rem;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #ffffffee;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+
+    &:focus {
+        border-color: var(--primary-accent-color);
+    }
+
+    option {
+        background-color: #1e1e2e;
+        color: #fff;
+    }
+}
+
+.type-selector {
+    display: flex;
+    flex-direction: row;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
+}
+
+.type-btn {
+    flex: 1;
+    padding: 0.5rem 0.3rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.3rem;
+    background-color: transparent;
+    color: #ffffffaa;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 120ms ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.06);
+    }
+
+    &.type-active {
+        color: #fff;
+    }
+}
+
+.period-preview {
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid;
+    border-radius: 0.3rem;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.modal-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.modal-spacer {
+    flex: 1;
+}
+
+.btn-save,
+.btn-cancel {
+    padding: 0.5rem 1.1rem;
+    border: none;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+
+.btn-save {
+    background-color: #d97706;
+    color: #fff;
+
+    &:hover { opacity: 0.85; }
+}
+
+.btn-cancel {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffffaa;
+
+    &:hover { background-color: rgba(255, 255, 255, 0.15); }
+}
+
+// ─── Mobile ──────────────────────────────────────────────────────────
+@media only screen and (max-width: @minimum) {
+    .seafarer-page {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        flex: none;
+        max-height: 50%;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 1rem;
+    }
+
+    .main-panel {
+        .panel-header {
+            padding: 1rem;
+        }
+        .event-list {
+            padding: 0 1rem 2rem;
+        }
+    }
+}

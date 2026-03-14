@@ -1,21 +1,25 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module - Route definitions
 
 const routesRegexp = {
     intro: {
         regexp: /^\/intro$/,
         urlParamsNames: []
     },
-    board: {
-        regexp: /^\/?(?:board)?$/,
+    companyDashboard: {
+        regexp: /^\/?(?:company-dashboard)?$/,
         urlParamsNames: []
     },
-    discover: {
-        regexp: /^\/discover(?:\/([^/]*)\/([^/]*)\/([^/]*))?$/,
+    companyCrewdb: {
+        regexp: /^\/company-crewdb(?:\/([^/]*)\/([^/]*)\/([^/]*))?$/,
         urlParamsNames: ['transportUrl', 'type', 'catalogId']
     },
-    library: {
-        regexp: /^\/library(?:\/([^/]*))?$/,
+    myfiles: {
+        regexp: /^\/myfiles(?:\/([^/]*))?$/,
         urlParamsNames: ['type']
+    },
+    companyCalendar: {
+        regexp: /^\/company-calendar(?:\/([^/]*)\/([^/]*))?$/,
+        urlParamsNames: ['year', 'month']
     },
     calendar: {
         regexp: /^\/calendar(?:\/([^/]*)\/([^/]*))?$/,
@@ -33,17 +37,17 @@ const routesRegexp = {
         regexp: /^\/(?:metadetails|detail)\/([^/]*)\/([^/]*)(?:\/([^/]*))?$/,
         urlParamsNames: ['type', 'id', 'videoId']
     },
-    addons: {
-        regexp: /^\/addons(?:\/([^/]*)(?:\/([^/]*)\/([^/]*))?)?$/,
+    myexams: {
+        regexp: /^\/myexams(?:\/([^/]*)(?:\/([^/]*)\/([^/]*))?)?$/,
         urlParamsNames: ['type', 'transportUrl', 'catalogId']
     },
     settings: {
         regexp: /^\/settings$/,
         urlParamsNames: []
     },
-    player: {
-        regexp: /^\/player\/([^/]*)(?:\/([^/]*)\/([^/]*)\/([^/]*)\/([^/]*)\/([^/]*))?$/,
-        urlParamsNames: ['stream', 'streamTransportUrl', 'metaTransportUrl', 'type', 'id', 'videoId']
+    dashboard: {
+        regexp: /^\/dashboard$/,
+        urlParamsNames: []
     }
 };
 
