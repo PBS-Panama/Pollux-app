@@ -6,6 +6,8 @@ The PBS Crewing Module is a **maritime crew management application** adapted fro
 
 **Status:** In active development (not yet deployed to production).
 
+**GitHub Repo:** [`RichoX-Hub/Crewingmodule`](https://github.com/RichoX-Hub/Crewingmodule) (private) — tracked as a **git submodule** in `pb-website`.
+
 ---
 
 ## Position in the PBS Ecosystem
@@ -16,9 +18,11 @@ This module lives inside the PBS Digital Ecosystem as a demo application:
 pb-website (main repo)
   └── products/portal/demo/
         ├── gxlivemarketing/      # GX Blog Builder (deployed)
-        ├── Tukutuku/             # Ganga Pack (deployed)
-        └── Crewing module/       # THIS APP (in development)
+        ├── Tukutuku/             # Ganga Pack (deployed, git submodule)
+        └── Crewing module/       # THIS APP (git submodule → RichoX-Hub/Crewingmodule)
 ```
+
+> **Submodule setup:** The Crewing module is a git submodule in pb-website. The original git remote was `Stremio/stremio-web.git` (upstream base); it was changed to `RichoX-Hub/Crewingmodule.git` on 2026-03-14. The local branch `development` is pushed as `main` on the new repo.
 
 When ready for production, this will follow the standard **Modular Demo Pattern**:
 1. Develop locally with `pnpm start` (webpack dev server, HTTPS, port 8080)
@@ -384,10 +388,62 @@ docker build -t crewing-module:local . && docker rm -f crewing-module && docker 
 | `crewing-module:v0.2-routes-renamed` | 2026-03-14 | All routes renamed from Stremio patterns to PBS Crewing paths (18 files updated, zero old routes remaining) |
 | `crewing-module:v0.3-full-features` | 2026-03-14 | Full PBS features: crew cards, pending interviews, book interview modal, Company & Seafarer calendars, synced add-to-list, confirmed interview badges, SeafarerSchedule |
 
+### Docker Container Quick Start (Current)
+
+```bash
+# The current working container uses port 8088:
+docker run -d --name crewing -p 8088:8080 crewing-module:latest
+# View at http://localhost:8088
+```
+
 ### Fixes Applied for Docker Builds
 
 1. **`webpack.config.js`** — `git rev-parse HEAD` wrapped in try/catch with `'build'` fallback (`.dockerignore` excludes `.git`)
 2. **`src/App/App.js`** — `onWindowFocus` guarded against null `services.core.transport` (Core WASM errors on init, transport becomes null, focus event would crash)
+
+### Webpack Dev Server (Local)
+
+```bash
+# pnpm is not in bash PATH on this machine — use npx:
+cd "products/portal/demo/Crewing module"
+npx pnpm start
+# Opens at https://localhost:8080 (self-signed cert, accept warning)
+# If port 8080 is taken, webpack picks next available port
+```
+
+---
+
+## Git & Version Control
+
+### Repository Setup (2026-03-14)
+
+The Crewing module was originally a direct clone of `Stremio/stremio-web.git`. It has been migrated:
+
+1. **New GitHub repo:** [`RichoX-Hub/Crewingmodule`](https://github.com/RichoX-Hub/Crewingmodule) (private)
+2. **Remote updated:** `origin` changed from `Stremio/stremio-web.git` → `RichoX-Hub/Crewingmodule.git`
+3. **Branch mapping:** Local `development` branch pushed as `main` on GitHub
+4. **Submodule in pb-website:** Added via `git submodule add -b main` — committed as `6ced179` in pb-website
+5. **All PBS customizations committed:** 91 files, 7939 insertions (commit `ee7248e6d` in Crewingmodule)
+
+### Working with the Submodule
+
+```bash
+# Clone pb-website with submodules
+git clone --recurse-submodules https://github.com/RichoX-Hub/pbtradingsolutions.com.git
+
+# If already cloned without submodules
+git submodule update --init --recursive
+
+# After making changes in Crewing module:
+cd "products/portal/demo/Crewing module"
+git add -A && git commit -m "description"
+git push origin development:main
+
+# Then update the submodule reference in pb-website:
+cd ../../../..  # back to pb-website root
+git add "products/portal/demo/Crewing module"
+git commit -m "Update Crewing Module submodule"
+```
 
 ---
 
@@ -398,6 +454,22 @@ A `vite.config.js` exists with 7 custom plugins for CJS/Less/JSX interop with Vi
 - **Transforms work:** CJS→ESM, JSX-in-JS, Less CSS Modules all resolve correctly
 - **Blocking issue:** Stremio Core WASM worker cannot load (gets HTML fallback), causing `Unexpected token '<'`. The app never reaches `initialized = true` because the Core transport promise hangs forever.
 - **Not yet resolved** — Docker/webpack is the working dev path for now
+
+---
+
+## Session Log
+
+### 2026-03-14 — Git Migration & Docker Rebuild
+
+- Discovered running Docker container was using **old Stremio base image** (no PBS code)
+- Rebuilt Docker image from current local source — confirmed all PBS features present
+- Tagged as `crewing-module:v0.3-full-features`
+- Created GitHub repo `RichoX-Hub/Crewingmodule` (private)
+- Changed git remote from `Stremio/stremio-web.git` to `RichoX-Hub/Crewingmodule.git`
+- Committed all 91 PBS-modified files (7939 insertions)
+- Pushed `development` → `main` on new repo
+- Added as git submodule in pb-website (commit `6ced179`)
+- Container running on **http://localhost:8088/** (port 8088:8080)
 
 ---
 
