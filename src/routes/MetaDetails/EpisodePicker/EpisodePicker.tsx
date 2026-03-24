@@ -1,63 +1,61 @@
-// Copyright (C) 2017-2025 Smart code 203358507
+// PBS Crewing Module: Document Picker (category + document number)
+// Replaces Stremio's EpisodePicker — navigates to a specific document
 
 import React, { useCallback, useMemo, useState, ChangeEvent } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Button, NumberInput } from 'stremio/components';
 import styles from './EpisodePicker.less';
 
 type Props = {
     className?: string,
-    seriesId: string;
-    onSubmit: (season: number, episode: number) => void;
+    crewId: string;
+    onSubmit: (category: number, docIndex: number) => void;
 };
 
-const EpisodePicker = ({ className, onSubmit }: Props) => {
-    const { t } = useTranslation();
-
-    const { initialSeason, initialEpisode } = useMemo(() => {
+const DocumentPicker = ({ className, onSubmit }: Props) => {
+    const { initialCategory, initialDoc } = useMemo(() => {
         const splitPath = window.location.hash.split('/');
         if (splitPath[splitPath.length - 1] === '') {
             splitPath.pop();
         }
-        const videoId = decodeURIComponent(splitPath[splitPath.length - 1]);
-        const [, pathSeason, pathEpisode] = videoId ? videoId.split(':') : [];
+        const documentId = decodeURIComponent(splitPath[splitPath.length - 1]);
+        const [, pathCategory, pathDoc] = documentId ? documentId.split(':') : [];
         return {
-            initialSeason: parseInt(pathSeason) || 0,
-            initialEpisode: parseInt(pathEpisode) || 1
+            initialCategory: parseInt(pathCategory) || 1,
+            initialDoc: parseInt(pathDoc) || 1
         };
     }, []);
 
-    const [season, setSeason] = useState(initialSeason);
-    const [episode, setEpisode] = useState(initialEpisode);
+    const [category, setCategory] = useState(initialCategory);
+    const [docIndex, setDocIndex] = useState(initialDoc);
 
-    const handleSeasonChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-        setSeason(parseInt(event.target.value));
+    const handleCategoryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+        setCategory(parseInt(event.target.value));
     }, []);
 
-    const handleEpisodeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-        setEpisode(parseInt(event.target.value));
+    const handleDocChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+        setDocIndex(parseInt(event.target.value));
     }, []);
 
     const handleSubmit = () => {
-        onSubmit(season, episode);
+        onSubmit(category, docIndex);
     };
 
-    const disabled = season === initialSeason && episode === initialEpisode;
+    const disabled = category === initialCategory && docIndex === initialDoc;
 
     return (
         <div className={className}>
             <NumberInput
-                min={0}
-                label={t('SEASON')}
-                defaultValue={season}
-                onChange={handleSeasonChange}
+                min={1}
+                label={'Category'}
+                defaultValue={category}
+                onChange={handleCategoryChange}
                 showButtons
             />
             <NumberInput
                 min={1}
-                label={t('EPISODE')}
-                defaultValue={episode}
-                onChange={handleEpisodeChange}
+                label={'Document'}
+                defaultValue={docIndex}
+                onChange={handleDocChange}
                 showButtons
             />
             <Button
@@ -65,10 +63,10 @@ const EpisodePicker = ({ className, onSubmit }: Props) => {
                 onClick={handleSubmit}
                 disabled={disabled}
             >
-                <div className={styles['label']}>{t('SIDEBAR_SHOW_STREAMS')}</div>
+                <div className={styles['label']}>{'Show Documents'}</div>
             </Button>
         </div>
     );
 };
 
-export default EpisodePicker;
+export default DocumentPicker;

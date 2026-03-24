@@ -12,7 +12,6 @@ const DeepLinkHandler = require('./DeepLinkHandler');
 const SearchParamsHandler = require('./SearchParamsHandler');
 const { default: UpdaterBanner } = require('./UpdaterBanner');
 const { default: ShortcutsModal } = require('./ShortcutsModal');
-const ErrorDialog = require('./ErrorDialog');
 const withProtectedRoutes = require('./withProtectedRoutes');
 const routerViewsConfig = require('./routerViewsConfig');
 const styles = require('./styles');
@@ -64,16 +63,12 @@ const App = () => {
         };
     }, []);
     React.useEffect(() => {
-        const onCoreStateChanged = () => {
-            setInitialized(
-                (services.core.active || services.core.error instanceof Error) &&
-                (services.shell.active || services.shell.error instanceof Error)
-            );
-        };
+        // Leto web deployment: initialization is gated only on Shell (no-op, instant).
+        // Core WASM loads in background — a WASM crash must not block or break the UI.
+        const onCoreStateChanged = () => { /* no-op — Core does not gate initialization */ };
         const onShellStateChanged = () => {
             setInitialized(
-                (services.core.active || services.core.error instanceof Error) &&
-                (services.shell.active || services.shell.error instanceof Error)
+                services.shell.active || services.shell.error instanceof Error
             );
         };
         const onChromecastStateChange = () => {
@@ -108,30 +103,6 @@ const App = () => {
         };
     }, []);
 
-    // Handle shell events
-    React.useEffect(() => {
-        const onOpenMedia = (data) => {
-            try {
-                const { protocol, hostname, pathname, searchParams } = new URL(data);
-                if (protocol === CONSTANTS.PROTOCOL) {
-                    if (hostname.length) {
-                        const transportUrl = `https://${hostname}${pathname}`;
-                        window.location.href = `#/myexams?addon=${encodeURIComponent(transportUrl)}`;
-                    } else {
-                        window.location.href = `#${pathname}?${searchParams.toString()}`;
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to open media:', e);
-            }
-        };
-
-        shell.on('open-media', onOpenMedia);
-
-        return () => {
-            shell.off('open-media', onOpenMedia);
-        };
-    }, []);
 
     React.useEffect(() => {
         const onCoreEvent = ({ event, args }) => {
@@ -139,10 +110,6 @@ const App = () => {
                 case 'SettingsUpdated': {
                     if (args && args.settings && typeof args.settings.interfaceLanguage === 'string') {
                         i18n.changeLanguage(args.settings.interfaceLanguage);
-                    }
-
-                    if (args?.settings?.quitOnClose && shell.windowClosed) {
-                        shell.send('quit');
                     }
 
                     break;
@@ -154,9 +121,6 @@ const App = () => {
                 i18n.changeLanguage(state.profile.settings.interfaceLanguage);
             }
 
-            if (state?.profile?.settings?.quitOnClose && shell.windowClosed) {
-                shell.send('quit');
-            }
         };
         const onWindowFocus = () => {
             if (!services.core.active || !services.core.transport) return;
@@ -201,16 +165,13 @@ const App = () => {
                 services.core.transport.off('CoreEvent', onCoreEvent);
             }
         };
-    }, [initialized, shell.windowClosed]);
+    }, [initialized]);
     return (
         <React.StrictMode>
             <ServicesProvider services={services}>
                 {
                     initialized ?
-                        services.core.error instanceof Error ?
-                            <ErrorDialog className={styles['error-container']} />
-                            :
-                            <PlatformProvider>
+                        <PlatformProvider>
                                 <ToastProvider className={styles['toasts-container']}>
                                     <TooltipProvider className={styles['tooltip-container']}>
                                         <FileDropProvider className={styles['file-drop-container']}>

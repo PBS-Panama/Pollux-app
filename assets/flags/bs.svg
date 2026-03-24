@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Bahamas: 3 horizontal stripes + black triangle -->
+  <rect width="640" height="160" fill="#00ABC9"/>
+  <rect y="160" width="640" height="160" fill="#FAE042"/>
+  <rect y="320" width="640" height="160" fill="#00ABC9"/>
+  <polygon points="0,0 220,240 0,480" fill="#000"/>
+</svg>

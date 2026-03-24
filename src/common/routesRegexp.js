@@ -34,8 +34,8 @@ const routesRegexp = {
         urlParamsNames: []
     },
     metadetails: {
-        regexp: /^\/(?:metadetails|detail)\/([^/]*)\/([^/]*)(?:\/([^/]*))?$/,
-        urlParamsNames: ['type', 'id', 'videoId']
+        regexp: /^\/(?:metadetails|detail|crew)\/([^/]*)\/([^/]*)(?:\/([^/]*))?$/,
+        urlParamsNames: ['type', 'id', 'documentId']
     },
     myexams: {
         regexp: /^\/myexams(?:\/([^/]*)(?:\/([^/]*)\/([^/]*))?)?$/,

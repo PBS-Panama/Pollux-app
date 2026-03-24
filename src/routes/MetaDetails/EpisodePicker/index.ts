@@ -1,5 +1,5 @@
-// Copyright (C) 2017-2025 Smart code 203358507
+// PBS Crewing Module: DocumentPicker (formerly EpisodePicker)
 
-import SeasonEpisodePicker from './EpisodePicker';
+import DocumentPicker from './EpisodePicker';
 
-export default SeasonEpisodePicker;
+export default DocumentPicker;

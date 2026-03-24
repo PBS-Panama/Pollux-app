@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <!-- Jamaica: diagonal cross -->
+  <rect width="640" height="480" fill="#009B3A"/>
+  <polygon points="0,0 280,240 0,480" fill="#000"/>
+  <polygon points="640,0 360,240 640,480" fill="#000"/>
+  <polygon points="0,0 320,200 640,0" fill="#000"/>
+  <polygon points="0,480 320,280 640,480" fill="#000"/>
+  <polygon points="0,0 320,210 640,0 640,0 320,190 0,0" fill="#FED100"/>
+  <polygon points="0,480 320,270 640,480 640,480 320,290 0,480" fill="#FED100"/>
+  <polygon points="0,0 270,240 0,480 0,480 290,240 0,0" fill="#FED100"/>
+  <polygon points="640,0 370,240 640,480 640,480 350,240 640,0" fill="#FED100"/>
+</svg>

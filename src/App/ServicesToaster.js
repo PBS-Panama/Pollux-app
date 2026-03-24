@@ -68,10 +68,10 @@ const ServicesToaster = () => {
                 timeout: 4000
             });
         };
-        core.transport.on('CoreEvent', onCoreEvent);
+        if (core.transport) core.transport.on('CoreEvent', onCoreEvent);
         dragAndDrop.on('error', onDragAndDropError);
         return () => {
-            core.transport.off('CoreEvent', onCoreEvent);
+            if (core.transport) core.transport.off('CoreEvent', onCoreEvent);
             dragAndDrop.off('error', onDragAndDropError);
         };
     }, []);

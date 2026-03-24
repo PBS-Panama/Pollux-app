@@ -7,7 +7,7 @@ const { useModelState } = require('stremio/common');
 
 const map = (discover) => ({
     ...discover,
-    catalog: discover.catalog !== null && discover.catalog.content.type === 'Ready' ?
+    catalog: discover.catalog !== null && discover.catalog.content && discover.catalog.content.type === 'Ready' ?
         {
             ...discover.catalog,
             content: {

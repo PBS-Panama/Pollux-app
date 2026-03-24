@@ -1,5 +1,5 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: DocumentsList (formerly VideosList)
 
-const VideosList = require('./VideosList');
+const DocumentsList = require('./VideosList');
 
-module.exports = VideosList;
+module.exports = DocumentsList;

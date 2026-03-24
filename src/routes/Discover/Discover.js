@@ -27,7 +27,7 @@ const Discover = ({ urlParams, queryParams }) => {
     const metaPreviewRef = React.useRef();
 
     React.useEffect(() => {
-        if (discover.catalog?.content.type === 'Loading') {
+        if (discover.catalog?.content?.type === 'Loading') {
             metasContainerRef.current.scrollTop = 0;
         }
     }, [discover.catalog]);
@@ -41,7 +41,7 @@ const Discover = ({ urlParams, queryParams }) => {
         }
     }, [hasNextPage, loadNextPage]);
     const filteredItems = React.useMemo(() => {
-        if (discover.catalog === null || discover.catalog.content.type !== 'Ready') return [];
+        if (discover.catalog === null || !discover.catalog.content || discover.catalog.content.type !== 'Ready') return [];
         return discover.catalog.content.content.filter((item) => filterItem(item.name));
     }, [discover.catalog, filterItem]);
     React.useEffect(() => {
@@ -124,7 +124,7 @@ const Discover = ({ urlParams, queryParams }) => {
                         </div>
                     </div>
                     {
-                        discover.catalog !== null && !discover.catalog.installed ?
+                        discover.catalog !== null && discover.catalog.content && !discover.catalog.installed ?
                             <div className={styles['missing-addon-warning-container']}>
                                 <div className={styles['warning-label']}>{t('ERR_ADDON_NOT_INSTALLED')}</div>
                                 <Button className={styles['install-button']} title={t('INSTALL_ADDON')} onClick={openAddonModal}>
@@ -143,13 +143,13 @@ const Discover = ({ urlParams, queryParams }) => {
                                 </div>
                             </DelayedRenderer>
                             :
-                            discover.catalog.content.type === 'Err' ?
+                            discover.catalog.content && discover.catalog.content.type === 'Err' ?
                                 <div className={styles['message-container']}>
                                     <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
                                     <div className={styles['message-label']}>{discover.catalog.content.content}</div>
                                 </div>
                                 :
-                                discover.catalog.content.type === 'Loading' ?
+                                discover.catalog.content && discover.catalog.content.type === 'Loading' ?
                                     <div ref={metasContainerRef} className={classnames(styles['meta-items-container'], 'animation-fade-in')}>
                                         {Array(CONSTANTS.CATALOG_PAGE_SIZE).fill(null).map((_, index) => (
                                             <div key={index} className={styles['meta-item-placeholder']}>
@@ -208,7 +208,7 @@ const Discover = ({ urlParams, queryParams }) => {
                             like={selectedMetaItem.like}
                         />
                         :
-                        discover.catalog !== null && discover.catalog.content.type === 'Loading' ?
+                        discover.catalog !== null && discover.catalog.content && discover.catalog.content.type === 'Loading' ?
                             <div className={styles['meta-preview-container']} />
                             :
                             null

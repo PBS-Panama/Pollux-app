@@ -1,4 +1,5 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: Crew Member Detail Page
+// Shows crew profile + documents by category with expiry status
 
 const React = require('react');
 const { useTranslation } = require('react-i18next');
@@ -8,9 +9,9 @@ const { useServices } = require('stremio/services');
 const { withCoreSuspender } = require('stremio/common');
 const { VerticalNavBar, HorizontalNavBar, DelayedRenderer, Image, MetaPreview, ModalDialog } = require('stremio/components');
 const StreamsList = require('./StreamsList');
-const VideosList = require('./VideosList');
+const DocumentsList = require('./VideosList');
 const useMetaDetails = require('./useMetaDetails');
-const useSeason = require('./useSeason');
+const useCategory = require('./useSeason');
 const useMetaExtensionTabs = require('./useMetaExtensionTabs');
 const styles = require('./styles');
 
@@ -18,7 +19,7 @@ const MetaDetails = ({ urlParams, queryParams }) => {
     const { t } = useTranslation();
     const { core } = useServices();
     const metaDetails = useMetaDetails(urlParams);
-    const [season, setSeason] = useSeason(urlParams, queryParams);
+    const [category, setCategory] = useCategory(urlParams, queryParams);
     const [tabs, metaExtension, clearMetaExtension] = useMetaExtensionTabs(metaDetails.metaExtensions);
     const [metaPath, streamPath] = React.useMemo(() => {
         return metaDetails.selected !== null ?
@@ -26,13 +27,12 @@ const MetaDetails = ({ urlParams, queryParams }) => {
             :
             [null, null];
     }, [metaDetails.selected]);
-    const video = React.useMemo(() => {
+    const document = React.useMemo(() => {
         return streamPath !== null && metaDetails.metaItem !== null && metaDetails.metaItem.content.type === 'Ready' ?
             metaDetails.metaItem.content.content.videos.reduce((result, video) => {
                 if (video.id === streamPath.id) {
                     return video;
                 }
-
                 return result;
             }, null)
             :
@@ -75,18 +75,18 @@ const MetaDetails = ({ urlParams, queryParams }) => {
             });
         }
     }, [metaDetails.libraryItem]);
-    const seasonOnSelect = React.useCallback((event) => {
-        setSeason(event.value);
-    }, [setSeason]);
-    const handleEpisodeSearch = React.useCallback((season, episode) => {
-        const searchVideoHash = encodeURIComponent(`${urlParams.id}:${season}:${episode}`);
+    const categoryOnSelect = React.useCallback((event) => {
+        setCategory(event.value);
+    }, [setCategory]);
+    const handleDocumentSearch = React.useCallback((cat, docIndex) => {
+        const searchDocHash = encodeURIComponent(`${urlParams.id}:${cat}:${docIndex}`);
         const url = window.location.hash;
 
-        const searchVideoPath = (urlParams.videoId === undefined || urlParams.videoId === null || urlParams.videoId === '') ?
-            url + (!url.endsWith('/') ? '/' : '') + searchVideoHash
-            : url.replace(encodeURIComponent(urlParams.videoId), searchVideoHash);
+        const searchDocPath = (urlParams.documentId === undefined || urlParams.documentId === null || urlParams.documentId === '') ?
+            url + (!url.endsWith('/') ? '/' : '') + searchDocHash
+            : url.replace(encodeURIComponent(urlParams.documentId), searchDocHash);
 
-        window.location = searchVideoPath;
+        window.location = searchDocPath;
     }, [urlParams, window.location]);
 
     return (
@@ -141,8 +141,8 @@ const MetaDetails = ({ urlParams, queryParams }) => {
                                             releaseInfo={metaDetails.metaItem.content.content.releaseInfo}
                                             released={metaDetails.metaItem.content.content.released}
                                             description={
-                                                video !== null && typeof video.overview === 'string' && video.overview.length > 0 ?
-                                                    video.overview
+                                                document !== null && typeof document.overview === 'string' && document.overview.length > 0 ?
+                                                    document.overview
                                                     :
                                                     metaDetails.metaItem.content.content.description
                                             }
@@ -157,17 +157,14 @@ const MetaDetails = ({ urlParams, queryParams }) => {
                 }
                 <div className={styles['spacing']} />
                 {
-                    /* PBS Crewing: always show document categories (VideosList)
+                    /* PBS Crewing: always show document categories (DocumentsList)
                        instead of StreamsList for all content types */
                     metaPath !== null ?
-                        <VideosList
+                        <DocumentsList
                             className={styles['videos-list']}
                             metaItem={metaDetails.metaItem}
-                            libraryItem={metaDetails.libraryItem}
-                            season={season}
-                            selectedVideoId={metaDetails.libraryItem?.state?.video_id}
-                            seasonOnSelect={seasonOnSelect}
-                            toggleNotifications={toggleNotifications}
+                            category={category}
+                            categoryOnSelect={categoryOnSelect}
                         />
                         :
                         null
@@ -196,7 +193,7 @@ MetaDetails.propTypes = {
     urlParams: PropTypes.shape({
         type: PropTypes.string,
         id: PropTypes.string,
-        videoId: PropTypes.string
+        documentId: PropTypes.string
     }),
     queryParams: PropTypes.instanceOf(URLSearchParams)
 };

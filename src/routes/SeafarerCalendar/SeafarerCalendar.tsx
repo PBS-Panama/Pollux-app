@@ -167,7 +167,7 @@ const SeafarerCalendar = () => {
         const events = [];
         // Availability periods as cards
         monthAvailability.forEach((p) => {
-            events.push({ day: p.startDay, endDay: p.endDay, title: p.label || AVAILABILITY_TYPES.find((t) => t.id === p.type).label, category: p.type, source: 'availability', periodId: p.id });
+            events.push({ day: p.startDay, endDay: p.endDay, title: p.label || (AVAILABILITY_TYPES.find((t) => t.id === p.type) || {}).label || p.type || 'Unknown', category: p.type, source: 'availability', periodId: p.id });
         });
         // Cert events
         certEvents.forEach((e) => events.push({ ...e, source: 'cert' }));
@@ -269,7 +269,7 @@ const SeafarerCalendar = () => {
                             <div className={styles['legend-empty']}>No periods set for this month.</div>
                         )}
                         {monthAvailability.map((p) => {
-                            const typeInfo = AVAILABILITY_TYPES.find((t) => t.id === p.type);
+                            const typeInfo = AVAILABILITY_TYPES.find((t) => t.id === p.type) || { color: '#6b7280', label: p.type || 'Unknown' };
                             return (
                                 <div key={p.id} className={styles['period-row']}>
                                     <span className={styles['period-dot']} style={{ backgroundColor: typeInfo.color }} />

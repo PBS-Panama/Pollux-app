@@ -4,3 +4,6 @@
 /npm-debug.log
 .DS_Store
 .prettierignore
+
+# User database (uploaded files — don't commit user data)
+/User database/*/myfiles/uploads/

@@ -1,28 +1,11 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// Stremio auth removed — Leto does not use Stremio user accounts.
+// Pure passthrough — all routes are accessible directly.
 
 const React = require('react');
-const { Intro } = require('stremio/routes');
-const { useProfile } = require('stremio/common');
 
 const withProtectedRoutes = (Component) => {
     return function withProtectedRoutes(props) {
-        const profile = useProfile();
-        const previousAuthRef = React.useRef(profile.auth);
-        React.useEffect(() => {
-            if (previousAuthRef.current !== null && profile.auth === null) {
-                window.location = '#/intro';
-            }
-            previousAuthRef.current = profile.auth;
-        }, [profile]);
-        const onRouteChange = React.useCallback((routeConfig) => {
-            if (profile.auth !== null && routeConfig.component === Intro) {
-                window.location.replace('#/company-dashboard');
-                return true;
-            }
-        }, [profile]);
-        return (
-            <Component {...props} onRouteChange={onRouteChange} />
-        );
+        return React.createElement(Component, props);
     };
 };
 

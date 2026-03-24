@@ -1,34 +1,34 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: Document Category navigation bar
+// Replaces Stremio's SeasonsBar — navigates between document categories
 
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { t } = require('i18next');
 const { default: Icon } = require('@stremio/stremio-icons/react');
 const { Button, MultiselectMenu } = require('stremio/components');
-const SeasonsBarPlaceholder = require('./SeasonsBarPlaceholder');
+const CategoryBarPlaceholder = require('./SeasonsBarPlaceholder');
 const styles = require('./styles');
 
 const { CREW_DOC_LABELS } = require('stremio/common/crewDocData');
 
-const SeasonsBar = ({ className, seasons, season, onSelect }) => {
+const CategoryBar = ({ className, categories, category, onSelect }) => {
     const options = React.useMemo(() => {
-        return seasons.map((season) => ({
-            value: String(season),
-            label: CREW_DOC_LABELS[season] || (season > 0 ? t('SEASON_NUMBER', { season }) : t('SPECIAL'))
+        return categories.map((cat) => ({
+            value: String(cat),
+            label: CREW_DOC_LABELS[cat] || `Category ${cat}`
         }));
-    }, [seasons]);
-    const selectedSeason = React.useMemo(() => {
-        return String(season);
-    }, [season]);
+    }, [categories]);
+    const selectedCategory = React.useMemo(() => {
+        return String(category);
+    }, [category]);
     const prevNextButtonOnClick = React.useCallback((event) => {
         if (typeof onSelect === 'function') {
-            const seasonIndex = seasons.indexOf(season);
+            const catIndex = categories.indexOf(category);
             const valueIndex = event.currentTarget.dataset.action === 'next' ?
-                seasonIndex + 1 < seasons.length ? seasonIndex + 1 : seasons.length - 1
+                catIndex + 1 < categories.length ? catIndex + 1 : categories.length - 1
                 :
-                seasonIndex - 1 >= 0 ? seasonIndex - 1 : 0;
-            const value = seasons[valueIndex];
+                catIndex - 1 >= 0 ? catIndex - 1 : 0;
+            const value = categories[valueIndex];
             onSelect({
                 type: 'select',
                 value: value,
@@ -36,54 +36,52 @@ const SeasonsBar = ({ className, seasons, season, onSelect }) => {
                 nativeEvent: event.nativeEvent
             });
         }
-    }, [season, seasons, onSelect]);
-    const seasonOnSelect = React.useCallback((value) => {
+    }, [category, categories, onSelect]);
+    const categoryOnSelect = React.useCallback((value) => {
         if (typeof onSelect === 'function') {
             onSelect({
                 type: 'select',
                 value: value,
-                reactEvent: event.reactEvent,
-                nativeEvent: event.nativeEvent
             });
         }
     }, [onSelect]);
 
     const [prevDisabled, nextDisabled] = React.useMemo(() => {
-        const currentIndex = seasons.indexOf(season);
+        const currentIndex = categories.indexOf(category);
         return [
             currentIndex === 0,
-            currentIndex === seasons.length - 1
+            currentIndex === categories.length - 1
         ];
-    }, [season, seasons]);
+    }, [category, categories]);
 
     return (
         <div className={classnames(className, styles['seasons-bar-container'])}>
-            <Button className={classnames(styles['prev-season-button'], { 'disabled': prevDisabled })} title={t('PREV_SEASON')} data-action={'prev'} onClick={prevNextButtonOnClick}>
+            <Button className={classnames(styles['prev-season-button'], { 'disabled': prevDisabled })} title={'Previous Category'} data-action={'prev'} onClick={prevNextButtonOnClick}>
                 <Icon className={styles['icon']} name={'chevron-back'} />
-                <div className={styles['label']}>{t('BUTTON_PREV')}</div>
+                <div className={styles['label']}>{'Prev'}</div>
             </Button>
             <MultiselectMenu
                 className={styles['seasons-popup-label-container']}
                 options={options}
-                title={CREW_DOC_LABELS[season] || (season > 0 ? t('SEASON_NUMBER', { season }) : t('SPECIAL'))}
-                value={selectedSeason}
-                onSelect={seasonOnSelect}
+                title={CREW_DOC_LABELS[category] || `Category ${category}`}
+                value={selectedCategory}
+                onSelect={categoryOnSelect}
             />
-            <Button className={classnames(styles['next-season-button'], { 'disabled': nextDisabled })} title={t('NEXT_SEASON')} data-action={'next'} onClick={prevNextButtonOnClick}>
-                <div className={styles['label']}>{t('BUTTON_NEXT')}</div>
+            <Button className={classnames(styles['next-season-button'], { 'disabled': nextDisabled })} title={'Next Category'} data-action={'next'} onClick={prevNextButtonOnClick}>
+                <div className={styles['label']}>{'Next'}</div>
                 <Icon className={styles['icon']} name={'chevron-forward'} />
             </Button>
         </div>
     );
 };
 
-SeasonsBar.Placeholder = SeasonsBarPlaceholder;
+CategoryBar.Placeholder = CategoryBarPlaceholder;
 
-SeasonsBar.propTypes = {
+CategoryBar.propTypes = {
     className: PropTypes.string,
-    seasons: PropTypes.arrayOf(PropTypes.number).isRequired,
-    season: PropTypes.number.isRequired,
+    categories: PropTypes.arrayOf(PropTypes.number).isRequired,
+    category: PropTypes.number.isRequired,
     onSelect: PropTypes.func
 };
 
-module.exports = SeasonsBar;
+module.exports = CategoryBar;

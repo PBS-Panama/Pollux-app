@@ -35,7 +35,7 @@ const URLsManager = () => {
             </div>
             <div className={styles['content']}>
                 {
-                    streamingServerUrls.map((item: StreamingServerUrl) => (
+                    (streamingServerUrls || []).map((item: StreamingServerUrl) => (
                         <Item key={item.url} {...item} />
                     ))
                 }

@@ -6,7 +6,7 @@ import Icon from '@stremio/stremio-icons/react';
 import { useServices } from 'stremio/services';
 import { CONSTANTS } from 'stremio/common';
 import { MetaPreview, Video } from 'stremio/components';
-import SeasonsBar from 'stremio/routes/MetaDetails/VideosList/SeasonsBar';
+import CategoryBar from 'stremio/routes/MetaDetails/VideosList/SeasonsBar';
 import styles from './SideDrawer.less';
 
 type Props = {
@@ -104,9 +104,9 @@ const SideDrawer = memo(forwardRef<HTMLDivElement, Props>(({ seriesInfo, classNa
             {
                 seriesInfo ?
                     <div className={styles['series-content']}>
-                        <SeasonsBar
-                            season={season}
-                            seasons={seasons}
+                        <CategoryBar
+                            category={season}
+                            categories={seasons}
                             onSelect={seasonOnSelect}
                         />
                         <div className={styles['videos']}>

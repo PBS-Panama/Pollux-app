@@ -1,8 +1,8 @@
-# PBS Crewing Module
+# DEMETER — Maritime Crew Management
 
 ## Overview
 
-The PBS Crewing Module is a **maritime crew management application** adapted from the open-source [Stremio Web](https://github.com/nickonometry/stremio-web-shell-linux) codebase (GPLv2). It repurposes the streaming media UI into a dual-platform crew management system with an **Uber-like model**: a **Company side** (recruiting/managing) and a **Seafarer side** (availability/documents).
+**DEMETER** (formerly "PBS Crewing Module") is a **maritime crew management application** adapted from the open-source [Stremio Web](https://github.com/nickonometry/stremio-web-shell-linux) codebase (GPLv2). It repurposes the streaming media UI into a dual-platform crew management system with an **Uber-like model**: a **Company side** (recruiting/managing) and a **Seafarer side** (availability/documents).
 
 **Status:** In active development (not yet deployed to production).
 
@@ -12,17 +12,17 @@ The PBS Crewing Module is a **maritime crew management application** adapted fro
 
 ## Position in the PBS Ecosystem
 
-This module lives inside the PBS Digital Ecosystem as a demo application:
+DEMETER lives inside the PBS Digital Ecosystem as a demo application:
 
 ```
 pb-website (main repo)
   └── products/portal/demo/
         ├── gxlivemarketing/      # GX Blog Builder (deployed)
         ├── Tukutuku/             # Ganga Pack (deployed, git submodule)
-        └── Crewing module/       # THIS APP (git submodule → RichoX-Hub/Crewingmodule)
+        └── Demeter/              # THIS APP (git submodule → RichoX-Hub/Crewingmodule)
 ```
 
-> **Submodule setup:** The Crewing module is a git submodule in pb-website. The original git remote was `Stremio/stremio-web.git` (upstream base); it was changed to `RichoX-Hub/Crewingmodule.git` on 2026-03-14. The local branch `development` is pushed as `main` on the new repo.
+> **Submodule setup:** DEMETER is a git submodule in pb-website. The original git remote was `Stremio/stremio-web.git` (upstream base); it was changed to `RichoX-Hub/Crewingmodule.git` on 2026-03-14. The local branch `development` is pushed as `main` on the new repo.
 
 When ready for production, this will follow the standard **Modular Demo Pattern**:
 1. Develop locally with `pnpm start` (webpack dev server, HTTPS, port 8080)
@@ -37,7 +37,7 @@ When ready for production, this will follow the standard **Modular Demo Pattern*
 | Project ID | `durable-sky-484422-b5` |
 | Region | `us-central1` |
 | Registry | `us-central1-docker.pkg.dev/durable-sky-484422-b5/pbs-registry` |
-| Future service name | `crewing-module` (TBD) |
+| Future service name | `demeter` (TBD) |
 
 ---
 
@@ -67,7 +67,7 @@ When ready for production, this will follow the standard **Modular Demo Pattern*
 ## Project Structure
 
 ```
-Crewing module/
+Demeter/
 ├── package.json              # "stremio" v5.0.0-beta.30
 ├── pnpm-lock.yaml
 ├── webpack.config.js         # Multi-stage: JS (babel) + TS (ts-loader) + Less (CSS Modules)
@@ -240,7 +240,7 @@ The `http_server.js` serves the `build/` directory as static files with cache he
 
 ```bash
 # Development (hot reload, HTTPS)
-cd "products/portal/demo/Crewing module"
+cd "products/portal/demo/Demeter"
 pnpm install
 pnpm start
 # Opens at https://localhost:8080
@@ -250,8 +250,8 @@ pnpm build
 # Output in ./build/
 
 # Docker build & run
-docker build -t crewing-module:local .
-docker run -d --name crewing-module -p 8080:8080 crewing-module:local
+docker build -t demeter:local .
+docker run -d --name demeter -p 8080:8080 demeter:local
 ```
 
 ### Future Cloud Run Deployment
@@ -262,12 +262,12 @@ REGION=us-central1
 REGISTRY=${REGION}-docker.pkg.dev/${PROJECT_ID}/pbs-registry
 
 # Build & push
-docker build -t ${REGISTRY}/crewing-module:latest .
-docker push ${REGISTRY}/crewing-module:latest
+docker build -t ${REGISTRY}/demeter:latest .
+docker push ${REGISTRY}/demeter:latest
 
 # Deploy
-gcloud run deploy crewing-module \
-  --image ${REGISTRY}/crewing-module:latest \
+gcloud run deploy demeter \
+  --image ${REGISTRY}/demeter:latest \
   --port 8080 \
   --region us-central1 \
   --allow-unauthenticated \
@@ -300,7 +300,7 @@ Key webpack settings in `webpack.config.js`:
 
 ---
 
-## Stremio-to-Crewing Mapping
+## Stremio-to-DEMETER Mapping
 
 The original Stremio concepts were mapped to maritime crew management:
 
@@ -365,19 +365,19 @@ For features that span multiple components (e.g., "Add to List" on both card and
 
 ```bash
 # Build image
-docker build -t crewing-module:local .
+docker build -t demeter:latest .
 
-# Run on port 4000
-docker rm -f crewing-module 2>/dev/null
-docker run -d --name crewing-module -p 4000:8080 crewing-module:local
+# Run on port 8088
+docker rm -f demeter 2>/dev/null
+docker run -d --name demeter -p 8088:8080 demeter:latest
 
-# View at http://localhost:4000
+# View at http://localhost:8088
 
 # Check logs
-docker logs crewing-module
+docker logs demeter
 
 # Rebuild after edits (full cycle)
-docker build -t crewing-module:local . && docker rm -f crewing-module && docker run -d --name crewing-module -p 4000:8080 crewing-module:local
+docker build -t demeter:latest . && docker rm -f demeter && docker run -d --name demeter -p 8088:8080 demeter:latest
 ```
 
 ### Saved Docker Tags
@@ -387,14 +387,17 @@ docker build -t crewing-module:local . && docker rm -f crewing-module && docker 
 | `crewing-module:v0.1-baseline` | 2026-03-13 | First working Docker build — all 8 sidebar tabs, crew data, calendars, transport null-guard fix |
 | `crewing-module:v0.2-routes-renamed` | 2026-03-14 | All routes renamed from Stremio patterns to PBS Crewing paths (18 files updated, zero old routes remaining) |
 | `crewing-module:v0.3-full-features` | 2026-03-14 | Full PBS features: crew cards, pending interviews, book interview modal, Company & Seafarer calendars, synced add-to-list, confirmed interview badges, SeafarerSchedule |
+| `crewing-module:v0.4-user-database` | 2026-03-17 | User Database backend, My Files page with file upload/preview/rotate, IMO catalog (83 courses), Stremio→Maritime terminology renaming |
 
-### Docker Container Quick Start (Current)
+> **Note:** Tags above use the old `crewing-module` naming. New builds should use `demeter:*` tags.
 
-```bash
-# The current working container uses port 8088:
-docker run -d --name crewing -p 8088:8080 crewing-module:latest
-# View at http://localhost:8088
-```
+### Active Container (as of 2026-03-17)
+
+| Container | Image | Port | URL |
+|-----------|-------|------|-----|
+| `demeter` | `demeter:latest` | 8088:8080 | http://localhost:8088 |
+
+> **Note:** Only one container should exist. Renamed from `crewing` → `demeter` as of 2026-03-17.
 
 ### Fixes Applied for Docker Builds
 
@@ -405,7 +408,7 @@ docker run -d --name crewing -p 8088:8080 crewing-module:latest
 
 ```bash
 # pnpm is not in bash PATH on this machine — use npx:
-cd "products/portal/demo/Crewing module"
+cd "products/portal/demo/Demeter"
 npx pnpm start
 # Opens at https://localhost:8080 (self-signed cert, accept warning)
 # If port 8080 is taken, webpack picks next available port
@@ -417,7 +420,7 @@ npx pnpm start
 
 ### Repository Setup (2026-03-14)
 
-The Crewing module was originally a direct clone of `Stremio/stremio-web.git`. It has been migrated:
+DEMETER was originally a direct clone of `Stremio/stremio-web.git`. It has been migrated:
 
 1. **New GitHub repo:** [`RichoX-Hub/Crewingmodule`](https://github.com/RichoX-Hub/Crewingmodule) (private)
 2. **Remote updated:** `origin` changed from `Stremio/stremio-web.git` → `RichoX-Hub/Crewingmodule.git`
@@ -434,15 +437,15 @@ git clone --recurse-submodules https://github.com/RichoX-Hub/pbtradingsolutions.
 # If already cloned without submodules
 git submodule update --init --recursive
 
-# After making changes in Crewing module:
-cd "products/portal/demo/Crewing module"
+# After making changes in DEMETER:
+cd "products/portal/demo/Demeter"
 git add -A && git commit -m "description"
 git push origin development:main
 
 # Then update the submodule reference in pb-website:
 cd ../../../..  # back to pb-website root
-git add "products/portal/demo/Crewing module"
-git commit -m "Update Crewing Module submodule"
+git add "products/portal/demo/Demeter"
+git commit -m "Update DEMETER submodule"
 ```
 
 ---
@@ -458,6 +461,18 @@ A `vite.config.js` exists with 7 custom plugins for CJS/Less/JSX interop with Vi
 ---
 
 ## Session Log
+
+### 2026-03-17 — User Database Backend + My Files Overhaul + Stremio→Maritime Renaming
+
+See [SESSION-2026-03-17.md](SESSION-2026-03-17.md) for full details.
+
+**Summary:** Built the entire User Database backend (Express API + filesystem persistence), redesigned the My Files page with 2-column layout, searchable document list, IMO catalog (83 courses), file upload with staging/save workflow, PDF preview with rotate/edit modal, and renamed all Stremio terminology (season→category, video→document, episode→docIndex) to maritime concepts.
+
+### 2026-03-16 — Docker Cleanup
+
+- Removed duplicate container `crewing-module` (port 4000, image `crewing-module:local`)
+- Removed image `crewing-module:local`
+- Standardized on single container: `crewing` (port 8088, image `crewing-module:latest`)
 
 ### 2026-03-14 — Git Migration & Docker Rebuild
 
@@ -476,8 +491,11 @@ A `vite.config.js` exists with 7 custom plugins for CJS/Less/JSX interop with Vi
 ## Future Plans
 
 - [ ] Separate Company and Seafarer layouts (different sidebar tabs per role)
-- [ ] Backend API for persistent data (replace localStorage)
+- [x] Backend API for persistent data (replace localStorage) — **Done 2026-03-17**
 - [ ] Authentication (company vs seafarer login)
 - [ ] Deploy to Cloud Run as independent service
 - [ ] Add card to Demo Gallery (`DemoApp.jsx`)
 - [ ] Integration with Neptune ERP for vessel/fleet data
+- [ ] Wire MetaDetails crew profile to read from User Database (instead of mock hash data)
+- [ ] My Files: connect uploaded docs to SeafarerCalendar expiry alerts
+- [ ] My Files: connect to My Exams for renewal suggestions

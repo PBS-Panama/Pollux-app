@@ -43,7 +43,6 @@ module.exports = (env, argv) => ({
     devtool: argv.mode === 'production' ? 'source-map' : 'eval-source-map',
     entry: {
         main: './src/index.js',
-        worker: './node_modules/@stremio/stremio-core-web/worker.js'
     },
     output: {
         path: path.join(__dirname, 'build'),
@@ -170,13 +169,7 @@ module.exports = (env, argv) => ({
                     filename: 'images/[name][ext][query]'
                 }
             },
-            {
-                test: /\.wasm$/,
-                type: 'asset/resource',
-                generator: {
-                    filename: `${COMMIT_HASH}/binaries/[name][ext][query]`
-                }
-            }
+            // WASM rule removed — stremio-core-web WASM replaced by JS mock CoreTransport
         ]
     },
     resolve: {
@@ -191,7 +184,14 @@ module.exports = (env, argv) => ({
         static: false,
         hot: false,
         server: 'https',
-        liveReload: false
+        liveReload: false,
+        proxy: [
+            {
+                context: ['/api'],
+                target: 'http://localhost:8080',
+                secure: false,
+            }
+        ],
     },
     optimization: {
         minimize: true,

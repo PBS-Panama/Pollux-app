@@ -2,16 +2,17 @@
 
 const useModelState = require('stremio/common/useModelState');
 
+// Stable sentinel — same reference every render so deepEqual short-circuits on ===
+const NEVER_DISMISSED = new Date(NaN);
+
 const map = (ctx) => ({
     ...ctx.profile,
     settings: {
         ...ctx.profile.settings,
-        streamingServerWarningDismissed: new Date(
+        streamingServerWarningDismissed:
             typeof ctx.profile.settings.streamingServerWarningDismissed === 'string' ?
-                ctx.profile.settings.streamingServerWarningDismissed
-                :
-                NaN
-        )
+                new Date(ctx.profile.settings.streamingServerWarningDismissed)
+                : NEVER_DISMISSED
     }
 });
 

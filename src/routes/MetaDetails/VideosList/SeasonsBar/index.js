@@ -1,5 +1,5 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: CategoryBar (formerly SeasonsBar)
 
-const SeasonsBar = require('./SeasonsBar');
+const CategoryBar = require('./SeasonsBar');
 
-module.exports = SeasonsBar;
+module.exports = CategoryBar;

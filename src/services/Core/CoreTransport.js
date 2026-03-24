@@ -1,57 +1,348 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module — JS CoreTransport (replaces Rust/WASM stremio-core-web)
+// Resolves getState() immediately with safe empty state shapes.
+// dispatch() / analytics() / decodeStream() are no-ops.
+// Eliminates WASM dependency, Web Worker, and 11470 local streaming server calls.
 
 const EventEmitter = require('eventemitter3');
-const Bridge = require('@stremio/stremio-core-web/bridge');
 
-function CoreTransport(args) {
-    const events = new EventEmitter();
-    const worker = new Worker(`${process.env.COMMIT_HASH}/scripts/worker.js`);
-    const bridge = new Bridge(window, worker);
+// ─── Mock crew database for Discover (company-crewdb) ─────────────
+const CREW_SEEDS = [
+    'Carlos Rodríguez', 'Miguel González', 'José Martínez', 'Ricardo López',
+    'Andrés Hernández', 'Fernando García', 'Diego Pérez', 'Luis Sánchez',
+    'Roberto Ramírez', 'Alejandro Torres', 'Manuel Flores', 'Gabriel Rivera',
+    'Daniel Gómez', 'Marco Díaz', 'Eduardo Cruz', 'Héctor Morales',
+    'Raúl Reyes', 'Sergio Gutiérrez', 'Víctor Ortiz', 'Pablo Ramos',
+    'Javier Vargas', 'Óscar Castillo', 'Tomás Jiménez', 'Enrique Moreno',
+    'Arturo Romero', 'Rafael Alvarado', 'Iván Ruiz', 'Felipe Mendoza',
+    'Adrián Aguilar', 'Gonzalo Medina', 'Santiago Castro', 'Martín Herrera',
+];
+const VESSEL_TYPES = ['Bulk Carrier', 'Container Ship', 'Oil Tanker', 'LNG Carrier', 'General Cargo', 'Ro-Ro', 'Chemical Tanker', 'Offshore Supply'];
+const RANKS_SHORT = [
+    'II/2 – Master', 'II/2 – Chief Mate', 'II/1 – OOW Navigation',
+    'III/2 – Chief Engineer', 'III/1 – EOOW', 'III/6 – ETO',
+    'II/5 – AB Deck', 'III/5 – Motorman', 'IV/2 – GMDSS Operator',
+    'II/4 – Helmsman', 'III/4 – Oiler', 'Cadet – Deck',
+];
+const NATIONALITIES = ['Panama', 'Colombia', 'Peru', 'Ecuador', 'Mexico', 'Honduras', 'Guatemala', 'Costa Rica'];
+const DEPARTMENTS = ['Deck Department', 'Engine Department', 'Electro-Technical', 'Catering / Hotel', 'Radio / GMDSS'];
+const IMO_NUMBERS = ['9876543', '9765432', '9654321', '9543210', '9432109', '9321098', '9210987', '9109876'];
+const VESSEL_NAMES = ['MV Atlantic Pioneer', 'MS Robin', 'MV Pacific Star', 'MT Cristóbal', 'MV Caribbean Wind', 'MS Panamá Spirit', 'MV Andean Explorer', 'MT Gulf Stream'];
+const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); };
 
-    window.onCoreEvent = ({ name, args }) => {
-        try {
-            events.emit(name, args);
-        } catch (error) {
-            console.error('CoreTransport', error);
-        }
-    };
-
-    bridge.call(['init'], [args])
-        .then(() => {
-            try {
-                events.emit('init');
-            } catch (error) {
-                console.error('CoreTransport', error);
+// Build a crew profile for MetaDetails from a crew name
+const buildCrewProfile = (crewName) => {
+    const h = hashStr(crewName);
+    const rank = RANKS_SHORT[h % RANKS_SHORT.length];
+    const nationality = NATIONALITIES[h % NATIONALITIES.length];
+    const vessel = VESSEL_NAMES[h % VESSEL_NAMES.length];
+    const vesselType = VESSEL_TYPES[h % VESSEL_TYPES.length];
+    const department = DEPARTMENTS[h % DEPARTMENTS.length];
+    const imo = IMO_NUMBERS[h % IMO_NUMBERS.length];
+    // Generate document "videos" (categories 1-5, ~3 docs each)
+    const docCategories = [
+        { cat: 1, label: 'STCW Certificates', docs: ['Certificate of Competency', 'STCW Basic Safety Training', 'Medical First Aid', 'Advanced Fire Fighting', 'Proficiency in Survival Craft'] },
+        { cat: 2, label: 'Flag State Documents', docs: ['Seaman Book', 'Flag State Endorsement', 'Yellow Fever Certificate', 'Passport'] },
+        { cat: 3, label: 'Company Certificates', docs: ['Company Familiarization', 'Drug & Alcohol Test', 'Pre-Employment Medical'] },
+        { cat: 4, label: 'Training Records', docs: ['ECDIS Training', 'BRM/ERM Course', 'Ship Security Officer'] },
+        { cat: 5, label: 'Personal Documents', docs: ['National ID', 'Birth Certificate'] },
+    ];
+    const videos = [];
+    docCategories.forEach(({ cat, docs }) => {
+        docs.forEach((title, j) => {
+            const dh = ((h * 31 + j * 17 + cat * 7) >>> 0) % 100;
+            if (dh < 70 || j < 2) { // ~70% chance or guarantee first 2
+                const offsetDays = ((h + j * 13) % 361) - 180;
+                const issued = new Date(Date.now() - (365 + offsetDays) * 86400000);
+                videos.push({
+                    id: `${crewName}:${cat}:${j}`,
+                    title: title,
+                    season: cat,
+                    episode: j + 1,
+                    released: issued.toISOString(),
+                    overview: `${title} — Issued ${issued.toISOString().split('T')[0]}`,
+                    thumbnail: null,
+                });
             }
-        })
-        .catch((error) => {
-            events.emit('error', error);
         });
+    });
+    return {
+        selected: {
+            metaPath: { resource: 'meta', type: 'crew', id: crewName, extra: [] },
+            streamPath: null,
+        },
+        metaItem: {
+            content: {
+                type: 'Ready',
+                content: {
+                    id: crewName,
+                    type: 'crew',
+                    name: crewName,
+                    poster: null,
+                    logo: null,
+                    background: null,
+                    description: `${rank}\n${department}\nNationality: ${nationality}\nVessel: ${vessel} (${vesselType})\nIMO: ${imo}`,
+                    releaseInfo: nationality,
+                    runtime: rank,
+                    released: new Date().toISOString(),
+                    links: [
+                        { name: department, category: 'Department', url: '#' },
+                        { name: nationality, category: 'Nationality', url: '#' },
+                        { name: vessel, category: 'Current Vessel', url: '#' },
+                    ],
+                    trailerStreams: [],
+                    inLibrary: true,
+                    videos: videos,
+                    behaviorHints: {},
+                },
+            },
+        },
+        libraryItem: null,
+        streams: [],
+        metaExtensions: [],
+        selectable: { subtitles_languages: [] },
+    };
+};
+const crewCatalogItems = CREW_SEEDS.map((name, i) => {
+    const h = hashStr(name);
+    return {
+        id: `crew-${i}`,
+        type: 'crew',
+        name: name,
+        poster: null,
+        posterShape: 'poster',
+        description: `${RANKS_SHORT[h % RANKS_SHORT.length]} · ${NATIONALITIES[h % NATIONALITIES.length]} · ${VESSEL_TYPES[h % VESSEL_TYPES.length]}`,
+        releaseInfo: NATIONALITIES[h % NATIONALITIES.length],
+        runtime: RANKS_SHORT[h % RANKS_SHORT.length],
+        links: [],
+        trailerStreams: [],
+        inLibrary: i < 8,
+        deepLinks: { metaDetailsVideos: `#/metadetails/crew/${name}`, player: null },
+        watched: false,
+    };
+});
 
-    this.on = function(name, listener) {
-        events.on(name, listener);
+// ─── Board catalogs: crew grouped by department ──────────────────
+const DEPT_GROUPS = {
+    'Ratings – Deck': (h) => ['Deck Department', 'Safety & Survival'].includes(DEPARTMENTS[h % DEPARTMENTS.length]),
+    'Ratings – Engine': (h) => ['Engine Department', 'Electro-Technical'].includes(DEPARTMENTS[h % DEPARTMENTS.length]),
+    'Ratings – Catering & Support': (h) => ['Catering / Hotel', 'Radio / GMDSS'].includes(DEPARTMENTS[h % DEPARTMENTS.length]),
+};
+const boardCatalogs = Object.entries(DEPT_GROUPS).map(([title, filter]) => {
+    const items = CREW_SEEDS.filter((name) => filter(hashStr(name))).map((name, i) => {
+        const h = hashStr(name);
+        return {
+            id: `crew-${name}`,
+            type: 'crew',
+            name: name,
+            poster: null,
+            posterShape: 'poster',
+            description: `DEPT ${DEPARTMENTS[h % DEPARTMENTS.length]}\nRANK ${RANKS_SHORT[h % RANKS_SHORT.length]}`,
+            releaseInfo: NATIONALITIES[h % NATIONALITIES.length],
+            runtime: RANKS_SHORT[h % RANKS_SHORT.length],
+            links: [],
+            trailerStreams: [],
+            inLibrary: false,
+            deepLinks: { metaDetailsVideos: `#/metadetails/crew/${name}`, player: null },
+            watched: false,
+        };
+    });
+    return {
+        addon: { manifest: { name: 'PBS Crewing' } },
+        id: `crew-${title.replace(/\s/g, '-').toLowerCase()}`,
+        name: title,
+        type: 'crew',
+        content: { type: 'Ready', content: items },
+        deepLinks: { discover: '#/company-crewdb' },
+        installed: true,
     };
-    this.off = function(name, listener) {
-        events.off(name, listener);
+}).filter((cat) => cat.content.content.length > 0);
+
+// Minimal valid state shapes for each model used in the UI
+const DEFAULT_STATES = {
+    ctx: {
+        profile: {
+            auth: null,
+            settings: {
+                interfaceLanguage: 'en-US',
+                streamingServerUrl: null,
+                streamingServerWarningDismissed: null,
+                binge_watching: false,
+                play_in_background: false,
+                play_in_external: false,
+                hardware_decoding: false,
+                subtitles_language: null,
+                subtitles_size: 100,
+                subtitles_text_color: '#ffffff',
+                subtitles_background_color: 'transparent',
+                subtitles_outline_color: '#000000',
+                audio_passthrough: false,
+                audio_normalization: false,
+                surround_sound: false,
+                secondary_audio_track_language: null,
+                seek_time_duration: 10000,
+                streaming_server_warning_dismissed: null,
+            }
+        },
+        searchHistory: [],
+        notifications: { count: 0, items: [] },
+        library: null,
+        streamingServerUrls: [],
+    },
+    streaming_server: {
+        settings: null,
+        selected: null,
+        torrent: null,
+        playback: null,
+        base_url: null,
+        remote_url: null,
+        network_info: null,
+    },
+    library: {
+        selected: null,
+        selectable: { types: [], sort: [], page: 1 },
+        catalog: [],
+    },
+    catalog_page: {
+        selected: null,
+        selectable: { catalogs: [], extra_supported: [], extra_required: [], types: [], sort: [] },
+        catalog: null,
+        loading: { catalog: false, next_page: false },
+    },
+    discover: {
+        selected: null,
+        selectable: { catalogs: [], extra_supported: [], extra_required: [], types: [], sort: [] },
+        catalog: {
+            installed: true,
+            content: { type: 'Ready', content: crewCatalogItems },
+        },
+        loading: { catalog: false, next_page: false },
+    },
+    meta_detail: {
+        selected: null,
+        meta_item: null,
+        library_item: null,
+        streams: [],
+        selectable: { subtitles_languages: [] },
+    },
+    local_search: {
+        query: null,
+        items: [],
+    },
+    notifications: {
+        count: 0,
+        items: [],
+        last_videos: [],
+    },
+    addon_catalog_with_filters: {
+        selected: null,
+        selectable: { catalogs: [], types: [] },
+        catalog: [],
+        loading: false,
+    },
+    installed_addons_with_filters: {
+        selected: null,
+        selectable: { types: [] },
+        addons: [],
+    },
+    settings: {
+        settings: null,
+        selected: null,
+    },
+    search: {
+        selected: null,
+        catalogs: [],
+    },
+    board: {
+        selected: null,
+        catalogs: boardCatalogs,
+    },
+    continue_watching_preview: {
+        library_items: [],
+        items: [],
+    },
+    player: {
+        selected: null,
+        meta_item: null,
+        subtitles: [],
+        next_video: null,
+        series_info: null,
+        library_item: null,
+        stream: null,
+        title: null,
+    },
+    meta_details: {
+        selected: null,
+        metaItem: null,
+        libraryItem: null,
+        streams: [],
+        metaExtensions: [],
+        selectable: { subtitles_languages: [] },
+    },
+    addon_details: {
+        selected: null,
+        local_addon: null,
+        remote_addon: null,
+    },
+    installed_addons: {
+        selected: null,
+        selectable: { types: [] },
+        addons: [],
+    },
+    remote_addons: {
+        selected: null,
+        selectable: { catalogs: [], types: [] },
+        catalog: [],
+        loading: false,
+    },
+    data_export: {
+        export: null,
+        exportUrl: null,
+    },
+    calendar: {
+        selected: null,
+        selectable: { months: [] },
+        items: [],
+    },
+};
+
+function CoreTransport() {
+    const events = new EventEmitter();
+
+    // Dynamic state overrides (updated by dispatch)
+    const overrides = {};
+
+    // Emit 'init' on next tick so Core.js marks itself active
+    setTimeout(() => {
+        try { events.emit('init'); } catch (e) { console.error('CoreTransport mock init emit:', e); }
+    }, 0);
+
+    this.on = (name, listener) => events.on(name, listener);
+    this.off = (name, listener) => events.off(name, listener);
+    this.removeAllListeners = () => events.removeAllListeners();
+
+    // Synchronous thenable — wrapPromise calls .then(cb) which calls cb(value)
+    // synchronously, setting status='success' BEFORE .read() is called.
+    // This means components NEVER suspend and NEVER retry.
+    const syncThenable = (value) => ({
+        then(resolve) { resolve(value); return Promise.resolve(value); }
+    });
+
+    this.getState = (model) => syncThenable(overrides[model] || DEFAULT_STATES[model] || {});
+    this.getDebugState = () => syncThenable({ transport: 'js-mock' });
+    this.dispatch = (action, model) => {
+        // Intercept MetaDetails Load to generate crew profile data
+        if (action && action.action === 'Load' && action.args && action.args.model === 'MetaDetails') {
+            const metaPath = action.args.args && action.args.args.metaPath;
+            if (metaPath && metaPath.id) {
+                overrides['meta_details'] = buildCrewProfile(metaPath.id);
+                // Notify useModelState listeners that meta_details changed
+                setTimeout(() => { events.emit('NewState', ['meta_details']); }, 0);
+            }
+        }
+        return syncThenable(undefined);
     };
-    this.removeAllListeners = function() {
-        events.removeAllListeners();
-    };
-    this.getState = async function(field) {
-        return bridge.call(['getState'], [field]);
-    };
-    this.getDebugState = async function() {
-        return bridge.call(['getDebugState'], []);
-    };
-    this.dispatch = async function(action, field) {
-        return bridge.call(['dispatch'], [action, field, location.hash]);
-    };
-    this.analytics = async function(event) {
-        return bridge.call(['analytics'], [event, location.hash]);
-    };
-    this.decodeStream = async function(stream) {
-        return bridge.call(['decodeStream'], [stream]);
-    };
+    this.analytics = () => syncThenable(undefined);
+    this.decodeStream = () => syncThenable(null);
 }
 
 module.exports = CoreTransport;

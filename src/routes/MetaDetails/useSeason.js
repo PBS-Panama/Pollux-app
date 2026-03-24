@@ -1,24 +1,30 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: Document category selector from URL query params
+// Replaces Stremio's season concept with maritime document categories
 
 const React = require('react');
 
-const useSeason = (urlParams, queryParams) => {
-    const season = React.useMemo(() => {
-        return queryParams.has('season') && !isNaN(queryParams.get('season')) ?
-            parseInt(queryParams.get('season'), 10)
+const useCategory = (urlParams, queryParams) => {
+    const category = React.useMemo(() => {
+        return queryParams.has('category') && !isNaN(queryParams.get('category')) ?
+            parseInt(queryParams.get('category'), 10)
             :
-            null;
+            // Backward compat: also check old 'season' param
+            queryParams.has('season') && !isNaN(queryParams.get('season')) ?
+                parseInt(queryParams.get('season'), 10)
+                :
+                null;
     }, [queryParams]);
-    const setSeason = React.useCallback((season) => {
+    const setCategory = React.useCallback((cat) => {
         const nextQueryParams = new URLSearchParams(queryParams);
-        nextQueryParams.set('season', season);
+        nextQueryParams.set('category', cat);
+        nextQueryParams.delete('season'); // clean up old param
         const path = urlParams.path.endsWith('/') ?
             urlParams.path.slice(0, -1):
             urlParams.path;
 
         window.location.replace(`#${path}?${nextQueryParams}`);
     }, [urlParams, queryParams]);
-    return [season, setSeason];
+    return [category, setCategory];
 };
 
-module.exports = useSeason;
+module.exports = useCategory;

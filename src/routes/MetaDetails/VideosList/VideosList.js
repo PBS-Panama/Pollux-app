@@ -1,17 +1,15 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: Document List by Category
+// Shows crew member's documents with issue/expiry dates and status badges
 
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { t } = require('i18next');
-const { useServices } = require('stremio/services');
 const { useProfile } = require('stremio/common');
-const { Image, SearchBar, Toggle, Video } = require('stremio/components');
-const SeasonsBar = require('./SeasonsBar');
-const { default: EpisodePicker } = require('../EpisodePicker');
+const { Image, SearchBar, Video } = require('stremio/components');
+const CategoryBar = require('./SeasonsBar');
 const styles = require('./styles');
 
-const { CREW_ALL_DOCS, CREW_DOC_CATEGORIES } = require('stremio/common/crewDocData');
+const { CREW_ALL_DOCS, CREW_DOC_CATEGORIES, getExpiryStatus } = require('stremio/common/crewDocData');
 
 // Hash function for deterministic per-crew randomization
 const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); };
@@ -19,7 +17,7 @@ const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h <
 // Minimum docs per category so no crew member has an empty tab
 const CREW_DOC_MINIMUMS = { 1: 3, 2: 3, 3: 2, 4: 2, 5: 2 };
 
-// Deterministic document selection per crew member
+// Deterministic document selection per crew member, now with expiry data
 const getCrewDocs = (crewHash, category) => {
     const pool = CREW_ALL_DOCS[category] || [];
     const minDocs = CREW_DOC_MINIMUMS[category] || 2;
@@ -39,105 +37,74 @@ const getCrewDocs = (crewHash, category) => {
         picked.push(skipped[idx++]);
     }
 
-    // Vary issue dates ±180 days per crew member
+    // Vary issue dates ±180 days per crew member, compute expiry
     return picked.map((doc, i) => {
         const base = new Date(doc.baseDate).getTime();
         const offsetDays = ((crewHash + i * 13) % 361) - 180;
-        const varied = new Date(base + offsetDays * 86400000);
-        return { title: doc.title, issued: varied.toISOString().split('T')[0] };
+        const issuedDate = new Date(base + offsetDays * 86400000);
+        const issuedStr = issuedDate.toISOString().split('T')[0];
+        const expiry = getExpiryStatus(issuedStr, doc.validityYears);
+
+        return {
+            title: doc.title,
+            issued: issuedStr,
+            validityYears: doc.validityYears,
+            expiryDate: expiry.expiryDate,
+            expiryStatus: expiry.status,
+            daysRemaining: expiry.daysRemaining,
+        };
     });
 };
 
-const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, selectedVideoId, toggleNotifications }) => {
-    const { core } = useServices();
+// Expiry status badge colors
+const STATUS_STYLES = {
+    valid: { background: 'rgba(46,204,113,0.25)', color: '#2ecc71', label: 'Valid' },
+    expiring: { background: 'rgba(241,196,15,0.25)', color: '#f1c40f', label: 'Expiring Soon' },
+    expired: { background: 'rgba(231,76,60,0.25)', color: '#e74c3c', label: 'Expired' },
+    permanent: { background: 'rgba(149,165,166,0.15)', color: '#95a5a6', label: 'No Expiry' },
+};
+
+const DocumentsList = ({ className, metaItem, category, categoryOnSelect }) => {
     const profile = useProfile();
 
-    const showNotificationsToggle = React.useMemo(() => {
-        return metaItem?.content?.content?.inLibrary && metaItem?.content?.content?.videos?.length;
-    }, [metaItem]);
-    const videos = React.useMemo(() => {
-        return metaItem && metaItem.content.type === 'Ready' ?
-            metaItem.content.content.videos
-            :
-            [];
-    }, [metaItem]);
     // PBS Crewing: hash from crew member name for deterministic doc distribution
     const crewHash = React.useMemo(() => {
         const name = metaItem?.content?.content?.name || '';
         return hashStr(name);
     }, [metaItem]);
-    // PBS Crewing: always show 5 document categories
-    const seasons = CREW_DOC_CATEGORIES;
-    const selectedSeason = React.useMemo(() => {
-        if (CREW_DOC_CATEGORIES.includes(season)) return season;
-        return 1; // default to Main Docs
-    }, [season]);
-    // PBS Crewing: per-crew randomized documents for the selected category
-    const videosForSeason = React.useMemo(() => {
-        const docs = getCrewDocs(crewHash, selectedSeason);
-        return docs.map((doc, i) => ({
-            id: `crew-doc-${selectedSeason}-${i}`,
-            title: doc.title,
-            thumbnail: null,
-            season: selectedSeason,
-            episode: i + 1,
-            released: new Date(doc.issued),
-            upcoming: false,
-            watched: false,
-            progress: null,
-            deepLinks: null,
-            scheduled: false,
-        }));
-    }, [selectedSeason, crewHash]);
 
-    const seasonWatched = React.useMemo(() => {
-        return videosForSeason.every((video) => video.watched);
-    }, [videosForSeason]);
+    // Always show 5 document categories
+    const categories = CREW_DOC_CATEGORIES;
+    const selectedCategory = React.useMemo(() => {
+        if (CREW_DOC_CATEGORIES.includes(category)) return category;
+        return 1; // default to Main Docs
+    }, [category]);
+
+    // Per-crew documents for the selected category
+    const documents = React.useMemo(() => {
+        return getCrewDocs(crewHash, selectedCategory);
+    }, [selectedCategory, crewHash]);
 
     const [search, setSearch] = React.useState('');
     const searchInputOnChange = React.useCallback((event) => {
         setSearch(event.currentTarget.value);
     }, []);
 
-    const onMarkVideoAsWatched = (video, watched) => {
-        core.transport.dispatch({
-            action: 'MetaDetails',
-            args: {
-                action: 'MarkVideoAsWatched',
-                args: [video, !watched]
-            }
-        });
-    };
-
-    const onMarkSeasonAsWatched = (season, watched) => {
-        core.transport.dispatch({
-            action: 'MetaDetails',
-            args: {
-                action: 'MarkSeasonAsWatched',
-                args: [season, !watched]
-            }
-        });
-    };
-
-    const onSeasonSearch = (value) => {
-        if (value) {
-            seasonOnSelect({
-                type: 'select',
-                value,
-            });
-        }
-    };
+    // Summary counts for current category
+    const statusCounts = React.useMemo(() => {
+        const counts = { valid: 0, expiring: 0, expired: 0, permanent: 0 };
+        documents.forEach((doc) => { counts[doc.expiryStatus]++; });
+        return counts;
+    }, [documents]);
 
     return (
         <div className={classnames(className, styles['videos-list-container'])}>
             {
                 !metaItem || metaItem.content.type === 'Loading' ?
                     <React.Fragment>
-                        <SeasonsBar.Placeholder className={styles['seasons-bar']} />
-                        <SearchBar.Placeholder className={styles['search-bar']} title={t('SEARCH_VIDEOS')} />
+                        <CategoryBar.Placeholder className={styles['seasons-bar']} />
+                        <SearchBar.Placeholder className={styles['search-bar']} title={'Search documents...'} />
                         <div className={styles['videos-scroll-container']}>
-                            <Video.Placeholder />
-                            <Video.Placeholder />
                             <Video.Placeholder />
                             <Video.Placeholder />
                             <Video.Placeholder />
@@ -151,12 +118,38 @@ const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, 
                         </div>
                         :
                         <React.Fragment>
-                            <SeasonsBar
+                            <CategoryBar
                                 className={styles['seasons-bar']}
-                                season={selectedSeason}
-                                seasons={seasons}
-                                onSelect={seasonOnSelect}
+                                category={selectedCategory}
+                                categories={categories}
+                                onSelect={categoryOnSelect}
                             />
+                            {/* Status summary bar */}
+                            <div style={{
+                                display: 'flex', gap: '0.5rem', padding: '0 1.5rem 0.5rem',
+                                fontSize: '0.75rem', flexWrap: 'wrap'
+                            }}>
+                                {statusCounts.valid > 0 && (
+                                    <span style={{ ...STATUS_STYLES.valid, padding: '2px 8px', borderRadius: '4px' }}>
+                                        {statusCounts.valid} Valid
+                                    </span>
+                                )}
+                                {statusCounts.expiring > 0 && (
+                                    <span style={{ ...STATUS_STYLES.expiring, padding: '2px 8px', borderRadius: '4px' }}>
+                                        {statusCounts.expiring} Expiring
+                                    </span>
+                                )}
+                                {statusCounts.expired > 0 && (
+                                    <span style={{ ...STATUS_STYLES.expired, padding: '2px 8px', borderRadius: '4px' }}>
+                                        {statusCounts.expired} Expired
+                                    </span>
+                                )}
+                                {statusCounts.permanent > 0 && (
+                                    <span style={{ ...STATUS_STYLES.permanent, padding: '2px 8px', borderRadius: '4px' }}>
+                                        {statusCounts.permanent} Permanent
+                                    </span>
+                                )}
+                            </div>
                             <SearchBar
                                 className={styles['search-bar']}
                                 title={'Search documents...'}
@@ -165,34 +158,42 @@ const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, 
                             />
                             <div className={styles['videos-container']}>
                                 {
-                                    videosForSeason
-                                        .filter((video) => {
+                                    documents
+                                        .filter((doc) => {
                                             return search.length === 0 ||
-                                                (
-                                                    (typeof video.title === 'string' && video.title.toLowerCase().includes(search.toLowerCase())) ||
-                                                    (!isNaN(video.released.getTime()) && video.released.toLocaleString(profile.settings.interfaceLanguage, { year: '2-digit', month: 'short', day: 'numeric' }).toLowerCase().includes(search.toLowerCase()))
-                                                );
+                                                doc.title.toLowerCase().includes(search.toLowerCase()) ||
+                                                (doc.expiryStatus && doc.expiryStatus.toLowerCase().includes(search.toLowerCase()));
                                         })
-                                        .map((video, index) => (
-                                            <Video
-                                                key={index}
-                                                id={video.id}
-                                                title={video.title}
-                                                thumbnail={video.thumbnail}
-                                                season={video.season}
-                                                episode={video.episode}
-                                                released={video.released}
-                                                upcoming={video.upcoming}
-                                                watched={video.watched}
-                                                progress={video.progress}
-                                                deepLinks={video.deepLinks}
-                                                scheduled={video.scheduled}
-                                                seasonWatched={seasonWatched}
-                                                selected={video.id === selectedVideoId}
-                                                onMarkVideoAsWatched={onMarkVideoAsWatched}
-                                                onMarkSeasonAsWatched={onMarkSeasonAsWatched}
-                                            />
-                                        ))
+                                        .map((doc, index) => {
+                                            const st = STATUS_STYLES[doc.expiryStatus] || STATUS_STYLES.permanent;
+                                            return (
+                                                <div key={index} style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '0.6rem 0.8rem', margin: '0 0.2rem 0.35rem',
+                                                    background: 'rgba(255,255,255,0.04)', borderRadius: '6px',
+                                                    borderLeft: `3px solid ${st.color}`,
+                                                }}>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ color: '#e0e0e0', fontSize: '0.9rem', fontWeight: 500 }}>
+                                                            {doc.title}
+                                                        </div>
+                                                        <div style={{ color: '#888', fontSize: '0.75rem', marginTop: '2px' }}>
+                                                            {'Issued: ' + new Date(doc.issued).toLocaleDateString(profile.settings?.interfaceLanguage)}
+                                                            {doc.expiryDate && (' — Expires: ' + new Date(doc.expiryDate).toLocaleDateString(profile.settings?.interfaceLanguage))}
+                                                            {doc.daysRemaining !== null && doc.daysRemaining >= 0 && ` (${doc.daysRemaining}d)`}
+                                                            {doc.daysRemaining !== null && doc.daysRemaining < 0 && ` (${Math.abs(doc.daysRemaining)}d overdue)`}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{
+                                                        ...st, padding: '3px 10px', borderRadius: '4px',
+                                                        fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
+                                                        whiteSpace: 'nowrap', marginLeft: '0.5rem',
+                                                    }}>
+                                                        {st.label}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
                                 }
                             </div>
                         </React.Fragment>
@@ -201,14 +202,11 @@ const VideosList = ({ className, metaItem, libraryItem, season, seasonOnSelect, 
     );
 };
 
-VideosList.propTypes = {
+DocumentsList.propTypes = {
     className: PropTypes.string,
     metaItem: PropTypes.object,
-    libraryItem: PropTypes.object,
-    season: PropTypes.number,
-    selectedVideoId: PropTypes.string,
-    seasonOnSelect: PropTypes.func,
-    toggleNotifications: PropTypes.func,
+    category: PropTypes.number,
+    categoryOnSelect: PropTypes.func,
 };
 
-module.exports = VideosList;
+module.exports = DocumentsList;

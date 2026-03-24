@@ -1,34 +1,32 @@
-// Copyright (C) 2017-2023 Smart code 203358507
+// PBS Crewing Module: CategoryBar loading placeholder
 
 const React = require('react');
-const { useTranslation } = require('react-i18next');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { default: Icon } = require('@stremio/stremio-icons/react');
 const styles = require('./styles');
 
-const SeasonsBarPlaceholder = ({ className }) => {
-    const { t } = useTranslation();
+const CategoryBarPlaceholder = ({ className }) => {
     return (
         <div className={classnames(className, styles['seasons-bar-placeholder-container'])}>
             <div className={styles['prev-season-button']}>
                 <Icon className={styles['icon']} name={'chevron-back'} />
-                <div className={styles['label']}>{t('SEASON_PREV')}</div>
+                <div className={styles['label']}>{'Prev'}</div>
             </div>
             <div className={styles['seasons-popup-label-container']}>
-                <div className={styles['seasons-popup-label']}>{t('SEASON_NUMBER', { season: 1 })}</div>
+                <div className={styles['seasons-popup-label']}>{'Main Docs'}</div>
                 <Icon className={styles['seasons-popup-icon']} name={'caret-down'} />
             </div>
             <div className={styles['next-season-button']}>
-                <div className={styles['label']}>{t('SEASON_NEXT')}</div>
+                <div className={styles['label']}>{'Next'}</div>
                 <Icon className={styles['icon']} name={'chevron-forward'} />
             </div>
         </div>
     );
 };
 
-SeasonsBarPlaceholder.propTypes = {
+CategoryBarPlaceholder.propTypes = {
     className: PropTypes.string
 };
 
-module.exports = SeasonsBarPlaceholder;
+module.exports = CategoryBarPlaceholder;

@@ -79,9 +79,10 @@
         .upload-area {
             flex: 1;
             display: flex;
-            flex-direction: column;
-            padding: 1.5rem;
-            overflow-y: auto;
+            flex-direction: row;
+            padding: 1rem 1.5rem;
+            overflow: hidden;
+            min-height: 0;
 
             .upload-controls {
                 flex: none;
@@ -158,14 +159,14 @@
                     text-transform: uppercase;
                     letter-spacing: 0.06em;
                     color: var(--primary-foreground-color);
-                    opacity: 0.4;
+                    opacity: 0.7;
                     margin-bottom: 0.75rem;
                 }
 
                 .uploads-empty {
                     font-size: 0.95rem;
                     color: var(--primary-foreground-color);
-                    opacity: 0.35;
+                    opacity: 0.6;
                     padding: 1rem 0;
                 }
 
