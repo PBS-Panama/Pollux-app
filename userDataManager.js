@@ -1,4 +1,4 @@
-// PBS Crewing Module: User Database — filesystem operations
+// Leto Crewing Module: User Database — filesystem operations
 // Manages per-user folder structure and JSON data persistence
 
 const fs = require('fs');
@@ -15,7 +15,7 @@ const DEFAULT_DATA = {
     calendar: { availability: [], confirmedInterviews: [] },
     dashboard: { currentContract: null, rotationHistory: [], portCalls: [] },
     myexams: { bookedExams: [] },
-    settings: { preferences: {} },
+    settings: { preferences: {}, rank: null },
 };
 
 // ─── Folder Management ──────────────────────────────────────────────

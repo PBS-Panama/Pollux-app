@@ -1,0 +1,92 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  Leto Platform — Unified Docker Compose                        ║
+# ╠══════════════════════════════════════════════════════════════════╣
+# ║                                                                  ║
+# ║  ARCHITECTURE:                                                   ║
+# ║  Nginx is the ONLY exposed component (Docker maps 3000 -> 80).   ║
+# ║  External Access is via: http://localhost:3000                   ║
+# ║  All other ports (5173, 8000, 8080) are INTERNAL network only.   ║
+# ║                                                                  ║
+# ║  SERVICES (5 total):                                             ║
+# ║  nginx    — Reverse proxy, single entry point (port 3000)       ║
+# ║  postgres — PostgreSQL 15, user auth database                   ║
+# ║  backend  — FastAPI, JWT auth + user management                 ║
+# ║  frontend — React/Vite, landing page + modals                   ║
+# ║  crewing  — React bundle + Express API, crewing module (/app/)  ║
+# ║                                                                  ║
+# ║  INTERNAL ROUTING:                                               ║
+# ║  /             → frontend (Leto Landing Page, int port 5173)    ║
+# ║  /api/         → backend  (Leto FastAPI, internal port 8000)    ║
+# ║    /api/docs        → Swagger UI                                ║
+# ║    /api/redoc       → ReDoc                                     ║
+# ║    /api/auth/*      → JWT auth endpoints                        ║
+# ║  /app/         → crewing  (Leto Crewing App, int port 8080)     ║
+# ║  /crewing-api/ → crewing API (Express, internal port 8080)      ║
+# ║                                                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+services:
+  # ─── Nginx Reverse Proxy (Single Entry Point) ──────────────────
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - frontend
+      - backend
+      - crewing
+
+  # ─── PostgreSQL Database ────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: leto_db
+      POSTGRES_USER: leto_user
+      POSTGRES_PASSWORD: leto_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leto_user -d leto_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Leto Backend (FastAPI) ─────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://leto_user:leto_pass@postgres:5432/leto_db
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ─── Leto Frontend (React/Vite Landing Page) ────────────────────
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+  # ─── Leto Crewing App (React bundle + Express API) ──────────────
+  crewing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./User database:/app/User database
+
+volumes:
+  postgres_data:

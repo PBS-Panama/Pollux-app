@@ -8,15 +8,13 @@ const AVAILABILITY_KEY = 'pbs_seafarer_availability';
 const CONFIRMED_KEY = 'pbs_confirmed_interviews';
 const BOOKED_EXAMS_KEY = 'pbs_booked_exams';
 
-const userId = api.DEFAULT_USER_ID;
-
 // Background sync: push localStorage data to API (fire-and-forget)
 const syncToApi = async (page, dataKey, storageKey) => {
     try {
         const available = await api.isApiAvailable();
         if (!available) return;
         const data = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        await api.patchPageData(userId, page, { [dataKey]: data });
+        await api.patchPageData(api.getUserId(), page, { [dataKey]: data });
     } catch { /* silent — localStorage is the fallback */ }
 };
 
@@ -25,6 +23,7 @@ const syncFromApi = async (page, dataKey, storageKey) => {
     try {
         const available = await api.isApiAvailable();
         if (!available) return;
+        const userId = api.getUserId();
         await api.initUser(userId);
         const pageData = await api.getPageData(userId, page);
         if (pageData && Array.isArray(pageData[dataKey])) {
@@ -62,7 +61,7 @@ const addAvailability = (period) => {
     list.push(newPeriod);
     localStorage.setItem(AVAILABILITY_KEY, JSON.stringify(list));
     // Sync to API
-    api.addAvailability(userId, period).catch(() => {});
+    api.addAvailability(api.getUserId(), period).catch(() => {});
     syncToApi('calendar', 'availability', AVAILABILITY_KEY);
     return newPeriod;
 };
@@ -71,7 +70,7 @@ const removeAvailability = (id) => {
     const list = getAvailability().filter((p) => p.id !== id);
     localStorage.setItem(AVAILABILITY_KEY, JSON.stringify(list));
     // Sync to API
-    api.removeAvailability(userId, id).catch(() => {});
+    api.removeAvailability(api.getUserId(), id).catch(() => {});
     syncToApi('calendar', 'availability', AVAILABILITY_KEY);
 };
 
@@ -93,7 +92,7 @@ const confirmInterview = (eventId) => {
         list.push(eventId);
         localStorage.setItem(CONFIRMED_KEY, JSON.stringify(list));
         // Sync to API
-        api.confirmInterview(userId, eventId).catch(() => {});
+        api.confirmInterview(api.getUserId(), eventId).catch(() => {});
     }
 };
 
@@ -115,7 +114,7 @@ const bookExam = (exam) => {
     list.push(newBooking);
     localStorage.setItem(BOOKED_EXAMS_KEY, JSON.stringify(list));
     // Sync to API
-    api.bookExam(userId, exam).catch(() => {});
+    api.bookExam(api.getUserId(), exam).catch(() => {});
     syncToApi('myexams', 'bookedExams', BOOKED_EXAMS_KEY);
     return newBooking;
 };
@@ -124,7 +123,7 @@ const removeBookedExam = (id) => {
     const list = getBookedExams().filter((e) => e.id !== id);
     localStorage.setItem(BOOKED_EXAMS_KEY, JSON.stringify(list));
     // Sync to API
-    api.cancelExam(userId, id).catch(() => {});
+    api.cancelExam(api.getUserId(), id).catch(() => {});
     syncToApi('myexams', 'bookedExams', BOOKED_EXAMS_KEY);
 };
 

@@ -1,4 +1,4 @@
-// PBS Crewing Module: shared document category data
+// Leto Crewing Module: shared document category data
 // Each document has a baseDate (issue) and validityYears (how long it's valid)
 // validityYears: null = no expiry (permanent), number = years from issue
 
@@ -186,4 +186,185 @@ const getExpiryStatus = (issuedDate, validityYears) => {
     };
 };
 
-module.exports = { CREW_DOC_LABELS, CREW_ALL_DOCS, CREW_DOC_CATEGORIES, getExpiryStatus };
+
+// ─── Rank → Required Document Titles ────────────────────────────────
+// Titles must match exactly those in CREW_ALL_DOCS above.
+// 'rank' IDs match the RANKS array in RegisterModal.tsx.
+const UNIVERSAL_DOCS = [
+    "Seaman's Book",
+    'National ID Card',
+    'Passport',
+    'STCW Certificate',
+    'Seaman Identity Document (SID)',
+    'Flag State Medical Certificate',
+    'Drug & Alcohol Test',
+    'Eyesight Test Certificate',
+    'IMO 1.19 — Proficiency in Personal Survival Techniques',
+    'IMO 1.20 — Fire Prevention and Fire Fighting',
+    'IMO 1.21 — Personal Safety and Social Responsibilities',
+    'IMO 1.14 — Medical First Aid',
+    'IMO 3.27 — Security Awareness Training for All Seafarers',
+];
+
+const RANK_REQUIRED_DOCS = {
+    master: [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.07 — Radar Navigation at Operational Level',
+        'IMO 1.08 — Radar Navigation at Management Level (Radar, ARPA, Bridge Teamwork & SAR)',
+        'IMO 1.15 — Medical Care',
+        'IMO 1.22 — Bridge Resource Management (BRM)',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 1.25 — General Operator\'s Certificate for GMDSS',
+        'IMO 1.27 — Operational Use of ECDIS',
+        'IMO 1.29 — Proficiency in Crisis Management and Human Behavior Training',
+        'IMO 1.39 — Leadership & Teamwork',
+        'IMO 1.40 — Use of Leadership and Managerial Skills',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 3.19 — Ship Security Officer (SSO)',
+        'IMO 7.01 — Master and Chief Mate',
+    ],
+    'chief-officer': [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.07 — Radar Navigation at Operational Level',
+        'IMO 1.08 — Radar Navigation at Management Level (Radar, ARPA, Bridge Teamwork & SAR)',
+        'IMO 1.15 — Medical Care',
+        'IMO 1.22 — Bridge Resource Management (BRM)',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 1.25 — General Operator\'s Certificate for GMDSS',
+        'IMO 1.27 — Operational Use of ECDIS',
+        'IMO 1.29 — Proficiency in Crisis Management and Human Behavior Training',
+        'IMO 1.39 — Leadership & Teamwork',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 7.01 — Master and Chief Mate',
+    ],
+    '2nd-officer': [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.07 — Radar Navigation at Operational Level',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 1.25 — General Operator\'s Certificate for GMDSS',
+        'IMO 1.27 — Operational Use of ECDIS',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 7.03 — Officer in Charge of a Navigational Watch (OOW)',
+    ],
+    '3rd-officer': [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 1.27 — Operational Use of ECDIS',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 7.03 — Officer in Charge of a Navigational Watch (OOW)',
+    ],
+    'chief-engineer': [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.15 — Medical Care',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 1.39 — Leadership & Teamwork',
+        'IMO 1.40 — Use of Leadership and Managerial Skills',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 7.02 — Chief Engineer Officer & Second Engineer Officer',
+        'IMO 7.17 — Engine-Room Resource Management (ERM)',
+        'High Voltage Operations',
+    ],
+    '2nd-engineer': [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 1.39 — Leadership & Teamwork',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 7.02 — Chief Engineer Officer & Second Engineer Officer',
+        'IMO 7.17 — Engine-Room Resource Management (ERM)',
+    ],
+    electrician: [
+        ...UNIVERSAL_DOCS,
+        'Flag State CoC',
+        'Endorsement of Recognition',
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 2.03 — Advanced Training in Fire Fighting',
+        'IMO 7.08 — Electro-Technical Officer (ETO)',
+        'High Voltage Operations',
+    ],
+    bosun: [
+        ...UNIVERSAL_DOCS,
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 3.26 — Security Training for Seafarers with Designated Security Duties',
+        'IMO 7.10 — Ratings as Able Seafarer Deck',
+    ],
+    ab: [
+        ...UNIVERSAL_DOCS,
+        'IMO 1.23 — Proficiency in Survival Craft and Rescue Boats (excl. Fast Rescue Boats)',
+        'IMO 3.26 — Security Training for Seafarers with Designated Security Duties',
+        'IMO 7.10 — Ratings as Able Seafarer Deck',
+    ],
+    cook: [
+        ...UNIVERSAL_DOCS,
+        'IMO 3.27 — Security Awareness Training for All Seafarers',
+    ],
+};
+
+/**
+ * Check a user's document compliance for their rank.
+ * @param {string} rank - rank ID (e.g. 'master', 'chief-officer')
+ * @param {Array} uploadedDocs - array of doc objects from the backend (with documentName, expiryDate, issuedDate)
+ * @returns {{ missing: string[], expiring: string[], expired: string[], compliant: boolean }}
+ */
+const getComplianceStatus = (rank, uploadedDocs) => {
+    const required = RANK_REQUIRED_DOCS[rank] || [];
+    if (required.length === 0) return { missing: [], expiring: [], expired: [], compliant: true };
+
+    const uploadedNames = new Set((uploadedDocs || []).map((d) => d.documentName));
+    const missing = [];
+    const expiring = [];
+    const expired = [];
+
+    for (const docTitle of required) {
+        if (!uploadedNames.has(docTitle)) {
+            missing.push(docTitle);
+            continue;
+        }
+        // Check expiry on uploaded doc
+        const uploaded = (uploadedDocs || []).find((d) => d.documentName === docTitle);
+        if (!uploaded) continue;
+
+        let expiryMs = null;
+        if (uploaded.expiryDate && uploaded.expiryDate !== 'N/A') {
+            expiryMs = new Date(uploaded.expiryDate).getTime();
+        } else if (uploaded.issuedDate && uploaded.validityYears) {
+            const issued = new Date(uploaded.issuedDate);
+            issued.setFullYear(issued.getFullYear() + uploaded.validityYears);
+            expiryMs = issued.getTime();
+        }
+
+        if (expiryMs !== null) {
+            const daysLeft = Math.ceil((expiryMs - Date.now()) / 86400000);
+            if (daysLeft < 0) {
+                expired.push(docTitle);
+            } else if (daysLeft <= 90) {
+                expiring.push(docTitle);
+            }
+        }
+    }
+
+    const compliant = missing.length === 0 && expired.length === 0;
+    return { missing, expiring, expired, compliant };
+};
+
+module.exports = {
+    CREW_DOC_LABELS,
+    CREW_ALL_DOCS,
+    CREW_DOC_CATEGORIES,
+    getExpiryStatus,
+    RANK_REQUIRED_DOCS,
+    UNIVERSAL_DOCS,
+    getComplianceStatus,
+};
+

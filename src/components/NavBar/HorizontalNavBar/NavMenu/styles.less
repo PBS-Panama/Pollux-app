@@ -82,6 +82,111 @@
         }
     }
 
+    .seafarer-profile-card {
+        padding: 1.5rem;
+        background: linear-gradient(145deg, rgba(16, 24, 39, 0.4) 0%, rgba(31, 41, 55, 0.2) 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+        .seafarer-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.25rem;
+
+            .seafarer-avatar {
+                flex: none;
+                height: 4.5rem;
+                width: 4.5rem;
+                border-radius: 50%;
+                background-size: cover;
+                background-repeat: no-repeat;
+                background-position: center;
+                border: 2px solid #00F0FF;
+                box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            }
+
+            .seafarer-details {
+                margin-left: 1.25rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+
+                .seafarer-name {
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #FFFFFF;
+                }
+
+                .seafarer-rank-status {
+                    display: flex;
+                    gap: 0.5rem;
+                    align-items: center;
+
+                    .seafarer-badge-rank {
+                        background-color: rgba(255, 255, 255, 0.1);
+                        color: #E2E8F0;
+                        padding: 0.1rem 0.5rem;
+                        border-radius: 4px;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                    }
+
+                    .seafarer-badge-status {
+                        background-color: rgba(16, 185, 129, 0.2);
+                        color: #10B981;
+                        border: 1px solid rgba(16, 185, 129, 0.3);
+                        padding: 0.1rem 0.5rem;
+                        border-radius: 4px;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                    }
+                }
+
+                .seafarer-email {
+                    font-size: 0.8rem;
+                    color: rgba(255, 255, 255, 0.5);
+                    margin-top: 0.25rem;
+                }
+            }
+        }
+
+        .seafarer-actions {
+            display: flex;
+            gap: 0.5rem;
+
+            .action-button-primary {
+                flex: 1;
+                background-color: rgba(0, 240, 255, 0.1);
+                color: #00F0FF;
+                border: 1px solid rgba(0, 240, 255, 0.2);
+                padding: 0.5rem;
+                text-align: center;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                transition: all 0.2s ease;
+
+                &:hover {
+                    background-color: rgba(0, 240, 255, 0.2);
+                }
+            }
+
+            .action-button-danger {
+                background-color: rgba(239, 68, 68, 0.1);
+                color: #EF4444;
+                border: 1px solid rgba(239, 68, 68, 0.2);
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                transition: all 0.2s ease;
+
+                &:hover {
+                    background-color: rgba(239, 68, 68, 0.2);
+                }
+            }
+        }
+    }
+
     .nav-menu-section {
         border-top: thin solid var(--overlay-color);
 

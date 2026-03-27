@@ -1,0 +1,45 @@
+{
+  "availability": [
+    {
+      "id": "avl-1774402437218-ud6h",
+      "type": "embarking",
+      "startDay": 1,
+      "endDay": 8,
+      "monthKey": "2026-03",
+      "label": "MV Atlantic voyage"
+    },
+    {
+      "id": "avl-1774402437219-zjyo",
+      "type": "days-off",
+      "startDay": 9,
+      "endDay": 14,
+      "monthKey": "2026-03",
+      "label": "Shore leave"
+    },
+    {
+      "id": "avl-1774402437220-79rq",
+      "type": "available",
+      "startDay": 15,
+      "endDay": 31,
+      "monthKey": "2026-03",
+      "label": "Available for contracts"
+    },
+    {
+      "id": "avl-1774402437220-jud6",
+      "type": "available",
+      "startDay": 1,
+      "endDay": 10,
+      "monthKey": "2026-04",
+      "label": "Available for contracts"
+    },
+    {
+      "id": "avl-1774402437220-dgbf",
+      "type": "embarking",
+      "startDay": 11,
+      "endDay": 30,
+      "monthKey": "2026-04",
+      "label": "MS Robin assignment"
+    }
+  ],
+  "confirmedInterviews": []
+}

@@ -5,114 +5,106 @@ const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { useTranslation } = require('react-i18next');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { useServices } = require('stremio/services');
 const { Button } = require('stremio/components');
-const { default: useFullscreen } = require('stremio/common/useFullscreen');
-const useProfile = require('stremio/common/useProfile');
-const usePWA = require('stremio/common/usePWA');
-const useTorrent = require('stremio/common/useTorrent');
 const { withCoreSuspender } = require('stremio/common/CoreSuspender');
-const useStreamingServer = require('stremio/common/useStreamingServer');
 const styles = require('./styles');
+
+// Read the authenticated Leto user from localStorage (set by landing page on login)
+const getLetoUser = () => {
+    try {
+        const data = typeof localStorage !== 'undefined' && localStorage.getItem('leto-user');
+        return data ? JSON.parse(data) : null;
+    } catch { return null; }
+};
 
 const NavMenuContent = ({ onClick }) => {
     const { t } = useTranslation();
-    const { core } = useServices();
-    const profile = useProfile();
-    const streamingServer = useStreamingServer();
-    const { createTorrentFromMagnet } = useTorrent();
-    const [fullscreen, requestFullscreen, exitFullscreen] = useFullscreen();
-    const [isIOSPWA, isAndroidPWA] = usePWA();
-    const streamingServerWarningDismissed = React.useMemo(() => {
-        return streamingServer.settings !== null && streamingServer.settings.type === 'Ready' || (
-            !isNaN(profile.settings.streamingServerWarningDismissed.getTime()) &&
-            profile.settings.streamingServerWarningDismissed.getTime() > Date.now()
-        );
-    }, [profile.settings, streamingServer.settings]);
-    const logoutButtonOnClick = React.useCallback(() => {
-        core.transport.dispatch({
-            action: 'Ctx',
-            args: {
-                action: 'Logout'
-            }
-        });
+    const [letoUser, setLetoUser] = React.useState(getLetoUser);
+
+    // Re-read if localStorage changes (e.g. login happening in parent window)
+    React.useEffect(() => {
+        const onStorage = () => setLetoUser(getLetoUser());
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
     }, []);
-    const onPlayMagnetLinkClick = React.useCallback(async () => {
-        try {
-            const clipboardText = await navigator.clipboard.readText();
-            createTorrentFromMagnet(clipboardText);
-        } catch(e) {
-            console.error(e);
+
+    const displayName = React.useMemo(() => {
+        if (!letoUser) return 'ANONYMOUS';
+        if (letoUser.first_name || letoUser.last_name) {
+            return `${letoUser.first_name || ''} ${letoUser.last_name || ''}`.trim().toUpperCase();
         }
+        return (letoUser.email || '').split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').toUpperCase();
+    }, [letoUser]);
+
+    const seafarerRank = letoUser ? (letoUser.rank || 'N/A') : null;
+    const seafarerStatus = 'Validado';
+
+    const logoutButtonOnClick = React.useCallback(() => {
+        try { localStorage.removeItem('leto-auth'); } catch { /* */ }
+        try { localStorage.removeItem('leto-user'); } catch { /* */ }
+        // Navigate the top-level window back to the landing page
+        (window.top || window).location.href = '/';
     }, []);
+
     return (
-        <div className={classnames(styles['nav-menu-container'], 'animation-fade-in', { [styles['with-warning']]: !streamingServerWarningDismissed } )} onClick={onClick}>
-            <div className={styles['user-info-container']}>
-                <div
-                    className={styles['avatar-container']}
-                    style={{
-                        backgroundImage: profile.auth === null ?
-                            `url('${require('/assets/images/anonymous.png')}')`
-                            :
-                            profile.auth.user.avatar ?
-                                `url('${profile.auth.user.avatar}')`
-                                :
-                                `url('${require('/assets/images/default_avatar.png')}')`
-                    }}
-                />
-                <div className={styles['user-info-details']}>
-                    <div className={styles['email-container']}>
-                        <div className={styles['email-label']}>{profile.auth === null ? t('ANONYMOUS_USER') : profile.auth.user.email}</div>
-                    </div>
-                    <Button className={styles['logout-button-container']} title={profile.auth === null ? `${t('LOG_IN')} / ${t('SIGN_UP')}` : t('LOG_OUT')} href={profile.auth === null ? '#/intro' : null} onClick={profile.auth !== null ? logoutButtonOnClick : null}>
-                        <div className={styles['logout-label']}>{profile.auth === null ? `${t('LOG_IN')} / ${t('SIGN_UP')}` : t('LOG_OUT')}</div>
-                    </Button>
-                </div>
-            </div>
+        <div className={classnames(styles['nav-menu-container'], 'animation-fade-in')} onClick={onClick}>
             {
-                !isIOSPWA && !isAndroidPWA ?
-                    <div className={styles['nav-menu-section']}>
-                        <Button className={styles['nav-menu-option-container']} title={fullscreen ? t('EXIT_FULLSCREEN') : t('ENTER_FULLSCREEN')} onClick={fullscreen ? exitFullscreen : requestFullscreen}>
-                            <Icon className={styles['icon']} name={fullscreen ? 'minimize' : 'maximize'} />
-                            <div className={styles['nav-menu-option-label']}>{fullscreen ? t('EXIT_FULLSCREEN') : t('ENTER_FULLSCREEN')}</div>
-                        </Button>
+                letoUser !== null ?
+                    <div className={styles['seafarer-profile-card']}>
+                        <div className={styles['seafarer-header']}>
+                            <div
+                                className={styles['seafarer-avatar']}
+                                style={{ backgroundImage: `url('${require('/assets/images/default_avatar.png')}')` }}
+                            />
+                            <div className={styles['seafarer-details']}>
+                                <div className={styles['seafarer-name']}>{displayName}</div>
+                                <div className={styles['seafarer-rank-status']}>
+                                    <span className={styles['seafarer-badge-rank']}>{seafarerRank}</span>
+                                    <span className={styles['seafarer-badge-status']}>&#x2714; {seafarerStatus}</span>
+                                </div>
+                                <div className={styles['seafarer-email']}>{letoUser.email}</div>
+                            </div>
+                        </div>
+                        <div className={styles['seafarer-actions']}>
+                            <Button className={styles['action-button-primary']} title={'Mis Documentos'} href={'#/myfiles'}>
+                                Mis Documentos
+                            </Button>
+                            <Button className={styles['action-button-danger']} title={'Cerrar sesión'} onClick={logoutButtonOnClick}>
+                                Cerrar sesión
+                            </Button>
+                        </div>
                     </div>
-                    :
-                    null
+                :
+                    <div className={styles['user-info-container']}>
+                        <div
+                            className={styles['avatar-container']}
+                            style={{ backgroundImage: `url('${require('/assets/images/anonymous.png')}')` }}
+                        />
+                        <div className={styles['user-info-details']}>
+                            <div className={styles['email-container']}>
+                                <div className={styles['email-label']}>{t('ANONYMOUS_USER')}</div>
+                            </div>
+                            <Button className={styles['logout-button-container']} title={'Iniciar Sesión'} onClick={() => { (window.top || window).location.href = '/'; }}>
+                                <div className={styles['logout-label']}>Iniciar Sesión</div>
+                            </Button>
+                        </div>
+                    </div>
             }
             <div className={styles['nav-menu-section']}>
-                <Button className={styles['nav-menu-option-container']} title={ t('SETTINGS') } href={'#/settings'}>
-                    <Icon className={styles['icon']} name={'settings'} />
-                    <div className={styles['nav-menu-option-label']}>{ t('SETTINGS') }</div>
-                </Button>
-                <Button className={styles['nav-menu-option-container']} title={ t('ADDONS') } href={'#/myexams'}>
-                    <Icon className={styles['icon']} name={'addons-outline'} />
-                    <div className={styles['nav-menu-option-label']}>{ t('ADDONS') }</div>
-                </Button>
-                <Button className={styles['nav-menu-option-container']} title={ t('PLAY_URL_MAGNET_LINK') } onClick={onPlayMagnetLinkClick}>
-                    <Icon className={styles['icon']} name={'magnet-link'} />
-                    <div className={styles['nav-menu-option-label']}>{ t('PLAY_URL_MAGNET_LINK') }</div>
-                </Button>
-                <Button className={styles['nav-menu-option-container']} title={ t('HELP_FEEDBACK') } href={'https://stremio.zendesk.com/'} target={'_blank'}>
-                    <Icon className={styles['icon']} name={'help'} />
-                    <div className={styles['nav-menu-option-label']}>{ t('HELP_FEEDBACK') }</div>
+                <Button className={styles['nav-menu-option-container']} title={'Ver perfil completo'} href={'#/company-crewdb'}>
+                    <Icon className={styles['icon']} name={'person'} />
+                    <div className={styles['nav-menu-option-label']}>Ver perfil completo</div>
                 </Button>
             </div>
             <div className={styles['nav-menu-section']}>
-                <Button className={styles['nav-menu-option-container']} title={ t('TERMS_OF_SERVICE') } href={'https://www.stremio.com/tos'} target={'_blank'}>
-                    <div className={styles['nav-menu-option-label']}>{ t('TERMS_OF_SERVICE') }</div>
+                <Button className={styles['nav-menu-option-container']} title={t('SETTINGS')} href={'#/settings'}>
+                    <Icon className={styles['icon']} name={'settings'} />
+                    <div className={styles['nav-menu-option-label']}>{t('SETTINGS')}</div>
                 </Button>
-                <Button className={styles['nav-menu-option-container']} title={ t('PRIVACY_POLICY') } href={'https://www.stremio.com/privacy'} target={'_blank'}>
-                    <div className={styles['nav-menu-option-label']}>{ t('PRIVACY_POLICY') }</div>
+                <Button className={styles['nav-menu-option-container']} title={'Mis Entrenamientos'} href={'#/myexams'}>
+                    <Icon className={styles['icon']} name={'addons-outline'} />
+                    <div className={styles['nav-menu-option-label']}>Mis Entrenamientos</div>
                 </Button>
-                {
-                    profile.auth !== null ?
-                        <Button className={styles['nav-menu-option-container']} title={ t('USER_PANEL') } href={'https://www.stremio.com/acc-settings'} target={'_blank'}>
-                            <div className={styles['nav-menu-option-label']}>{ t('USER_PANEL') }</div>
-                        </Button>
-                        :
-                        null
-                }
             </div>
         </div>
     );

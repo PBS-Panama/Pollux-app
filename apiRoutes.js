@@ -1,8 +1,9 @@
-// PBS Crewing Module: API Routes
-// Express router for per-user data persistence (Firestore + GCS)
+// Leto Crewing Module: API Routes
+// Express router for per-user data persistence (local filesystem)
 
 const express = require('express');
-const dm = require('./cloudDataManager');
+const fs = require('fs');
+const dm = require('./userDataManager');
 
 const router = express.Router();
 
@@ -37,7 +38,25 @@ router.post('/users/:userId/init', async (req, res) => {
     }
 });
 
+// ─── Rank: store/retrieve user rank ─────────────────────────────────
+
+// PATCH /api/users/:userId/settings/rank — set rank (called from Leto on registration)
+router.patch('/users/:userId/settings/rank', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { rank } = req.body;
+        if (!rank) return res.status(400).json({ error: 'rank is required' });
+        const data = await dm.readPageData(userId, 'settings');
+        data.rank = rank;
+        await dm.writePageData(userId, 'settings', data);
+        res.json({ ok: true, rank });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ─── Generic Page Data (calendar, dashboard, myexams, settings) ─────
+
 
 // GET /api/users/:userId/:page — read page data
 router.get('/users/:userId/:page', validPage, async (req, res) => {
@@ -158,14 +177,15 @@ router.delete('/users/:userId/myfiles/uploads/:docId', async (req, res) => {
     }
 });
 
-// GET /api/users/:userId/myfiles/download/:savedName — download a file from GCS
-router.get('/users/:userId/myfiles/download/:savedName', async (req, res) => {
+// GET /api/users/:userId/myfiles/download/:savedName — download a file from local storage
+router.get('/users/:userId/myfiles/download/:savedName', (req, res) => {
     try {
         const { userId, savedName } = req.params;
-        const buffer = await dm.getFileBuffer(userId, savedName);
+        const filePath = dm.getUploadedFilePath(userId, savedName);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${savedName}"`);
-        res.send(buffer);
+        res.sendFile(filePath);
     } catch (err) {
         res.status(404).json({ error: 'File not found' });
     }
@@ -181,13 +201,14 @@ router.post('/users/:userId/myfiles/rotate/:docId', async (req, res) => {
     }
 
     try {
-        const data = await dm.readPageData(userId, 'myfiles');
+        const data = dm.readPageData(userId, 'myfiles');
         const doc = (data.uploads || []).find((d) => d.id === docId);
         if (!doc || !doc.savedName) {
             return res.status(404).json({ error: 'Document not found' });
         }
 
-        const buffer = await dm.getFileBuffer(userId, doc.savedName);
+        const filePath = dm.getUploadedFilePath(userId, doc.savedName);
+        const buffer = fs.readFileSync(filePath);
         const { PDFDocument, degrees } = require('pdf-lib');
         const pdfDoc = await PDFDocument.load(buffer);
         const angle = direction === 'cw' ? 90 : -90;
@@ -198,7 +219,7 @@ router.post('/users/:userId/myfiles/rotate/:docId', async (req, res) => {
         }
 
         const rotatedBytes = await pdfDoc.save();
-        await dm.replaceFile(userId, doc.savedName, Buffer.from(rotatedBytes));
+        fs.writeFileSync(filePath, Buffer.from(rotatedBytes));
 
         res.json({ ok: true, docId, direction, pages: pages.length });
     } catch (err) {

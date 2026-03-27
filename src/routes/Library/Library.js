@@ -6,7 +6,7 @@ const { useProfile, withCoreSuspender } = require('stremio/common');
 const { default: Button } = require('stremio/components/Button');
 const { MainNavBars } = require('stremio/components');
 const { default: Placeholder } = require('./Placeholder');
-const { getExpiryStatus } = require('stremio/common/crewDocData');
+const { getExpiryStatus, getComplianceStatus } = require('stremio/common/crewDocData');
 const api = require('stremio/common/apiClient');
 const useDocumentUpload = require('./useDocumentUpload');
 const styles = require('./styles');
@@ -71,11 +71,45 @@ const Library = () => {
     const [stagedFile, setStagedFile] = React.useState(null);
     const [savedDocName, setSavedDocName] = React.useState(null);
     const [isDragOver, setIsDragOver] = React.useState(false);
+    // Inline preview: which uploaded doc from the list is being previewed
+    const [listPreviewDocId, setListPreviewDocId] = React.useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
     // Rotate modal state
     const [showRotateModal, setShowRotateModal] = React.useState(false);
     const [rotating, setRotating] = React.useState(false);
     const [previewRotation, setPreviewRotation] = React.useState(0);
     const [previewKey, setPreviewKey] = React.useState(0); // force iframe reload after rotate
+
+    // ── Compliance: rank-based document requirements ──────────────────
+    const [userRank, setUserRank] = React.useState(null);
+    const [compliance, setCompliance] = React.useState(null); // { missing, expiring, expired, compliant }
+    const [bannerVisible, setBannerVisible] = React.useState(false);
+
+    // Fetch rank and compute compliance whenever uploaded docs change
+    React.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const data = await api.getSettings(api.DEFAULT_USER_ID);
+                if (cancelled) return;
+                const rank = data?.rank || null;
+                setUserRank(rank);
+                if (rank) {
+                    const status = getComplianceStatus(rank, uploadedDocs);
+                    setCompliance(status);
+                    setBannerVisible(true);
+                    // Auto-hide green banner after 3s
+                    if (status.compliant && status.expiring.length === 0) {
+                        setTimeout(() => { if (!cancelled) setBannerVisible(false); }, 3000);
+                    }
+                }
+            } catch (_) { /* API not available */ }
+        })();
+        return () => { cancelled = true; };
+    }, [uploadedDocs]);
+
+
+
 
     // Map of docName → upload record for current category
     const uploadedDocMap = React.useMemo(() => {
@@ -204,12 +238,92 @@ const Library = () => {
         return uploadedDocs.filter((doc) => doc.category === selectedCategory);
     }, [uploadedDocs, selectedCategory]);
 
+    // ── Pre-compute compliance banner values to avoid JSX IIFE issues ──
+    const RANK_LABELS = {
+        master: 'Capitán / Master', 'chief-officer': 'Primer Oficial',
+        '2nd-officer': 'Segundo Oficial', '3rd-officer': 'Tercer Oficial',
+        'chief-engineer': 'Jefe de Máquinas', '2nd-engineer': 'Segundo Ingeniero',
+        electrician: 'Electricista', bosun: 'Contramaestre', ab: 'Marinero AB', cook: 'Cocinero Jefe',
+    };
+    const rankLabel = userRank ? RANK_LABELS[userRank] || userRank : '';
+    const isGreen = compliance && compliance.compliant && compliance.expiring.length === 0;
+    const isYellow = compliance && compliance.compliant && compliance.expiring.length > 0;
+    const isRed = compliance && !compliance.compliant;
+    const bannerBgColor = isRed ? 'rgba(231,76,60,0.13)' : isYellow ? 'rgba(241,196,15,0.10)' : 'rgba(46,204,113,0.10)';
+    const bannerBorderColor = isRed ? 'rgba(231,76,60,0.4)' : isYellow ? 'rgba(241,196,15,0.4)' : 'rgba(46,204,113,0.4)';
+    const bannerTextColor = isRed ? '#e74c3c' : isYellow ? '#f1c40f' : '#2ecc71';
+    const bannerIcon = isRed ? '🔴' : isYellow ? '🟡' : '✅';
+
     return (
         <MainNavBars className={styles['library-container']} route={'myfiles'}>
-            {
-                <div className={styles['library-content']}>
+            <div className={styles['library-content']} style={{ flexDirection: 'column' }}>
+
+                {/* ── Compliance Alert Banner (full-width, above the row) ── */}
+                {bannerVisible && compliance && userRank && (
+                    <div style={{
+                        flexShrink: 0,
+                        margin: '0.6rem 1rem 0',
+                        padding: '0.55rem 1rem',
+                        borderRadius: '7px',
+                        background: bannerBgColor,
+                        border: `1px solid ${bannerBorderColor}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        fontSize: '0.8rem',
+                        color: '#ccc',
+                    }}>
+                        <span style={{ fontSize: '0.9rem', flex: 'none' }}>{bannerIcon}</span>
+                        <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: 700, color: bannerTextColor }}>
+                                {isGreen
+                                    ? `✓ Todos tus documentos están al día (${rankLabel})`
+                                    : `Documentos pendientes — ${rankLabel}: `
+                                }
+                            </span>
+                            {isRed && (
+                                <span>
+                                    {compliance.missing.length > 0 && (
+                                        <span style={{ color: '#e74c3c' }}>
+                                            {compliance.missing.length} faltante{compliance.missing.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                    {compliance.expired.length > 0 && (
+                                        <span style={{ color: '#e74c3c', marginLeft: '0.4rem' }}>
+                                            · {compliance.expired.length} expirado{compliance.expired.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                    {compliance.expiring.length > 0 && (
+                                        <span style={{ color: '#f1c40f', marginLeft: '0.4rem' }}>
+                                            · {compliance.expiring.length} por expirar
+                                        </span>
+                                    )}
+                                </span>
+                            )}
+                            {isYellow && (
+                                <span style={{ color: '#f1c40f' }}>
+                                    {compliance.expiring.length} documento{compliance.expiring.length !== 1 ? 's' : ''} por expirar pronto
+                                </span>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setBannerVisible(false)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#777', fontSize: '0.85rem', flex: 'none', lineHeight: 1, padding: '0.1rem',
+                            }}
+                            title="Cerrar"
+                        >✕</button>
+                    </div>
+                )}
+
+                    {/* Inner row: sidebar + content */}
+                    <div style={{ display: 'flex', flexDirection: 'row', flex: 1, minHeight: 0 }}>
+
                     {/* Left sidebar */}
                     <div className={styles['category-sidebar']}>
+
                         <div className={styles['sidebar-title']}>{'Document Categories'}</div>
                         {categories.map((catId) => (
                             <Button
@@ -380,8 +494,8 @@ const Library = () => {
                                 </div>
                             ) : null}
 
-                            {/* Preview panel — shows when selected doc has a file in DB */}
-                            {previewUrl ? (
+                            {/* Preview panel — shows when selected doc has a file in DB AND no list preview is active */}
+                            {previewUrl && !listPreviewDocId ? (
                                 <div style={{ flex: 1, minHeight: '10rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 'none' }}>
                                         <div style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
@@ -507,62 +621,131 @@ const Library = () => {
                                 </div>
                             ) : null}
 
-                            {/* Uploaded documents list */}
-                            {!previewUrl ? (
-                                <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-                                    <div style={{ fontSize: '0.7rem', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '0.5rem' }}>
-                                        {'Uploaded Documents' + (filteredUploads.length > 0 ? ' (' + filteredUploads.length + ')' : '')}
+                            {/* Uploaded documents list — ALWAYS visible */}
+                            <div style={{ flex: listPreviewDocId ? 'none' : 1, overflowY: 'auto', minHeight: 0, maxHeight: listPreviewDocId ? '12rem' : 'none' }}>
+                                <div style={{ fontSize: '0.7rem', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '0.5rem' }}>
+                                    {'Uploaded Documents' + (filteredUploads.length > 0 ? ' (' + filteredUploads.length + ')' : '')}
+                                </div>
+                                {filteredUploads.length === 0 ? (
+                                    <div style={{ fontSize: '0.9rem', color: '#999', padding: '0.5rem 0' }}>
+                                        {'No documents uploaded in this category'}
                                     </div>
-                                    {filteredUploads.length === 0 ? (
-                                        <div style={{ fontSize: '0.9rem', color: '#999', padding: '0.5rem 0' }}>
-                                            {'No documents uploaded in this category'}
-                                        </div>
-                                    ) : (
-                                        filteredUploads.map((doc) => {
-                                            let expStatus;
-                                            if (doc.expiryDate === 'N/A' || (doc.expiryDate === null && doc.validityYears === null)) {
-                                                expStatus = 'permanent';
-                                            } else if (doc.expiryDate && doc.expiryDate !== 'N/A') {
-                                                const days = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86400000);
-                                                expStatus = days < 0 ? 'expired' : days <= 90 ? 'expiring' : 'valid';
-                                            } else if (doc.issuedDate && doc.validityYears) {
-                                                expStatus = getExpiryStatus(doc.issuedDate, doc.validityYears).status;
-                                            } else {
-                                                expStatus = 'permanent';
-                                            }
-                                            const badge = STATUS_COLORS[expStatus] || STATUS_COLORS.permanent;
-                                            return (
-                                                <div key={doc.id} style={{
-                                                    display: 'flex', alignItems: 'center', padding: '0.5rem 0.6rem',
-                                                    marginBottom: '0.35rem', borderRadius: '4px',
-                                                    background: 'rgba(255,255,255,0.03)', borderLeft: `3px solid ${badge.color}`,
-                                                }}>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ color: '#e0e0e0', fontSize: '0.85rem', fontWeight: 500 }}>{doc.documentName}</div>
-                                                        <div style={{ color: '#999', fontSize: '0.7rem' }}>
-                                                            {doc.fileName}{doc.fileSize ? ` (${(doc.fileSize / 1024).toFixed(1)} KB)` : ''}
-                                                        </div>
-                                                        <div style={{ color: '#777', fontSize: '0.65rem' }}>
-                                                            {doc.issuedDate ? 'Issued: ' + new Date(doc.issuedDate).toLocaleDateString() : 'Uploaded: ' + new Date(doc.uploadedAt).toLocaleDateString()}
-                                                            {doc.expiryDate === 'N/A' ? ' — Does not expire' : doc.expiryDate ? ' — Expires: ' + new Date(doc.expiryDate).toLocaleDateString() : ''}
-                                                        </div>
+                                ) : (
+                                    filteredUploads.map((doc) => {
+                                        let expStatus;
+                                        if (doc.expiryDate === 'N/A' || (doc.expiryDate === null && doc.validityYears === null)) {
+                                            expStatus = 'permanent';
+                                        } else if (doc.expiryDate && doc.expiryDate !== 'N/A') {
+                                            const days = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86400000);
+                                            expStatus = days < 0 ? 'expired' : days <= 90 ? 'expiring' : 'valid';
+                                        } else if (doc.issuedDate && doc.validityYears) {
+                                            expStatus = getExpiryStatus(doc.issuedDate, doc.validityYears).status;
+                                        } else {
+                                            expStatus = 'permanent';
+                                        }
+                                        const badge = STATUS_COLORS[expStatus] || STATUS_COLORS.permanent;
+                                        const isListPreview = listPreviewDocId === doc.id;
+                                        const isConfirmingDelete = confirmDeleteId === doc.id;
+                                        return (
+                                            <div key={doc.id} style={{
+                                                display: 'flex', alignItems: 'center', padding: '0.5rem 0.6rem',
+                                                marginBottom: '0.35rem', borderRadius: '4px',
+                                                background: isListPreview ? 'rgba(52,152,219,0.15)' : 'rgba(255,255,255,0.03)',
+                                                borderLeft: isListPreview ? '3px solid #3498db' : `3px solid ${badge.color}`,
+                                                cursor: doc.savedName ? 'pointer' : 'default',
+                                                transition: 'background 0.2s, border-color 0.2s',
+                                            }}
+                                                onClick={() => { if (doc.savedName) setListPreviewDocId(isListPreview ? null : doc.id); }}
+                                                onMouseEnter={(e) => { if (!isListPreview && doc.savedName) e.currentTarget.style.background = 'rgba(52,152,219,0.08)'; }}
+                                                onMouseLeave={(e) => { if (!isListPreview) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                                            >
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ color: '#e0e0e0', fontSize: '0.85rem', fontWeight: 500 }}>{doc.documentName}</div>
+                                                    <div style={{ color: '#999', fontSize: '0.7rem' }}>
+                                                        {doc.fileName}{doc.fileSize ? ` (${(doc.fileSize / 1024).toFixed(1)} KB)` : ''}
                                                     </div>
+                                                    <div style={{ color: '#777', fontSize: '0.65rem' }}>
+                                                        {doc.issuedDate ? 'Issued: ' + new Date(doc.issuedDate).toLocaleDateString() : 'Uploaded: ' + new Date(doc.uploadedAt).toLocaleDateString()}
+                                                        {doc.expiryDate === 'N/A' ? ' — Does not expire' : doc.expiryDate ? ' — Expires: ' + new Date(doc.expiryDate).toLocaleDateString() : ''}
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                                                     <div style={{
-                                                        flex: 'none', padding: '2px 6px', borderRadius: '3px', fontSize: '0.6rem', fontWeight: 600,
+                                                        padding: '2px 6px', borderRadius: '3px', fontSize: '0.6rem', fontWeight: 600,
                                                         textTransform: 'uppercase', background: badge.bg, color: badge.color, whiteSpace: 'nowrap',
                                                     }}>
                                                         {badge.label}
                                                     </div>
+                                                    {/* Delete button */}
+                                                    {isConfirmingDelete ? (
+                                                        <div style={{ display: 'flex', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
+                                                            <button type="button"
+                                                                onClick={async (e) => { e.stopPropagation(); await removeUpload(doc.id); setConfirmDeleteId(null); setListPreviewDocId((prev) => prev === doc.id ? null : prev); }}
+                                                                style={{ ...btnBase, flex: 'none', padding: '2px 8px', fontSize: '0.6rem', background: 'rgba(231,76,60,0.3)', color: '#e74c3c', border: '1px solid rgba(231,76,60,0.5)' }}>
+                                                                {'Yes'}
+                                                            </button>
+                                                            <button type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                                                style={{ ...btnBase, flex: 'none', padding: '2px 8px', fontSize: '0.6rem', background: 'rgba(255,255,255,0.06)', color: '#999', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                                                {'No'}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button type="button"
+                                                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(doc.id); }}
+                                                            title="Delete document"
+                                                            style={{
+                                                                background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+                                                                color: '#888', fontSize: '0.9rem', transition: 'color 0.2s',
+                                                            }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.color = '#e74c3c'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.color = '#888'; }}>
+                                                            {'🗑️'}
+                                                        </button>
+                                                    )}
                                                 </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            ) : null}
-                        </div>
-                    </div>
-                </div>
-            }
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Inline preview — shows when user clicks an uploaded doc */}
+                            {(() => {
+                                const listDoc = listPreviewDocId ? filteredUploads.find((d) => d.id === listPreviewDocId) : null;
+                                const listUrl = listDoc && listDoc.savedName ? api.getDownloadUrl(api.DEFAULT_USER_ID, listDoc.savedName) : null;
+                                if (!listUrl) return null;
+                                return (
+                                    <div style={{ flex: 1, minHeight: '14rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 'none' }}>
+                                            <div style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                                                {'Preview — ' + listDoc.fileName}
+                                            </div>
+                                            <button type="button" onClick={() => setListPreviewDocId(null)}
+                                                style={{
+                                                    background: 'none', border: 'none', color: '#888', fontSize: '1rem', cursor: 'pointer',
+                                                    padding: '0 4px', lineHeight: 1,
+                                                }}>
+                                                {'✕'}
+                                            </button>
+                                        </div>
+                                        <iframe
+                                            src={listUrl}
+                                            style={{
+                                                flex: 1, width: '100%', minHeight: '12rem',
+                                                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px',
+                                                background: '#1a1a2e',
+                                            }}
+                                            title={'Preview: ' + listDoc.documentName}
+                                        />
+                                    </div>
+                                );
+                            })()}
+                        </div> {/* end RIGHT */}
+                    </div>  {/* end upload-area */}
+                </div>  {/* end inner row */}
+            </div>  {/* end library-content */}
+
         </MainNavBars>
     );
 };

@@ -40,7 +40,7 @@ const useDocumentUpload = () => {
     const [useApi, setUseApi] = React.useState(false);
     const [uploading, setUploading] = React.useState(false);
 
-    const userId = api.DEFAULT_USER_ID;
+    const userId = api.getUserId();
 
     // On mount: check API, load data from API or localStorage
     React.useEffect(() => {

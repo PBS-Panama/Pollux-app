@@ -1,56 +1,29 @@
-# Stremio - Freedom to Stream
+# Leto Platform
 
-[![Build](https://github.com/Stremio/stremio-web/actions/workflows/build.yml/badge.svg)](https://github.com/Stremio/stremio-web/actions/workflows/build.yml)
-[![Github Page](https://img.shields.io/website?label=Page&logo=github&up_message=online&down_message=offline&url=https%3A%2F%2Fstremio.github.io%2Fstremio-web%2F)](https://stremio.github.io/stremio-web/development)
+The Leto platform is an integrated web system for seafarers comprising public marketing paths, user registration, and a comprehensive crewing module to manage documents and compliance.
 
-Stremio is a modern media center that's a one-stop solution for your video entertainment. You discover, watch and organize video content from easy to install addons.
+## Architecture
 
-## Build
+The project is orchestrated via Docker Compose and unified through an Nginx reverse proxy.
 
-### Prerequisites
+- **Nginx (port 80 / 3000 externally)**: The single entry point unifying all services.
+- **Leto Frontend (`/`)**: A React/Vite application handling the landing page, login, and registration.
+- **Leto Backend (`/api/`)**: A FastAPI service for general platform operations.
+- **Leto Crewing Module (`/app/`)**: A React/Express application managing "My Files", schedules, compliance, and document uploads.
+- **Leto Crewing API (`/demeter-api/`)**: Express API serving the crewing module (data persistence and logic).
 
-* Node.js 12 or higher
-* [pnpm](https://pnpm.io/installation) 10 or higher
+## Running the Project
 
-### Install dependencies
-
-```bash
-pnpm install
-```
-
-### Start development server
+Ensure you have Docker and Docker Compose installed.
 
 ```bash
-pnpm start
+docker compose up --build -d
 ```
 
-### Production build
+Access the unified platform at: `http://localhost:3000`
 
-```bash
-pnpm run build
-```
+### Integration Details
 
-### Run with Docker
-
-```bash
-docker build -t stremio-web .
-docker run -p 8080:8080 stremio-web
-```
-
-## Screenshots
-
-### Board
-
-![Board](/assets/screenshots/board.png)
-
-### Discover
-
-![Discover](/assets/screenshots/discover.png)
-
-### Meta Details
-
-![Meta Details](/assets/screenshots/metadetails.png)
-
-## License
-
-Stremio is copyright 2017-2023 Smart code and available under GPLv2 license. See the [LICENSE](/LICENSE.md) file in the project for more information.
+- When a user registers in the Leto Frontend, their profile is synchronized to the Leto Crewing Module via the `/demeter-api/users` endpoint.
+- After login, the user dashboard integrates the Leto Crewing Module smoothly into the UI experience.
+- The platform uses a consolidated component architecture where certain Stremio legacy utilities and UI components handle the styling constraints inside the Leto Crewing Module.

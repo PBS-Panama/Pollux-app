@@ -2,10 +2,21 @@
 // Communicates with the Express backend for User Database persistence.
 // Falls back to localStorage when the API is not available (e.g., webpack dev server).
 
-const DEFAULT_USER_ID = 'SF-001';
+const DEFAULT_USER_ID = 'SF-001'; // legacy fallback — use getUserId() for dynamic resolution
+
+const getUserId = () => {
+    try {
+        const data = typeof localStorage !== 'undefined' && localStorage.getItem('leto-user');
+        if (data) {
+            const parsed = JSON.parse(data);
+            if (parsed.id) return parsed.id;
+        }
+    } catch { /* silent */ }
+    return DEFAULT_USER_ID;
+};
 
 // API base — same origin in Docker/production, configurable for dev
-const API_BASE = (typeof window !== 'undefined' && window.PBS_API_BASE) || '/api';
+const API_BASE = (typeof window !== 'undefined' && window.PBS_API_BASE) || '/crewing-api';
 
 let _apiAvailable = null; // null = not checked yet
 
@@ -137,6 +148,7 @@ const initUser = (userId) => apiPost(`/users/${userId}/init`);
 
 module.exports = {
     DEFAULT_USER_ID,
+    getUserId,
     API_BASE,
     isApiAvailable,
     resetApiCheck,

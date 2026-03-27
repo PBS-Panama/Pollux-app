@@ -27,14 +27,14 @@ RUN pnpm build
 # Stage 2: Production server dependencies
 FROM base AS server
 
-RUN pnpm i express@4 multer@1 pdf-lib@1 @google-cloud/storage@7 @google-cloud/firestore@7
+RUN pnpm i express@4 multer@1 pdf-lib@1
 
 # Stage 3: Final image — static server + API
 FROM base
 
 COPY http_server.js /app/
 COPY apiRoutes.js /app/
-COPY cloudDataManager.js /app/
+COPY userDataManager.js /app/
 COPY --from=server /app/node_modules /app/node_modules
 COPY --from=app /app/build /app/build
 

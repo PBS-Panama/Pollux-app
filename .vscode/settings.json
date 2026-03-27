@@ -1,0 +1,13 @@
+{
+    "claudeCode.useTerminal": false,
+
+    // ─── Python (backend runs in Docker — no local interpreter) ────
+    "python.analysis.typeCheckingMode": "off",
+    "python.analysis.diagnosticMode": "off",
+    "pylint.enabled": false,
+    "python.linting.enabled": false,
+
+    // ─── TypeScript (frontend runs in Docker — types extracted) ────
+    "typescript.tsdk": "frontend/node_modules/typescript/lib",
+    "typescript.preferences.includePackageJsonAutoImports": "on"
+}
