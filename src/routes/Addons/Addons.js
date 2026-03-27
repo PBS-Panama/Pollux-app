@@ -17,7 +17,7 @@ const SCROLL_AMOUNT = 300;
 
 const Addons = () => {
     const [selectedLevel, setSelectedLevel] = useState(null);
-    const [selectedDept, setSelectedDept] = useState(null);
+    const [selectedDept, setSelectedDept] = useState('All Departments');
     const [expandedId, setExpandedId] = useState(null);
     const [booked, setBooked] = useState(new Set());
     const listRef = useRef(null);

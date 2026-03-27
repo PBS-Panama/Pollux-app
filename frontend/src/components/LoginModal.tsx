@@ -52,16 +52,16 @@ export default function LoginModal({ onClose }: Props) {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       })
       login(user, tokens.access_token, tokens.refresh_token)
-      // Init crewing user folder and read rank, then bridge identity to crewing module via localStorage
-      let rank: string | null = null
+      // Init crewing user folder, then bridge identity to crewing module via localStorage
       try {
         await fetch(`/crewing-api/users/${user.id}/init`, { method: 'POST' })
-        const settings = await fetch(`/crewing-api/users/${user.id}/settings`).then((r) => r.json())
-        rank = settings?.rank ?? null
       } catch { /* non-critical */ }
       localStorage.setItem('leto-user', JSON.stringify({
-        id: user.id, email: user.email, rank,
-        first_name: user.first_name ?? null, last_name: user.last_name ?? null,
+        id: user.id, email: user.email,
+        rank: user.rank ?? null,
+        first_name: user.first_name ?? null,
+        last_name: user.last_name ?? null,
+        date_of_birth: user.date_of_birth ?? null,
       }))
       onClose()
       navigate('/dashboard')

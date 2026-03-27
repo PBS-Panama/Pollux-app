@@ -35,20 +35,19 @@ USUARIO → LoginModal (landing page)
         └─► crea User database/{UUID}/ si no existe
         │
         ▼
-5. GET  /crewing-api/users/{UUID}/settings → Express
-        └─► { rank: "master", preferences: {} }
-        │
-        ▼
-6. localStorage.setItem('leto-user', {
-       id:         "f703542f-cf4d-48eb-aa5f-764a610c7adb",
-       email:      "demo@leto.com",
-       rank:       "master",
-       first_name: "Demo",
-       last_name:  null
+5. localStorage.setItem('leto-user', {
+       id:             "f703542f-cf4d-48eb-aa5f-764a610c7adb",
+       email:          "demo@leto.com",
+       rank:           "master",
+       first_name:     "Carlos",
+       last_name:      "Marino",
+       date_of_birth:  "1991-02-20"
    })
         │
         ▼
-7. navigate('/dashboard')  →  iframe full-screen carga /app/
+6. navigate('/dashboard')
+   → ProtectedRoute checks accessToken (Zustand + localStorage fallback)
+   → renders Dashboard with iframe to /app/  →  iframe full-screen carga /app/
 ```
 
 ---
@@ -158,5 +157,7 @@ localhost:3000/                    localhost:3000/app/
 
 | Key | Escrito por | Leído por | Contenido |
 |---|---|---|---|
-| `leto-auth` | Zustand (authStore) | Landing page (rutas protegidas) | JWT + user object |
-| `leto-user` | LoginModal / RegisterModal | Crewing module | `{ id, email, rank, first_name, last_name }` |
+| `leto-auth` | Zustand (authStore) | Landing page (rutas protegidas), MyProfile (fallback DOB fetch) | JWT + user object |
+| `leto-user` | LoginModal / RegisterModal | Crewing module (NavMenu, apiClient, MyProfile) | `{ id, email, rank, first_name, last_name, date_of_birth }` |
+| `leto-profile-extra` | MyProfile (on save) | MyProfile | `{ city, experience, languages, vessels, companies, aboutMe }` |
+| `leto-keyboard-shortcuts` | Settings/Interface | KeyboardShortcuts.js | `'on'` o `'off'` — toggle de atajos de teclado |

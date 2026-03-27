@@ -35,6 +35,10 @@ class UserResponse(BaseModel):
     role: str
     company_id: Optional[str] = None
     created_at: datetime
+    rank: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
     class Config:
         from_attributes = True

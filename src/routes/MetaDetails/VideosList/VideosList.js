@@ -77,11 +77,15 @@ const DocumentsList = ({ className, metaItem, category, categoryOnSelect }) => {
     const categories = CREW_DOC_CATEGORIES;
     const selectedCategory = React.useMemo(() => {
         if (CREW_DOC_CATEGORIES.includes(category)) return category;
-        return 1; // default to Main Docs
+        return 0; // default to All Documents
     }, [category]);
 
-    // Per-crew documents for the selected category
+    // Per-crew documents for the selected category (0 = all)
     const documents = React.useMemo(() => {
+        if (selectedCategory === 0) {
+            // Merge all categories
+            return [1, 2, 3, 4, 5].flatMap((cat) => getCrewDocs(crewHash, cat));
+        }
         return getCrewDocs(crewHash, selectedCategory);
     }, [selectedCategory, crewHash]);
 

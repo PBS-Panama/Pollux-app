@@ -461,6 +461,12 @@ A `vite.config.js` exists with 7 custom plugins for CJS/Less/JSX interop with Vi
 
 ## Session Log
 
+### 2026-03-27 — My Profile + /me enrichment + UX improvements
+
+See [sessions/session_2026-03-27.md](sessions/session_2026-03-27.md) para el log completo.
+
+**Resumen:** Nueva ruta `/my-profile` con perfil editable del marino (reutiliza MetaPreview/MetaLinks/ActionButton para consistencia visual con crew database). Panel derecho muestra documentos requeridos por rango STCW con status VALID/MISSING/EXPIRING. Endpoint `/me` enriquecido con rank, first_name, last_name, date_of_birth desde tabla Seafarer. LoginModal simplificado (sin fetch extra a crewing-api). Keyboard shortcuts toggle en Settings. My Exams default a "All Departments". Guard de cambios sin guardar con modal blur.
+
 ### 2026-03-25 — Leto Integration + Auth Unification + UUID Migration
 
 See [sessions/session_2026-03-25.md](sessions/session_2026-03-25.md) para el log completo.
@@ -501,7 +507,12 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 - [x] Login de Stremio reemplazado por redirect a landing page — **Done 2026-03-25**
 - [x] Identidad real en NavMenu (seafarer card con nombre + rank) — **Done 2026-03-25**
 - [x] Aislamiento por UUID (cada usuario tiene su carpeta propia) — **Done 2026-03-25**
-- [ ] Ruta `/my-profile` — vista de perfil propio del marino (próxima sesión)
+- [x] Ruta `/my-profile` — perfil editable del marino con docs requeridos — **Done 2026-03-27**
+- [x] Endpoint `/me` enriquecido (rank, name, dob desde Seafarer) — **Done 2026-03-27**
+- [x] "All Documents" como categoría default en crew detail + my profile — **Done 2026-03-27**
+- [x] Keyboard shortcuts toggle en Settings — **Done 2026-03-27**
+- [x] Fix login loop (Zustand hydration race) — **Done 2026-03-27**
+- [ ] Fix spacing en My Profile (panel izquierdo no coincide con crew detail)
 - [ ] Wire MetaDetails crew profile to read from User Database (instead of mock hash data)
 - [ ] My Files: connect uploaded docs to SeafarerCalendar expiry alerts
 - [ ] My Files: connect to My Exams for renewal suggestions

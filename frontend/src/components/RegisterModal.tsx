@@ -224,15 +224,18 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
       // Init crewing user folder with real UUID and sync rank
       try {
         await fetch(`/crewing-api/users/${user.id}/init`, { method: 'POST' })
-        await fetch(`/crewing-api/users/${user.id}/settings/rank`, {
+        await fetch(`/crewing-api/users/${user.id}/settings`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rank: form.rank }),
         })
       } catch (_) { /* non-critical */ }
       localStorage.setItem('leto-user', JSON.stringify({
-        id: user.id, email: user.email, rank: form.rank,
-        first_name: form.first_name, last_name: form.last_name,
+        id: user.id, email: user.email,
+        rank: user.rank ?? form.rank,
+        first_name: user.first_name ?? form.first_name,
+        last_name: user.last_name ?? form.last_name,
+        date_of_birth: user.date_of_birth ?? form.date_of_birth ?? null,
       }))
       onClose(); navigate('/dashboard')
 

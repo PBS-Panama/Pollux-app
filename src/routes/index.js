@@ -12,6 +12,7 @@ const Search = require('./Search');
 const { default: Settings } = require('./Settings');
 const Player = require('./SeafarerSchedule');
 const Intro = require('./Intro');
+const MyProfile = require('./MyProfile');
 
 module.exports = {
     Addons,
@@ -21,6 +22,7 @@ module.exports = {
     Calendar,
     SeafarerCalendar,
     MetaDetails,
+    MyProfile,
     NotFound,
     Search,
     Settings,

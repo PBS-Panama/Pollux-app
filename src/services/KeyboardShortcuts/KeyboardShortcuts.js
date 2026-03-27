@@ -8,9 +8,14 @@ function KeyboardShortcuts() {
     const events = new EventEmitter();
 
     function onKeyDown(event) {
-        if (event.keyboardShortcutPrevented || event.target.tagName === 'INPUT' || event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) {
+        if (event.keyboardShortcutPrevented || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable || event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) {
             return;
         }
+
+        // Check if keyboard shortcuts are disabled in settings
+        try {
+            if (localStorage.getItem('leto-keyboard-shortcuts') === 'off') return;
+        } catch { /* silent */ }
 
         switch (event.code) {
             case 'Digit0': {

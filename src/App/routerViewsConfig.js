@@ -48,6 +48,10 @@ const routerViewsConfig = [
     ],
     [
         {
+            ...routesRegexp.myprofile,
+            component: routes.MyProfile
+        },
+        {
             ...routesRegexp.myexams,
             component: routes.Addons
         },

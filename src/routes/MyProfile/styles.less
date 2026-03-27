@@ -1,0 +1,92 @@
+// MyProfile — clones MetaDetails layout exactly
+// Values copied from MetaDetails/styles.less and VideosList/styles.less
+
+@import (reference) '~@stremio/stremio-colors/less/stremio-colors.less';
+@import (reference) '~stremio/common/screen-sizes.less';
+
+.myprofile-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+    box-sizing: border-box;
+
+    .nav-bar {
+        z-index: 1;
+        flex: none;
+        align-self: stretch;
+    }
+
+    .myprofile-content {
+        flex: 1;
+        align-self: stretch;
+        position: relative;
+        z-index: 0;
+        display: flex;
+        flex-direction: row;
+        margin-top: calc(var(--top-overlay-size) * -1);
+        padding-top: var(--top-overlay-size);
+        padding-bottom: var(--safe-area-inset-bottom, 0rem);
+
+        .vertical-nav-bar {
+            flex: none;
+        }
+
+        // Left panel — matches MetaDetails .meta-preview exactly
+        .profile-panel {
+            flex: 0 1 auto;
+            align-self: stretch;
+            padding: 0 4rem 2rem 4rem;
+            padding-left: max(1rem, calc(4rem - var(--safe-area-inset-left)));
+        }
+
+        .spacing {
+            flex: 1;
+        }
+
+        // Right panel — matches MetaDetails .videos-list exactly
+        .documents-panel {
+            flex: 0 0 30rem;
+            align-self: stretch;
+            border-radius: var(--border-radius) 0 0 var(--border-radius);
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(15px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+    }
+}
+
+@media @phone-landscape {
+    .myprofile-container {
+        .myprofile-content {
+            .profile-panel {
+                padding: 0 1.5rem 1rem;
+            }
+        }
+    }
+}
+
+@media only screen and (max-width: @minimum) {
+    .myprofile-container {
+        .myprofile-content {
+            display: block;
+            overflow-y: auto;
+
+            .spacing {
+                display: none;
+            }
+
+            .profile-panel {
+                padding: 0 1.5rem 2rem;
+            }
+
+            .documents-panel {
+                border-radius: var(--border-radius) var(--border-radius) 0 0;
+            }
+        }
+    }
+}

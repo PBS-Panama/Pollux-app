@@ -70,5 +70,16 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)):
-    return current_user
+def me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    seafarer = db.query(Seafarer).filter(Seafarer.id == current_user.id).first()
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        role=current_user.role,
+        company_id=current_user.company_id,
+        created_at=current_user.created_at,
+        rank=seafarer.rank if seafarer else None,
+        first_name=seafarer.first_name if seafarer else None,
+        last_name=seafarer.last_name if seafarer else None,
+        date_of_birth=seafarer.date_of_birth if seafarer else None,
+    )

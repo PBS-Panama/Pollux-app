@@ -21,6 +21,22 @@ import { useAuthStore } from '../store/authStore'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.accessToken)
-  if (!token) return <Navigate to="/login" replace />
+
+  // Zustand persist hydrates async — check localStorage directly as fallback
+  // to avoid redirecting before hydration completes
+  if (!token) {
+    try {
+      const raw = localStorage.getItem('leto-auth')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.state?.accessToken) {
+          // Token exists in storage, Zustand just hasn't hydrated yet — render children
+          return <>{children}</>
+        }
+      }
+    } catch { /* ignore */ }
+    return <Navigate to="/" replace />
+  }
+
   return <>{children}</>
 }

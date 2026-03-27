@@ -91,7 +91,7 @@ const NavMenuContent = ({ onClick }) => {
                     </div>
             }
             <div className={styles['nav-menu-section']}>
-                <Button className={styles['nav-menu-option-container']} title={'Ver perfil completo'} href={'#/company-crewdb'}>
+                <Button className={styles['nav-menu-option-container']} title={'Ver perfil completo'} href={'#/my-profile'}>
                     <Icon className={styles['icon']} name={'person'} />
                     <div className={styles['nav-menu-option-label']}>Ver perfil completo</div>
                 </Button>

@@ -3,6 +3,7 @@
 // validityYears: null = no expiry (permanent), number = years from issue
 
 const CREW_DOC_LABELS = {
+    0: 'All Documents',
     1: 'Main Docs',
     2: 'IMO Courses',
     3: 'Health Certificates',
@@ -149,7 +150,7 @@ const CREW_ALL_DOCS = {
     ],
 };
 
-const CREW_DOC_CATEGORIES = [1, 2, 3, 4, 5];
+const CREW_DOC_CATEGORIES = [0, 1, 2, 3, 4, 5];
 
 /**
  * Calculate expiry status for a document

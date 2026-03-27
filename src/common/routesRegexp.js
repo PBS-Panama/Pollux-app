@@ -41,6 +41,10 @@ const routesRegexp = {
         regexp: /^\/myexams(?:\/([^/]*)(?:\/([^/]*)\/([^/]*))?)?$/,
         urlParamsNames: ['type', 'transportUrl', 'catalogId']
     },
+    myprofile: {
+        regexp: /^\/my-profile$/,
+        urlParamsNames: []
+    },
     settings: {
         regexp: /^\/settings$/,
         urlParamsNames: []
