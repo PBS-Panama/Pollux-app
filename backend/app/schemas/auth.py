@@ -1,6 +1,14 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
+
+
+class VesselInput(BaseModel):
+    name: str
+    imo_number: Optional[str] = None
+    vessel_type: Optional[str] = None
+    flag_state: Optional[str] = None
+    gross_tonnage: Optional[int] = None
 
 
 class RegisterRequest(BaseModel):
@@ -16,6 +24,22 @@ class RegisterRequest(BaseModel):
     date_of_birth: Optional[date] = None
     # Company fields
     company_name: Optional[str] = None
+    ruc: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
+    sector: Optional[str] = None
+    company_size: Optional[str] = None
+    # Representatives
+    legal_rep_name: Optional[str] = None
+    legal_rep_phone: Optional[str] = None
+    legal_rep_email: Optional[str] = None
+    hr_rep_name: Optional[str] = None
+    hr_rep_phone: Optional[str] = None
+    hr_rep_email: Optional[str] = None
+    # Fleet
+    vessels: Optional[List[VesselInput]] = None
 
 
 class LoginRequest(BaseModel):

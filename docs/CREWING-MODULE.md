@@ -461,6 +461,12 @@ A `vite.config.js` exists with 7 custom plugins for CJS/Less/JSX interop with Vi
 
 ## Session Log
 
+### 2026-03-28 — Company registration, Stremio→Leto rename, landing page overhaul
+
+See [sessions/session_2026-03-28.md](sessions/session_2026-03-28.md) para el log completo.
+
+**Resumen:** Stremio→Leto alias rename (~150 archivos). Landing page UX: nav action-based, "Tripulante" naming, single hero CTA. Company registration flow completo (4 pasos): info empresa + RUC/sector, representantes con checkboxes, flota dinámica con vessel cards, resumen con editar. Backend: Company model expandido (+12 cols), Vessel table nueva, register endpoint acepta vessels. DarkSelect custom dropdown. Modal scroll lock. DATABASE.md + NAMING-CONVENTION.md + index2.html prototype.
+
 ### 2026-03-27 — My Profile + /me enrichment + UX improvements
 
 See [sessions/session_2026-03-27.md](sessions/session_2026-03-27.md) para el log completo.
@@ -512,9 +518,19 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 - [x] "All Documents" como categoría default en crew detail + my profile — **Done 2026-03-27**
 - [x] Keyboard shortcuts toggle en Settings — **Done 2026-03-27**
 - [x] Fix login loop (Zustand hydration race) — **Done 2026-03-27**
-- [ ] Fix spacing en My Profile (panel izquierdo no coincide con crew detail)
+- [x] Fix spacing en My Profile (flex:1 on profile panel) — **Done 2026-03-28**
+- [x] Stremio→Leto alias rename (~150 archivos) — **Done 2026-03-28**
+- [x] Company registration flow (4 steps) + Vessel model — **Done 2026-03-28**
+- [x] DarkSelect custom dropdown (replace native select) — **Done 2026-03-28**
+- [x] Landing page: action-based nav, "Tripulante" naming, single CTA — **Done 2026-03-28**
+- [x] Modal form persistence + scroll lock — **Done 2026-03-28**
+- [ ] Company-specific post-login dashboard (fleet overview, crew stats)
+- [ ] Role-based sidebar tabs (company vs seafarer see different tabs)
 - [ ] Wire MetaDetails crew profile to read from User Database (instead of mock hash data)
 - [ ] My Files: connect uploaded docs to SeafarerCalendar expiry alerts
 - [ ] My Files: connect to My Exams for renewal suggestions
+- [ ] Assignments table (seafarer ↔ vessel linking)
+- [ ] CSV import for vessels (bulk fleet registration)
+- [ ] IMO number validation against public registries
 - [ ] Deploy to Cloud Run as parte del stack Leto completo
 - [ ] Integration with Neptune ERP for vessel/fleet data

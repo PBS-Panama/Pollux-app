@@ -6,6 +6,7 @@ from app.core.deps import get_current_user
 from app.models.user import User, UserRole
 from app.models.seafarer import Seafarer
 from app.models.company import Company
+from app.models.vessel import Vessel
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserResponse
 
 router = APIRouter()
@@ -45,11 +46,38 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     elif payload.role == "company":
         company = Company(
             name=payload.company_name or "Unnamed Company",
+            ruc=payload.ruc,
+            country=payload.country,
+            city=payload.city,
+            address=payload.address,
+            website=payload.website,
+            sector=payload.sector,
+            company_size=payload.company_size,
             contact_email=payload.email,
+            fleet_size=len(payload.vessels) if payload.vessels else 0,
+            legal_rep_name=payload.legal_rep_name,
+            legal_rep_phone=payload.legal_rep_phone,
+            legal_rep_email=payload.legal_rep_email,
+            hr_rep_name=payload.hr_rep_name,
+            hr_rep_phone=payload.hr_rep_phone,
+            hr_rep_email=payload.hr_rep_email,
         )
         db.add(company)
         db.flush()
         user.company_id = company.id
+
+        # Register vessels if provided
+        if payload.vessels:
+            for v in payload.vessels:
+                vessel = Vessel(
+                    company_id=company.id,
+                    name=v.name,
+                    imo_number=v.imo_number,
+                    vessel_type=v.vessel_type,
+                    flag_state=v.flag_state,
+                    gross_tonnage=v.gross_tonnage,
+                )
+                db.add(vessel)
 
     db.commit()
     db.refresh(user)

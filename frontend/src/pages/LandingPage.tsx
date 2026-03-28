@@ -26,7 +26,7 @@
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LoginModal from '../components/LoginModal'
 import RegisterModal from '../components/RegisterModal'
 
@@ -51,6 +51,16 @@ export default function LandingPage() {
   const openRegister = () => setModal('register')
   const openLogin = () => setModal('login')
   const closeModal = () => setModal(null)
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (modal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [modal])
 
   return (
     <div className="min-h-screen bg-navy text-ice" style={{ fontFamily: 'Inter, sans-serif' }}>
