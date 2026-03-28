@@ -48,7 +48,6 @@ const steps = [
 
 export default function LandingPage() {
   const [modal, setModal] = useState<Modal>(null)
-
   const openRegister = () => setModal('register')
   const openLogin = () => setModal('login')
   const closeModal = () => setModal(null)
@@ -94,13 +93,13 @@ export default function LandingPage() {
           <span className="w-2 h-2 rounded-full bg-cyan shadow-[0_0_10px_#00F0FF]" />Leto
         </div>
         <div className="flex gap-3">
-          <button onClick={openRegister}
-            className="px-4 py-2 rounded-md text-sm font-semibold bg-cyan text-navy hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
-            Soy Tripulante
-          </button>
           <button onClick={openLogin}
             className="px-4 py-2 rounded-md text-sm font-semibold border border-steel text-ice hover:border-cyan hover:text-cyan transition-colors">
-            Soy Empresa
+            Iniciar Sesión
+          </button>
+          <button onClick={openRegister}
+            className="px-4 py-2 rounded-md text-sm font-semibold bg-cyan text-navy hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
+            Crear Cuenta
           </button>
         </div>
       </nav>
@@ -120,14 +119,10 @@ export default function LandingPage() {
         <p className="text-ice/60 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
           Leto digitaliza el ciclo de vida completo de la tripulación — desde la contratación hasta la gestión de documentos — con cumplimiento normativo desde el primer día.
         </p>
-        <div className="flex justify-center gap-4 flex-wrap">
+        <div className="flex justify-center">
           <button onClick={openRegister}
-            className="px-8 py-3 rounded-lg bg-cyan text-navy font-semibold text-base hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all">
-            Soy Tripulante
-          </button>
-          <button onClick={openLogin}
-            className="px-8 py-3 rounded-lg border border-white/20 text-ice font-semibold text-base hover:border-white/40 transition-colors">
-            Soy Empresa
+            className="px-10 py-3.5 rounded-lg bg-cyan text-navy font-semibold text-base hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all">
+            Regístrate Ahora
           </button>
         </div>
         <div className="flex justify-center gap-12 mt-16 flex-wrap">

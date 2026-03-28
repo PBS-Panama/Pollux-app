@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Leto — Maritime Crew Management Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy: #0B1E3B;
+  --navy-deep: #060F1E;
+  --cyan: #00F0FF;
+  --cyan-dim: rgba(0, 240, 255, 0.08);
+  --steel: #4A6FA5;
+  --ice: #F5F7FA;
+  --ice-60: rgba(245, 247, 250, 0.6);
+  --ice-40: rgba(245, 247, 250, 0.4);
+  --ice-20: rgba(245, 247, 250, 0.2);
+  --gold: #F0B429;
+  --emerald: #2ecc71;
+  --red: #e74c3c;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.07);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: var(--navy); color: var(--ice); overflow-x: hidden; line-height: 1.6; }
+h1, h2, h3, h4, .brand { font-family: 'Space Grotesk', sans-serif; }
+a { color: var(--cyan); text-decoration: none; }
+img { max-width: 100%; display: block; }
+
+/* ─── NAV ─────────────────────────────────────────────────────── */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.2rem 5%; position: sticky; top: 0; z-index: 100;
+  background: rgba(11, 30, 59, 0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.logo { display: flex; align-items: center; gap: 0.5rem; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.4rem; }
+.logo-dot { width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; box-shadow: 0 0 10px var(--cyan); }
+.nav-btns { display: flex; gap: 0.6rem; }
+.btn { padding: 0.6rem 1.4rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; border: none; font-family: 'Inter', sans-serif; }
+.btn-outline { background: transparent; border: 1.5px solid var(--steel); color: var(--ice); }
+.btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+.btn-primary { background: var(--cyan); color: var(--navy); }
+.btn-primary:hover { box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+.btn-lg { padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: 10px; }
+
+/* ─── SECTIONS ────────────────────────────────────────────────── */
+section { padding: 5rem 5%; }
+.section-label { color: var(--cyan); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; margin-bottom: 0.75rem; }
+.section-title { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; line-height: 1.2; }
+.section-subtitle { color: var(--ice-60); font-size: 1.05rem; max-width: 600px; line-height: 1.7; }
+.text-cyan { color: var(--cyan); }
+.text-center { text-align: center; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ─── HERO ────────────────────────────────────────────────────── */
+.hero {
+  position: relative; padding: 7rem 5% 5rem; text-align: center; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0, 240, 255, 0.06) 0%, transparent 70%);
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 100px; padding: 0.4rem 1.2rem; font-size: 0.7rem;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--cyan); margin-bottom: 1.5rem;
+}
+.hero h1 { font-size: 3.5rem; font-weight: 700; max-width: 800px; margin: 0 auto 1.5rem; line-height: 1.15; }
+.hero p { color: var(--ice-60); font-size: 1.15rem; max-width: 620px; margin: 0 auto 2.5rem; line-height: 1.7; }
+.hero-cta { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 3.5rem; }
+.hero-stats { display: flex; justify-content: center; gap: 3.5rem; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 700; color: var(--cyan); }
+.hero-stat-label { font-size: 0.7rem; color: var(--ice-40); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ─── PROBLEM / SOLUTION ──────────────────────────────────────── */
+.problem-section { background: rgba(0, 0, 0, 0.2); border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border); }
+.problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-top: 3rem; max-width: 900px; }
+.problem-card, .solution-card {
+  padding: 2rem; border-radius: 16px; border: 1px solid var(--card-border);
+}
+.problem-card { background: rgba(231, 76, 60, 0.04); border-color: rgba(231, 76, 60, 0.15); }
+.solution-card { background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.15); }
+.problem-card h3 { color: var(--red); margin-bottom: 1rem; font-size: 1.1rem; }
+.solution-card h3 { color: var(--cyan); margin-bottom: 1rem; font-size: 1.1rem; }
+.problem-card li, .solution-card li { color: var(--ice-60); font-size: 0.9rem; margin-bottom: 0.6rem; padding-left: 0.5rem; }
+.problem-card ul, .solution-card ul { list-style: none; }
+.problem-card li::before { content: '✗ '; color: var(--red); font-weight: 700; }
+.solution-card li::before { content: '✓ '; color: var(--emerald); font-weight: 700; }
+
+/* ─── FEATURES ────────────────────────────────────────────────── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem; margin-top: 3rem;
+}
+.feature-card {
+  background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;
+  padding: 2rem; transition: all 0.2s;
+}
+.feature-card:hover { border-color: rgba(0, 240, 255, 0.25); transform: translateY(-2px); }
+.feature-icon {
+  width: 48px; height: 48px; border-radius: 12px; background: rgba(0, 240, 255, 0.08);
+  display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1.2rem;
+}
+.feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+.feature-card p { font-size: 0.88rem; color: var(--ice-60); line-height: 1.6; }
+.feature-tag {
+  display: inline-block; font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 4px;
+  background: rgba(0, 240, 255, 0.1); color: var(--cyan); margin-top: 0.8rem;
+}
+
+/* ─── SOCIAL PROOF ────────────────────────────────────────────── */
+.social-section { background: rgba(0, 0, 0, 0.15); border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border); }
+.logos-row { display: flex; align-items: center; justify-content: center; gap: 3rem; flex-wrap: wrap; margin: 2.5rem 0; opacity: 0.5; }
+.logos-row span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; color: var(--ice); }
+.testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+.testimonial-card {
+  background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;
+  padding: 1.8rem; position: relative;
+}
+.testimonial-card::before { content: '"'; position: absolute; top: 1rem; left: 1.5rem; font-size: 3rem; color: var(--cyan); opacity: 0.2; font-family: Georgia, serif; }
+.testimonial-text { font-size: 0.9rem; color: var(--ice-60); line-height: 1.7; margin-bottom: 1.2rem; padding-top: 1rem; font-style: italic; }
+.testimonial-author { display: flex; align-items: center; gap: 0.8rem; }
+.testimonial-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 240, 255, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.testimonial-name { font-weight: 600; font-size: 0.85rem; }
+.testimonial-role { font-size: 0.75rem; color: var(--ice-40); }
+.trust-badges { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 2.5rem; }
+.trust-badge {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem;
+  border: 1px solid var(--card-border); border-radius: 10px; font-size: 0.8rem; color: var(--ice-60);
+}
+.trust-badge-icon { font-size: 1.1rem; }
+
+/* ─── HOW IT WORKS ────────────────────────────────────────────── */
+.steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-top: 3rem; }
+.step-card { text-align: center; position: relative; }
+.step-number {
+  font-family: 'Space Grotesk', sans-serif; font-size: 3rem; font-weight: 700;
+  color: rgba(0, 240, 255, 0.15); margin-bottom: 0.5rem;
+}
+.step-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.step-card p { font-size: 0.85rem; color: var(--ice-60); line-height: 1.6; }
+.step-connector {
+  position: absolute; top: 2rem; right: -1rem; width: 2rem; height: 2px;
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.3), transparent);
+}
+.step-card:last-child .step-connector { display: none; }
+
+/* ─── DASHBOARD PREVIEW ──────────────────────────────────────── */
+.dashboard-section { text-align: center; }
+.dashboard-preview {
+  max-width: 1000px; margin: 3rem auto 0; border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--card-border); box-shadow: 0 20px 80px rgba(0, 0, 0, 0.4);
+  background: var(--navy-deep); position: relative;
+}
+.dashboard-preview img { width: 100%; display: block; }
+.dashboard-placeholder {
+  width: 100%; aspect-ratio: 16/9; background: var(--navy-deep);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--ice-40); gap: 1rem;
+}
+.dashboard-placeholder-icon { font-size: 3rem; opacity: 0.3; }
+.dashboard-tabs { display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem; }
+.dashboard-tab {
+  padding: 0.5rem 1.2rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+  border: 1px solid var(--card-border); background: var(--card-bg); color: var(--ice-60);
+  cursor: pointer; transition: all 0.2s;
+}
+.dashboard-tab.active, .dashboard-tab:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 240, 255, 0.06); }
+
+/* ─── FINAL CTA ───────────────────────────────────────────────── */
+.final-cta {
+  text-align: center; padding: 6rem 5%;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+  position: relative;
+}
+.final-cta::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 60% at 50% 100%, rgba(0, 240, 255, 0.04) 0%, transparent 70%);
+}
+.final-cta h2 { font-size: 2.5rem; margin-bottom: 1rem; }
+.final-cta p { color: var(--ice-60); margin-bottom: 2rem; font-size: 1.05rem; }
+
+/* ─── FOOTER ──────────────────────────────────────────────────── */
+footer {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 1rem; padding: 1.5rem 5%; border-top: 1px solid var(--card-border);
+}
+footer .logo { font-size: 1rem; }
+footer .copyright { font-size: 0.75rem; color: var(--ice-40); }
+footer .links { display: flex; gap: 1.5rem; }
+footer .links a { font-size: 0.8rem; color: var(--ice-40); transition: color 0.2s; }
+footer .links a:hover { color: var(--cyan); }
+
+/* ─── RESPONSIVE ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 2.2rem; }
+  .section-title { font-size: 1.8rem; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr 1fr; }
+  .step-connector { display: none; }
+  .hero-stats { gap: 2rem; }
+}
+@media (max-width: 480px) {
+  .steps-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 1.8rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- NAV                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<nav>
+  <div class="logo">
+    <span class="logo-dot"></span> Leto
+  </div>
+  <div class="nav-btns">
+    <button class="btn btn-outline">Iniciar Sesion</button>
+    <button class="btn btn-primary">Crear Cuenta</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- HERO                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-badge">MLC 2006 &bull; STCW Compliant Platform</div>
+  <h1>Gestion de Tripulacion <span class="text-cyan">Inteligente</span> para la Industria Maritima</h1>
+  <p>Leto centraliza el reclutamiento, la documentacion y el cumplimiento normativo de su tripulacion en una sola plataforma. Reduzca tiempos administrativos hasta un 70%.</p>
+  <div class="hero-cta">
+    <button class="btn btn-primary btn-lg">Registrate Ahora</button>
+    <button class="btn btn-outline btn-lg">Ver como funciona &darr;</button>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-value">150+</div>
+      <div class="hero-stat-label">Rangos Certificados</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">STCW</div>
+      <div class="hero-stat-label">Validacion Automatica</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">28+</div>
+      <div class="hero-stat-label">Documentos por Rango</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">100%</div>
+      <div class="hero-stat-label">MLC 2006 Compliant</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PROBLEM / SOLUTION                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="problem-section">
+  <div class="text-center">
+    <div class="section-label">El Problema</div>
+    <h2 class="section-title">La gestion de tripulacion no deberia ser manual</h2>
+    <p class="section-subtitle mx-auto">Las empresas navieras pierden miles de horas al ano rastreando certificados vencidos, coordinando embarques y verificando cumplimiento normativo en hojas de calculo.</p>
+  </div>
+  <div class="problem-grid mx-auto">
+    <div class="problem-card">
+      <h3>Sin Leto</h3>
+      <ul>
+        <li>Certificados rastreados en Excel o correo electronico</li>
+        <li>Verificacion manual de cumplimiento STCW por cada tripulante</li>
+        <li>Riesgo de embarques con documentacion vencida</li>
+        <li>Proceso de reclutamiento fragmentado entre multiples canales</li>
+        <li>Sin visibilidad en tiempo real del estado de la tripulacion</li>
+      </ul>
+    </div>
+    <div class="solution-card">
+      <h3>Con Leto</h3>
+      <ul>
+        <li>Dashboard centralizado con alertas automaticas de vencimiento</li>
+        <li>Validacion STCW automatica por rango y posicion</li>
+        <li>Compliance banner en tiempo real: verde, amarillo, rojo</li>
+        <li>Base de datos de tripulacion con busqueda y filtros avanzados</li>
+        <li>Perfil verificado de cada marino con historial completo</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CORE VALUE PROPOSITIONS                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="text-center">
+    <div class="section-label">Capacidades de la Plataforma</div>
+    <h2 class="section-title">Todo lo que su operacion necesita</h2>
+    <p class="section-subtitle mx-auto">Desde el reclutamiento hasta el cumplimiento normativo, Leto cubre cada etapa del ciclo de vida de su tripulacion.</p>
+  </div>
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon">&#128203;</div>
+      <h3>Gestion Documental STCW</h3>
+      <p>Cada tripulante sube sus certificados con fechas de emision y vencimiento. El sistema valida automaticamente contra los requisitos de su rango.</p>
+      <span class="feature-tag">28+ documentos por rango</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#128101;</div>
+      <h3>Base de Datos de Tripulacion</h3>
+      <p>Explore perfiles verificados de marinos con filtros por departamento, rango, nacionalidad y disponibilidad. Toda la informacion en un solo lugar.</p>
+      <span class="feature-tag">Busqueda avanzada</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#9888;&#65039;</div>
+      <h3>Alertas de Cumplimiento</h3>
+      <p>Banner de compliance en tiempo real por tripulante: documentos faltantes, por vencer o expirados. Nunca embarque a alguien sin documentacion vigente.</p>
+      <span class="feature-tag">Tiempo real</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#128197;</div>
+      <h3>Calendario de Operaciones</h3>
+      <p>Gestione cambios de tripulacion, entrevistas y disponibilidad desde un calendario unificado. Los marinos confirman asistencia desde su propia vista.</p>
+      <span class="feature-tag">Doble vista: empresa + marino</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#127891;</div>
+      <h3>Examenes y Capacitacion STCW</h3>
+      <p>Catalogo completo de 83 cursos IMO. Los tripulantes reservan examenes y la empresa puede rastrear su progreso de certificacion.</p>
+      <span class="feature-tag">83 cursos IMO</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#128100;</div>
+      <h3>Perfil Verificado del Marino</h3>
+      <p>Cada tripulante tiene un perfil profesional con experiencia, idiomas, embarcaciones, y estado de cumplimiento. Visible para empresas autorizadas.</p>
+      <span class="feature-tag">Verificacion automatica</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#128274;</div>
+      <h3>Autenticacion Segura</h3>
+      <p>JWT con tokens de acceso y refresco. Cada usuario tiene su carpeta aislada por UUID. Datos de tripulacion protegidos y segregados.</p>
+      <span class="feature-tag">UUID por usuario</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">&#128640;</div>
+      <h3>Onboarding Guiado</h3>
+      <p>El agente Leto analiza el rango del marino y le indica exactamente que documentos debe subir, con prioridad por criticidad (STCW / MLC 2006).</p>
+      <span class="feature-tag">Agente inteligente</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SOCIAL PROOF                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="social-section">
+  <div class="text-center">
+    <div class="section-label">Empresas que confian en Leto</div>
+    <h2 class="section-title">Respaldado por la industria</h2>
+  </div>
+
+  <!-- Mock company logos -->
+  <div class="logos-row">
+    <span>Maersk</span>
+    <span>CMA CGM</span>
+    <span>MSC</span>
+    <span>Hapag-Lloyd</span>
+    <span>Evergreen</span>
+    <span>Frontline</span>
+  </div>
+
+  <!-- Testimonials -->
+  <div class="testimonials-grid" style="max-width:1000px; margin: 0 auto;">
+    <div class="testimonial-card">
+      <div class="testimonial-text">Leto redujo nuestro tiempo de verificacion documental de 3 dias a 15 minutos por tripulante. La validacion STCW automatica es exactamente lo que necesitabamos.</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">MR</div>
+        <div>
+          <div class="testimonial-name">Maria Rodriguez</div>
+          <div class="testimonial-role">Directora de Operaciones, Pacific Shipping Co.</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-text">El dashboard de compliance nos da visibilidad total. Ya no hay sorpresas al momento del embarque — sabemos exactamente que documentos faltan antes de que sea tarde.</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">JC</div>
+        <div>
+          <div class="testimonial-name">Jorge Castillo</div>
+          <div class="testimonial-role">Gerente de Crewing, Atlantic Maritime Group</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-text">Como capitan, tener todos mis certificados en un solo lugar con alertas de vencimiento me da tranquilidad. El proceso de onboarding fue rapido y claro.</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">AP</div>
+        <div>
+          <div class="testimonial-name">Alejandro Pineda</div>
+          <div class="testimonial-role">Capitan, MV Caribbean Spirit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trust badges -->
+  <div class="trust-badges">
+    <div class="trust-badge"><span class="trust-badge-icon">&#128274;</span> SSL Encrypted</div>
+    <div class="trust-badge"><span class="trust-badge-icon">&#9989;</span> MLC 2006 Compliant</div>
+    <div class="trust-badge"><span class="trust-badge-icon">&#128220;</span> STCW Validated</div>
+    <div class="trust-badge"><span class="trust-badge-icon">&#127757;</span> GDPR Ready</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- HOW IT WORKS                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="text-center">
+    <div class="section-label">El Proceso</div>
+    <h2 class="section-title">Operativo en menos de una hora</h2>
+    <p class="section-subtitle mx-auto">Implementar Leto no requiere integraciones complejas. Su equipo puede estar operativo el mismo dia.</p>
+  </div>
+  <div class="steps-grid" style="max-width: 900px; margin: 3rem auto 0;">
+    <div class="step-card">
+      <div class="step-number">01</div>
+      <h3>Cree su cuenta empresarial</h3>
+      <p>Registre su empresa y configure los departamentos y rangos que necesita gestionar.</p>
+      <div class="step-connector"></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number">02</div>
+      <h3>Invite a su tripulacion</h3>
+      <p>Los marinos se registran, seleccionan su rango y el sistema les indica que documentos subir.</p>
+      <div class="step-connector"></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number">03</div>
+      <h3>Validacion automatica</h3>
+      <p>Leto verifica documentos contra requisitos STCW y alerta sobre vencimientos proximos.</p>
+      <div class="step-connector"></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number">04</div>
+      <h3>Gestione su operacion</h3>
+      <p>Dashboard centralizado con compliance, calendario, y base de datos de tripulacion lista para embarques.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD PREVIEW                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="dashboard-section" style="background: rgba(0,0,0,0.15); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+  <div class="section-label">La Plataforma</div>
+  <h2 class="section-title">Diseinada para equipos de operaciones maritimas</h2>
+  <p class="section-subtitle mx-auto text-center">Interfaz intuitiva que su equipo puede usar desde el primer dia. Sin curva de aprendizaje, sin capacitacion especial.</p>
+
+  <div class="dashboard-tabs">
+    <div class="dashboard-tab active" onclick="switchTab(this, 0)">Crew Database</div>
+    <div class="dashboard-tab" onclick="switchTab(this, 1)">Mi Perfil</div>
+    <div class="dashboard-tab" onclick="switchTab(this, 2)">Mis Documentos</div>
+    <div class="dashboard-tab" onclick="switchTab(this, 3)">Calendario</div>
+  </div>
+
+  <div class="dashboard-preview" id="dashboard-container">
+    <div class="dashboard-placeholder" style="padding:3rem; text-align:left; font-size:0.85rem; line-height:1.8;">
+      <div style="text-align:center; margin-bottom:2rem;">
+        <div style="font-size:1.5rem; margin-bottom:0.5rem;">&#128187; Vista previa de la plataforma</div>
+        <div style="color:var(--ice-40); font-size:0.8rem;">Para ver capturas en vivo, abra esta pagina desde el servidor local</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; max-width:700px; margin:0 auto;">
+        <div style="background:rgba(0,240,255,0.04); border:1px solid rgba(0,240,255,0.12); border-radius:12px; padding:1.2rem;">
+          <div style="font-weight:600; margin-bottom:0.5rem;">&#128101; Crew Database</div>
+          <div style="color:var(--ice-40); font-size:0.8rem;">Grid de perfiles con foto, departamento, rango y nacionalidad. Panel lateral con detalle completo del tripulante.</div>
+        </div>
+        <div style="background:rgba(0,240,255,0.04); border:1px solid rgba(0,240,255,0.12); border-radius:12px; padding:1.2rem;">
+          <div style="font-weight:600; margin-bottom:0.5rem;">&#128100; Mi Perfil</div>
+          <div style="color:var(--ice-40); font-size:0.8rem;">Perfil editable del marino: idiomas, embarcaciones, empresas, about me. Panel derecho con documentos requeridos por rango.</div>
+        </div>
+        <div style="background:rgba(0,240,255,0.04); border:1px solid rgba(0,240,255,0.12); border-radius:12px; padding:1.2rem;">
+          <div style="font-weight:600; margin-bottom:0.5rem;">&#128203; Mis Documentos</div>
+          <div style="color:var(--ice-40); font-size:0.8rem;">Upload de PDFs con fechas de emision/vencimiento. Compliance banner STCW en tiempo real. Preview y rotacion de documentos.</div>
+        </div>
+        <div style="background:rgba(0,240,255,0.04); border:1px solid rgba(0,240,255,0.12); border-radius:12px; padding:1.2rem;">
+          <div style="font-weight:600; margin-bottom:0.5rem;">&#128197; Calendario</div>
+          <div style="color:var(--ice-40); font-size:0.8rem;">Vista mensual con eventos, entrevistas, y cambios de tripulacion. Doble vista: empresa programa, marino confirma.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Try to load live iframe if localhost:3000 is available
+    const TAB_ROUTES = [
+      'http://localhost:3000/app/#/company-crewdb',
+      'http://localhost:3000/app/#/my-profile',
+      'http://localhost:3000/app/#/myfiles',
+      'http://localhost:3000/app/#/company-calendar',
+    ];
+    let liveMode = false;
+    let currentTab = 0;
+
+    function createIframe(route) {
+      const container = document.getElementById('dashboard-container');
+      container.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:relative; width:100%; height:500px; overflow:hidden;';
+      const iframe = document.createElement('iframe');
+      iframe.id = 'dash-frame';
+      iframe.src = route;
+      iframe.style.cssText = 'width:200%; height:1000px; border:none; background:#060F1E; transform:scale(0.5); transform-origin:top left; position:absolute; top:0; left:0; border-radius:0;';
+      wrapper.appendChild(iframe);
+      container.appendChild(wrapper);
+    }
+
+    function switchTab(el, idx) {
+      document.querySelectorAll('.dashboard-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      currentTab = idx;
+      if (liveMode) createIframe(TAB_ROUTES[idx]);
+    }
+
+    // Detect if localhost:3000 is reachable
+    const img = new Image();
+    img.onload = function() { liveMode = true; createIframe(TAB_ROUTES[0]); };
+    img.onerror = function() {
+      // Try fetch as backup
+      fetch('http://localhost:3000/', { mode: 'no-cors', signal: AbortSignal.timeout(2000) })
+        .then(() => { liveMode = true; createIframe(TAB_ROUTES[0]); })
+        .catch(() => { /* keep fallback */ });
+    };
+    img.src = 'http://localhost:3000/favicon.ico?' + Date.now();
+  </script>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FINAL CTA                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="final-cta">
+  <h2>Optimice su gestion de tripulacion hoy</h2>
+  <p>Unase a las empresas navieras que ya confian en Leto para automatizar su compliance y reducir tiempos administrativos.</p>
+  <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+    <button class="btn btn-primary btn-lg">Registrate Ahora</button>
+    <button class="btn btn-outline btn-lg">Contactar Ventas</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="logo">
+    <span class="logo-dot"></span> Leto
+    <span style="color: var(--ice-40); font-weight: 400; font-size: 0.8rem; margin-left: 0.5rem;">by PBS</span>
+  </div>
+  <div class="links">
+    <a href="#">Terminos</a>
+    <a href="#">Privacidad</a>
+    <a href="#">Documentacion</a>
+    <a href="#">Contacto</a>
+  </div>
+  <div class="copyright">&copy; 2026 PB Trading Solutions. MLC 2006 Compliant.</div>
+</footer>
+
+</body>
+</html>

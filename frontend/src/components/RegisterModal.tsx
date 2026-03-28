@@ -274,6 +274,14 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
               <h2 className="font-grotesk text-lg font-semibold">Crea tu cuenta</h2>
               <p className="text-ice/40 text-sm mt-0.5">Paso 1 de 3 — Información personal</p>
             </div>
+            <div className="flex gap-1.5 p-1 bg-white/[0.04] rounded-lg">
+              {(['seafarer','company'] as const).map((r) => (
+                <button key={r} type="button" onClick={() => set('role', r)}
+                  className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${form.role===r ? 'bg-cyan text-navy' : 'text-ice/50 hover:text-ice'}`}>
+                  {r==='seafarer' ? '⚓ Tripulante' : '🏢 Empresa'}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-xs font-semibold text-ice/60 mb-1.5">Nombre</label>
                 <input value={form.first_name} onChange={(e) => set('first_name', e.target.value)} placeholder="Juan" required className={inp} /></div>
