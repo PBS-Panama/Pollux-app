@@ -2,7 +2,7 @@
 // Values copied from MetaDetails/styles.less and VideosList/styles.less
 
 @import (reference) '~@stremio/stremio-colors/less/stremio-colors.less';
-@import (reference) '~stremio/common/screen-sizes.less';
+@import (reference) '~leto/common/screen-sizes.less';
 
 .myprofile-container {
     display: flex;
@@ -34,12 +34,15 @@
             flex: none;
         }
 
-        // Left panel — matches MetaDetails .meta-preview exactly
+        // Left panel — flex:1 so it fills space (unlike MetaDetails' flex:0 1 auto
+        // which works there because real content gives width, but here empty
+        // placeholders are narrow and collapse the panel)
         .profile-panel {
-            flex: 0 1 auto;
+            flex: 1;
             align-self: stretch;
             padding: 0 4rem 2rem 4rem;
             padding-left: max(1rem, calc(4rem - var(--safe-area-inset-left)));
+            overflow-y: auto;
         }
 
         .spacing {

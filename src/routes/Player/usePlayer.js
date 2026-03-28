@@ -1,8 +1,8 @@
 // Copyright (C) 2017-2023 Smart code 203358507
 
 const React = require('react');
-const { useServices } = require('stremio/services');
-const { useModelState, useCoreSuspender } = require('stremio/common');
+const { useServices } = require('leto/services');
+const { useModelState, useCoreSuspender } = require('leto/common');
 
 const map = (player) => ({
     ...player,

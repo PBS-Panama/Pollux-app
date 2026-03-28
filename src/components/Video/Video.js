@@ -4,11 +4,11 @@ const React = require('react');
 const { useTranslation } = require('react-i18next');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { useRouteFocused } = require('stremio-router');
+const { useRouteFocused } = require('leto-router');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { Button, Image, Popup } = require('stremio/components');
-const useBinaryState = require('stremio/common/useBinaryState');
-const useProfile = require('stremio/common/useProfile');
+const { Button, Image, Popup } = require('leto/components');
+const useBinaryState = require('leto/common/useBinaryState');
+const useProfile = require('leto/common/useProfile');
 const VideoPlaceholder = require('./VideoPlaceholder');
 const styles = require('./styles');
 

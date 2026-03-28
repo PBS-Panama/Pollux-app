@@ -6,7 +6,7 @@
         "outDir": "./dist",
         "moduleResolution": "node",
         "paths": {
-            "stremio/*": ["*"],
+            "leto/*": ["*"],
         },
         "resolveJsonModule": true,
         "esModuleInterop": true,

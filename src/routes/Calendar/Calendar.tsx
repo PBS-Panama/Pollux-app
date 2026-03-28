@@ -2,10 +2,10 @@
 
 const React = require('react');
 const { useState, useMemo, useCallback, useEffect } = React;
-const { MainNavBars } = require('stremio/components');
+const { MainNavBars } = require('leto/components');
 const { MONTHS, WEEKDAYS_SHORT, EVENT_CATEGORIES, COMPANY_EVENTS } = require('./calendarData');
-const { getPendingInterviews, removePendingInterview, getCustomEvents, addCustomEvent, updateCustomEvent, deleteCustomEvent } = require('stremio/common/crewStore');
-const { isInterviewConfirmed } = require('stremio/common/seafarerStore');
+const { getPendingInterviews, removePendingInterview, getCustomEvents, addCustomEvent, updateCustomEvent, deleteCustomEvent } = require('leto/common/crewStore');
+const { isInterviewConfirmed } = require('leto/common/seafarerStore');
 const styles = require('./Calendar.less');
 
 const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();

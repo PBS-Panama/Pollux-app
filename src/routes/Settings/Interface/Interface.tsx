@@ -1,5 +1,5 @@
 import React, { forwardRef, useState, useCallback } from 'react';
-import { MultiselectMenu } from 'stremio/components';
+import { MultiselectMenu } from 'leto/components';
 import { Section, Option } from '../components';
 import useInterfaceOptions from './useInterfaceOptions';
 

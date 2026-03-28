@@ -2,11 +2,11 @@
 
 const React = require('react');
 const { useState, useMemo, useCallback, useEffect } = React;
-const { MainNavBars } = require('stremio/components');
+const { MainNavBars } = require('leto/components');
 const { MONTHS, WEEKDAYS_SHORT } = require('../Calendar/calendarData');
 const { AVAILABILITY_TYPES, SEAFARER_CATEGORIES, getCertExpiryForMonth, getCertificateAlerts, DEFAULT_AVAILABILITY } = require('./seafarerData');
-const { getAvailability, addAvailability, removeAvailability, getAvailabilityForMonth, confirmInterview, isInterviewConfirmed, getBookedExams } = require('stremio/common/seafarerStore');
-const { getCustomEvents } = require('stremio/common/crewStore');
+const { getAvailability, addAvailability, removeAvailability, getAvailabilityForMonth, confirmInterview, isInterviewConfirmed, getBookedExams } = require('leto/common/seafarerStore');
+const { getCustomEvents } = require('leto/common/crewStore');
 const styles = require('./SeafarerCalendar.less');
 
 const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();

@@ -1,9 +1,9 @@
 // Copyright (C) 2017-2023 Smart code 203358507
 
 const React = require('react');
-const { useServices } = require('stremio/services');
+const { useServices } = require('leto/services');
 const PropTypes = require('prop-types');
-const MetaItem = require('stremio/components/MetaItem');
+const MetaItem = require('leto/components/MetaItem');
 const { t } = require('i18next');
 
 const LibItem = ({ _id, removable, notifications, watched, ...props }) => {

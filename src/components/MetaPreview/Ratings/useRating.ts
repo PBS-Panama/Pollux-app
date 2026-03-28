@@ -1,7 +1,7 @@
 // Copyright (C) 2017-2025 Smart code 203358507
 
 import { useMemo, useCallback } from 'react';
-import { useServices } from 'stremio/services';
+import { useServices } from 'leto/services';
 
 const useRating = (ratingInfo?: Loadable<RatingInfo>) => {
     const { core } = useServices();

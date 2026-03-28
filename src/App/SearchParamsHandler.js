@@ -2,8 +2,8 @@
 
 const React = require('react');
 const { deepEqual } = require('fast-equals');
-const { withCoreSuspender, useProfile, useToast } = require('stremio/common');
-const { useServices } = require('stremio/services');
+const { withCoreSuspender, useProfile, useToast } = require('leto/common');
+const { useServices } = require('leto/services');
 
 const SearchParamsHandler = () => {
     const { core } = useServices();

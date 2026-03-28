@@ -2,7 +2,7 @@
 
 const React = require('react');
 const { useMemo } = React;
-const { MainNavBars } = require('stremio/components');
+const { MainNavBars } = require('leto/components');
 const {
     CURRENT_CONTRACT,
     STATUS_LABELS,

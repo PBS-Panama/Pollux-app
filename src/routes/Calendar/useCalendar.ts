@@ -1,7 +1,7 @@
 // Copyright (C) 2017-2024 Smart code 203358507
 
 import React from 'react';
-import { useModelState } from 'stremio/common';
+import { useModelState } from 'leto/common';
 
 const useCalendar = (urlParams: UrlParams) => {
     const action = React.useMemo(() => {

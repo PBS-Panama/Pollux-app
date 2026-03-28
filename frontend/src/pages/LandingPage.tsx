@@ -15,7 +15,7 @@
  * ║     • Footer (PBS branding)                                          ║
  * ║                                                                      ║
  * ║  B) AUTH MODALS — Blur overlay pattern:                              ║
- * ║     • "Soy Marino" → opens RegisterModal (3-step flow)              ║
+ * ║     • "Soy Tripulante" → opens RegisterModal (3-step flow)              ║
  * ║     • "Acceso Clientes" → opens LoginModal                          ║
  * ║     • Landing stays visible but blurred (backdrop-filter: blur 14px) ║
  * ║     • Click outside or ✕ button closes the modal                    ║
@@ -56,21 +56,37 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-navy text-ice" style={{ fontFamily: 'Inter, sans-serif' }}>
 
-      {/* ─── Blur overlay modal ─── */}
-      {modal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(6, 15, 30, 0.75)', backdropFilter: 'blur(14px)' }}
-          onClick={closeModal}
-        >
-          <div onClick={e => e.stopPropagation()} className="w-full" style={{ maxWidth: modal === 'register' ? '34rem' : '28rem' }}>
-            {modal === 'login'
-              ? <LoginModal onClose={closeModal} />
-              : <RegisterModal onClose={closeModal} onSwitchToLogin={openLogin} />
-            }
-          </div>
+      {/* ─── Blur overlay modals — always mounted, hidden when inactive ─── */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{
+          background: 'rgba(6, 15, 30, 0.75)',
+          backdropFilter: 'blur(14px)',
+          opacity: modal === 'login' ? 1 : 0,
+          pointerEvents: modal === 'login' ? 'auto' : 'none',
+          transition: 'opacity 0.2s ease',
+        }}
+        onClick={closeModal}
+      >
+        <div onClick={e => e.stopPropagation()} className="w-full" style={{ maxWidth: '28rem' }}>
+          <LoginModal onClose={closeModal} />
         </div>
-      )}
+      </div>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{
+          background: 'rgba(6, 15, 30, 0.75)',
+          backdropFilter: 'blur(14px)',
+          opacity: modal === 'register' ? 1 : 0,
+          pointerEvents: modal === 'register' ? 'auto' : 'none',
+          transition: 'opacity 0.2s ease',
+        }}
+        onClick={closeModal}
+      >
+        <div onClick={e => e.stopPropagation()} className="w-full" style={{ maxWidth: '34rem' }}>
+          <RegisterModal onClose={closeModal} onSwitchToLogin={openLogin} />
+        </div>
+      </div>
 
       {/* NAV */}
       <nav className="sticky top-0 z-40 flex items-center justify-between px-[5%] py-5 bg-navy/90 backdrop-blur-md border-b border-white/[0.06]">
@@ -78,13 +94,13 @@ export default function LandingPage() {
           <span className="w-2 h-2 rounded-full bg-cyan shadow-[0_0_10px_#00F0FF]" />Leto
         </div>
         <div className="flex gap-3">
-          <button onClick={openLogin}
-            className="px-4 py-2 rounded-md text-sm font-semibold border border-steel text-ice hover:border-cyan hover:text-cyan transition-colors">
-            Acceso Clientes
-          </button>
           <button onClick={openRegister}
             className="px-4 py-2 rounded-md text-sm font-semibold bg-cyan text-navy hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
-            Soy Marino
+            Soy Tripulante
+          </button>
+          <button onClick={openLogin}
+            className="px-4 py-2 rounded-md text-sm font-semibold border border-steel text-ice hover:border-cyan hover:text-cyan transition-colors">
+            Soy Empresa
           </button>
         </div>
       </nav>
@@ -107,11 +123,11 @@ export default function LandingPage() {
         <div className="flex justify-center gap-4 flex-wrap">
           <button onClick={openRegister}
             className="px-8 py-3 rounded-lg bg-cyan text-navy font-semibold text-base hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all">
-            Registrarme como Marino
+            Soy Tripulante
           </button>
           <button onClick={openLogin}
             className="px-8 py-3 rounded-lg border border-white/20 text-ice font-semibold text-base hover:border-white/40 transition-colors">
-            Soy una Empresa Naviera
+            Soy Empresa
           </button>
         </div>
         <div className="flex justify-center gap-12 mt-16 flex-wrap">
@@ -161,8 +177,8 @@ export default function LandingPage() {
         <p className="text-ice/50 mb-12">Leto sirve a ambos lados del ecosistema marítimo</p>
         <div className="flex justify-center gap-6 flex-wrap">
           {[
-            { icon:'⚓', badge:'MARINO / SEAFARER', badgeColor:'gold', title:'Soy Tripulante', desc:'Gestiona tu perfil, documentos y conecta con las mejores navieras del mundo.', btn:'Crear mi Perfil', action: openRegister, primary: true },
-            { icon:'🏢', badge:'EMPRESA NAVIERA', badgeColor:'steel', title:'Soy una Empresa', desc:'Encuentra y contrata tripulación calificada con documentación verificada.', btn:'Acceso Empresarial', action: openLogin, primary: false },
+            { icon:'⚓', badge:'TRIPULANTE', badgeColor:'gold', title:'Soy Tripulante', desc:'Gestiona tu perfil, documentos y conecta con las mejores navieras del mundo.', btn:'Crear mi Perfil', action: openRegister, primary: true },
+            { icon:'🏢', badge:'EMPRESA', badgeColor:'steel', title:'Soy Empresa', desc:'Encuentra y contrata tripulación calificada con documentación verificada.', btn:'Acceso Empresa', action: openLogin, primary: false },
           ].map(c=>(
             <div key={c.title} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-8 w-72 hover:border-cyan/30 hover:-translate-y-1 transition-all">
               <div className="text-4xl mb-3">{c.icon}</div>

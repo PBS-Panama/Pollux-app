@@ -2,12 +2,12 @@
 
 const React = require('react');
 const classnames = require('classnames');
-const { useProfile, withCoreSuspender } = require('stremio/common');
-const { default: Button } = require('stremio/components/Button');
-const { MainNavBars } = require('stremio/components');
+const { useProfile, withCoreSuspender } = require('leto/common');
+const { default: Button } = require('leto/components/Button');
+const { MainNavBars } = require('leto/components');
 const { default: Placeholder } = require('./Placeholder');
-const { getExpiryStatus, getComplianceStatus } = require('stremio/common/crewDocData');
-const api = require('stremio/common/apiClient');
+const { getExpiryStatus, getComplianceStatus } = require('leto/common/crewDocData');
+const api = require('leto/common/apiClient');
 const useDocumentUpload = require('./useDocumentUpload');
 const styles = require('./styles');
 

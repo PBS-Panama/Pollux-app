@@ -2,8 +2,8 @@
 
 const React = require('react');
 const UrlUtils = require('url');
-const { useServices } = require('stremio/services');
-const { useModelState } = require('stremio/common');
+const { useServices } = require('leto/services');
+const { useModelState } = require('leto/common');
 
 const map = (discover) => ({
     ...discover,

@@ -4,9 +4,9 @@ const React = require('react');
 const throttle = require('lodash.throttle');
 const { deepEqual } = require('fast-equals');
 const intersection = require('lodash.intersection');
-const { useCoreSuspender } = require('stremio/common/CoreSuspender');
-const { useRouteFocused } = require('stremio-router');
-const { useServices } = require('stremio/services');
+const { useCoreSuspender } = require('leto/common/CoreSuspender');
+const { useRouteFocused } = require('leto-router');
+const { useServices } = require('leto/services');
 
 const useModelState = ({ action, ...args }) => {
     const { core } = useServices();

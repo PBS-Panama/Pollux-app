@@ -4,9 +4,9 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const debounce = require('lodash.debounce');
-const { useRouteFocused } = require('stremio-router');
-const { useBinaryState } = require('stremio/common');
-const { Button, Slider } = require('stremio/components');
+const { useRouteFocused } = require('leto-router');
+const { useBinaryState } = require('leto/common');
+const { Button, Slider } = require('leto/components');
 const formatTime = require('./formatTime');
 const styles = require('./styles');
 

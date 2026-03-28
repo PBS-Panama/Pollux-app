@@ -4,7 +4,7 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const FocusLock = require('react-focus-lock').default;
-const { useRouteFocused } = require('stremio-router');
+const { useRouteFocused } = require('leto-router');
 const styles = require('./styles');
 
 const getAnchorElement = (element) => {

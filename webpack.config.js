@@ -175,8 +175,8 @@ module.exports = (env, argv) => ({
     resolve: {
         extensions: ['.tsx', '.ts', '.js', '.json', '.less', '.wasm'],
         alias: {
-            'stremio': path.resolve(__dirname, 'src'),
-            'stremio-router': path.resolve(__dirname, 'src', 'router')
+            'leto': path.resolve(__dirname, 'src'),
+            'leto-router': path.resolve(__dirname, 'src', 'router')
         }
     },
     devServer: {

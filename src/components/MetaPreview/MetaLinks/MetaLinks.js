@@ -3,8 +3,8 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { Button } = require('stremio/components');
-const useTranslate = require('stremio/common/useTranslate');
+const { Button } = require('leto/components');
+const useTranslate = require('leto/common/useTranslate');
 const styles = require('./styles');
 
 const MetaLinks = ({ className, label, links }) => {

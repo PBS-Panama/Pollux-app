@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { WHITELISTED_HOSTS } from 'stremio/common/CONSTANTS';
+import { WHITELISTED_HOSTS } from 'leto/common/CONSTANTS';
 import { name, isMobile } from './device';
 
 interface PlatformContext {

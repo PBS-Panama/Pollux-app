@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import Icon from '@stremio/stremio-icons/react';
 import { useTranslation } from 'react-i18next';
-import { useServices } from 'stremio/services';
-import { useBinaryState, useShell } from 'stremio/common';
-import { Button, Transition } from 'stremio/components';
+import { useServices } from 'leto/services';
+import { useBinaryState, useShell } from 'leto/common';
+import { Button, Transition } from 'leto/components';
 import styles from './UpdaterBanner.less';
 
 type Props = {

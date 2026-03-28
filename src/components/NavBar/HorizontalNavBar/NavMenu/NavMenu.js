@@ -3,9 +3,9 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { useRouteFocused } = require('stremio-router');
-const Popup = require('stremio/components/Popup');
-const useBinaryState = require('stremio/common/useBinaryState');
+const { useRouteFocused } = require('leto-router');
+const Popup = require('leto/components/Popup');
+const useBinaryState = require('leto/common/useBinaryState');
 const NavMenuContent = require('./NavMenuContent');
 const styles = require('./styles.less');
 

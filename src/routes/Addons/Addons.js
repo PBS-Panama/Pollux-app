@@ -2,7 +2,7 @@
 
 const React = require('react');
 const { useState, useMemo, useCallback, useRef } = React;
-const { MainNavBars, MultiselectMenu } = require('stremio/components');
+const { MainNavBars, MultiselectMenu } = require('leto/components');
 const { EXAMS, STCW_LEVELS, EXAM_DEPARTMENTS } = require('../Calendar/examData');
 const styles = require('./styles');
 

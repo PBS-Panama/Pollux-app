@@ -5,11 +5,11 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { Button, MultiselectMenu } = require('stremio/components');
+const { Button, MultiselectMenu } = require('leto/components');
 const CategoryBarPlaceholder = require('./SeasonsBarPlaceholder');
 const styles = require('./styles');
 
-const { CREW_DOC_LABELS } = require('stremio/common/crewDocData');
+const { CREW_DOC_LABELS } = require('leto/common/crewDocData');
 
 const CategoryBar = ({ className, categories, category, onSelect }) => {
     const options = React.useMemo(() => {

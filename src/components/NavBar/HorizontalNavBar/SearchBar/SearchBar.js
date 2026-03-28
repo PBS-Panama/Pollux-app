@@ -6,15 +6,15 @@ const classnames = require('classnames');
 const debounce = require('lodash.debounce');
 const { useTranslation } = require('react-i18next');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { useRouteFocused } = require('stremio-router');
-const Button = require('stremio/components/Button').default;
-const TextInput = require('stremio/components/TextInput').default;
-const useTorrent = require('stremio/common/useTorrent');
-const { withCoreSuspender } = require('stremio/common/CoreSuspender');
+const { useRouteFocused } = require('leto-router');
+const Button = require('leto/components/Button').default;
+const TextInput = require('leto/components/TextInput').default;
+const useTorrent = require('leto/common/useTorrent');
+const { withCoreSuspender } = require('leto/common/CoreSuspender');
 const useSearchHistory = require('./useSearchHistory');
 const useLocalSearch = require('./useLocalSearch');
 const styles = require('./styles');
-const useBinaryState = require('stremio/common/useBinaryState');
+const useBinaryState = require('leto/common/useBinaryState');
 
 const SearchBar = React.memo(({ className, query, active }) => {
     const { t } = useTranslation();

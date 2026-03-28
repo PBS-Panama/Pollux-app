@@ -5,11 +5,11 @@ const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { useTranslation } = require('react-i18next');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { useRouteFocused } = require('stremio-router');
-const { useServices } = require('stremio/services');
-const { Button } = require('stremio/components');
-const { default: TextInput } = require('stremio/components/TextInput');
-const useToast = require('stremio/common/Toast/useToast');
+const { useRouteFocused } = require('leto-router');
+const { useServices } = require('leto/services');
+const { Button } = require('leto/components');
+const { default: TextInput } = require('leto/components/TextInput');
+const useToast = require('leto/common/Toast/useToast');
 const styles = require('./styles');
 
 const SharePrompt = ({ className, url }) => {

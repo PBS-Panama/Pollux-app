@@ -3,9 +3,9 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import classnames from 'classnames';
 import throttle from 'lodash.throttle';
-import { useRouteFocused } from 'stremio-router';
-import { useProfile, withCoreSuspender } from 'stremio/common';
-import { MainNavBars } from 'stremio/components';
+import { useRouteFocused } from 'leto-router';
+import { useProfile, withCoreSuspender } from 'leto/common';
+import { MainNavBars } from 'leto/components';
 import { SECTIONS } from './constants';
 import Menu from './Menu';
 import General from './General';

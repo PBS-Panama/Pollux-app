@@ -3,10 +3,10 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import classnames from 'classnames';
-import { useServices } from 'stremio/services';
-import { Button } from 'stremio/components';
-import useProfile from 'stremio/common/useProfile';
-import { withCoreSuspender } from 'stremio/common/CoreSuspender';
+import { useServices } from 'leto/services';
+import { Button } from 'leto/components';
+import useProfile from 'leto/common/useProfile';
+import { withCoreSuspender } from 'leto/common/CoreSuspender';
 import styles from './StreamingServerWarning.less';
 
 type Props = {

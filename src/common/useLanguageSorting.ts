@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import interfaceLanguages from 'stremio/common/interfaceLanguages.json';
+import interfaceLanguages from 'leto/common/interfaceLanguages.json';
 
 const useLanguageSorting = (options: MultiselectMenuOption[]) => {
     const userLangCode = useMemo(() => {

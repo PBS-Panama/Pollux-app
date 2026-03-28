@@ -6,17 +6,17 @@ const classnames = require('classnames');
 const { useTranslation } = require('react-i18next');
 const filterInvalidDOMProps = require('filter-invalid-dom-props').default;
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { default: Button } = require('stremio/components/Button');
-const { default: Image } = require('stremio/components/Image');
-const Multiselect = require('stremio/components/Multiselect');
-const useBinaryState = require('stremio/common/useBinaryState');
-const { ICON_FOR_TYPE } = require('stremio/common/CONSTANTS');
+const { default: Button } = require('leto/components/Button');
+const { default: Image } = require('leto/components/Image');
+const Multiselect = require('leto/components/Multiselect');
+const useBinaryState = require('leto/common/useBinaryState');
+const { ICON_FOR_TYPE } = require('leto/common/CONSTANTS');
 const styles = require('./styles');
 
 // PBS Crewing Module: corporate default profile image for all cards
 const CREW_DEFAULT_POSTER = 'images/profileimg.png';
-const { getCrewName, getCrewDepartment, getCrewRank, getCrewNationality, getCrewFlagPath } = require('stremio/common/crewData');
-const { togglePendingInterview, isPendingInterview } = require('stremio/common/crewStore');
+const { getCrewName, getCrewDepartment, getCrewRank, getCrewNationality, getCrewFlagPath } = require('leto/common/crewData');
+const { togglePendingInterview, isPendingInterview } = require('leto/common/crewStore');
 
 const MetaItem = React.memo(({ className, type, name, poster, posterShape, posterChangeCursor, progress, newVideos, options, deepLinks, dataset, optionOnSelect, onDismissClick, onPlayClick, watched, ...props }) => {
     const { t } = useTranslation();

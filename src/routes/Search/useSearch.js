@@ -1,8 +1,8 @@
 // Copyright (C) 2017-2023 Smart code 203358507
 
 const React = require('react');
-const { useModelState } = require('stremio/common');
-const { useServices } = require('stremio/services');
+const { useModelState } = require('leto/common');
+const { useServices } = require('leto/services');
 
 const useSearch = (queryParams) => {
     const { core } = useServices();

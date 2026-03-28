@@ -1,7 +1,7 @@
 // Copyright (C) 2017-2023 Smart code 203358507
 
 const React = require('react');
-const { useServices } = require('stremio/services');
+const { useServices } = require('leto/services');
 
 const useStatistics = (player, streamingServer) => {
     const { core } = useServices();

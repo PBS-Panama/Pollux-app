@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from 'stremio/components';
+import { Button } from 'leto/components';
 import styles from './Link.less';
 
 type Props = {

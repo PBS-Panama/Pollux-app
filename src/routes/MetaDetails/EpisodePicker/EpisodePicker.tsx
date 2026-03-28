@@ -2,7 +2,7 @@
 // Replaces Stremio's EpisodePicker — navigates to a specific document
 
 import React, { useCallback, useMemo, useState, ChangeEvent } from 'react';
-import { Button, NumberInput } from 'stremio/components';
+import { Button, NumberInput } from 'leto/components';
 import styles from './EpisodePicker.less';
 
 type Props = {

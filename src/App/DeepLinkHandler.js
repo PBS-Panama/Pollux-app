@@ -1,7 +1,7 @@
 // Copyright (C) 2017-2023 Smart code 203358507
 
 const React = require('react');
-const { withCoreSuspender, useStreamingServer } = require('stremio/common');
+const { withCoreSuspender, useStreamingServer } = require('leto/common');
 
 const DeepLinkHandler = () => {
     const streamingServer = useStreamingServer();

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useServices } from 'stremio/services';
+import { useServices } from 'leto/services';
 import { Link } from '../../components';
 import styles from './User.less';
 

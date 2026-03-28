@@ -2,8 +2,8 @@
 
 const React = require('react');
 const PropTypes = require('prop-types');
-const { useServices } = require('stremio/services');
-const LibItem = require('stremio/components/LibItem');
+const { useServices } = require('leto/services');
+const LibItem = require('leto/components/LibItem');
 
 const ContinueWatchingItem = ({ _id, notifications, deepLinks, ...props }) => {
     const { core } = useServices();

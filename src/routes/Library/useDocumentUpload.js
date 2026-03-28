@@ -2,8 +2,8 @@
 // Uses backend API for file persistence, falls back to localStorage
 
 const React = require('react');
-const { CREW_DOC_LABELS, CREW_ALL_DOCS, CREW_DOC_CATEGORIES, getExpiryStatus } = require('stremio/common/crewDocData');
-const api = require('stremio/common/apiClient');
+const { CREW_DOC_LABELS, CREW_ALL_DOCS, CREW_DOC_CATEGORIES, getExpiryStatus } = require('leto/common/crewDocData');
+const api = require('leto/common/apiClient');
 
 const STORAGE_KEY = 'pbs_crew_uploaded_docs';
 

@@ -4,9 +4,9 @@ import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import classnames from 'classnames';
 import * as AColorPicker from 'a-color-picker';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'stremio/components';
-import ModalDialog from 'stremio/components/ModalDialog';
-import useBinaryState from 'stremio/common/useBinaryState';
+import { Button } from 'leto/components';
+import ModalDialog from 'leto/components/ModalDialog';
+import useBinaryState from 'leto/common/useBinaryState';
 import ColorPicker from './ColorPicker';
 import styles from './ColorInput.less';
 

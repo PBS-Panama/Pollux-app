@@ -5,8 +5,8 @@ const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { useTranslation } = require('react-i18next');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { Button } = require('stremio/components');
-const CONSTANTS = require('stremio/common/CONSTANTS');
+const { Button } = require('leto/components');
+const CONSTANTS = require('leto/common/CONSTANTS');
 const styles = require('./styles');
 
 const MetaRowPlaceholder = ({ className, title, deepLinks }) => {

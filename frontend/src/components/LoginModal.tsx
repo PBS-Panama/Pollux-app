@@ -9,7 +9,7 @@
  * ║  Displayed as a blur-overlay modal ON TOP of the landing page.      ║
  * ║                                                                      ║
  * ║  FEATURES:                                                           ║
- * ║  • Dual-role toggle: ⚓ Marino / 🏢 Empresa                        ║
+ * ║  • Dual-role toggle: ⚓ Tripulante / 🏢 Empresa                        ║
  * ║  • Email + Password form with show/hide toggle                      ║
  * ║  • Spanish-language error messages for 401, 422, network errors     ║
  * ║                                                                      ║
@@ -90,7 +90,7 @@ export default function LoginModal({ onClose }: Props) {
           {(['seafarer','company'] as const).map((r) => (
             <button key={r} onClick={() => setRole(r)}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${role===r ? 'bg-cyan text-navy' : 'text-ice/50 hover:text-ice'}`}>
-              {r==='seafarer' ? '⚓ Marino' : '🏢 Empresa'}
+              {r==='seafarer' ? '⚓ Tripulante' : '🏢 Empresa'}
             </button>
           ))}
         </div>

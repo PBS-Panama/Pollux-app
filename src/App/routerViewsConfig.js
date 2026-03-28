@@ -1,7 +1,7 @@
 // PBS Crewing Module - Route-to-Component mapping
 
-const routes = require('stremio/routes');
-const { routesRegexp } = require('stremio/common');
+const routes = require('leto/routes');
+const { routesRegexp } = require('leto/common');
 
 const routerViewsConfig = [
     [

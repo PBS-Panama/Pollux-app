@@ -3,10 +3,10 @@
 const React = require('react');
 const { useTranslation } = require('react-i18next');
 const PropTypes = require('prop-types');
-const ModalDialog = require('stremio/components/ModalDialog');
-const { withCoreSuspender } = require('stremio/common/CoreSuspender');
-const { usePlatform } = require('stremio/common/Platform');
-const { useServices } = require('stremio/services');
+const ModalDialog = require('leto/components/ModalDialog');
+const { withCoreSuspender } = require('leto/common/CoreSuspender');
+const { usePlatform } = require('leto/common/Platform');
+const { useServices } = require('leto/services');
 const AddonDetailsWithRemoteAndLocalAddon = withRemoteAndLocalAddon(require('./AddonDetails'));
 const useAddonDetails = require('./useAddonDetails');
 const styles = require('./styles');

@@ -4,7 +4,7 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { Button, Image } = require('stremio/components');
+const { Button, Image } = require('leto/components');
 const styles = require('./styles');
 
 // PBS Crewing Module: custom navigation SVG icons

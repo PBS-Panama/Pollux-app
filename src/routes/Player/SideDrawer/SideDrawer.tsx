@@ -3,10 +3,10 @@
 import React, { useMemo, useCallback, useState, forwardRef, memo } from 'react';
 import classNames from 'classnames';
 import Icon from '@stremio/stremio-icons/react';
-import { useServices } from 'stremio/services';
-import { CONSTANTS } from 'stremio/common';
-import { MetaPreview, Video } from 'stremio/components';
-import CategoryBar from 'stremio/routes/MetaDetails/VideosList/SeasonsBar';
+import { useServices } from 'leto/services';
+import { CONSTANTS } from 'leto/common';
+import { MetaPreview, Video } from 'leto/components';
+import CategoryBar from 'leto/routes/MetaDetails/VideosList/SeasonsBar';
 import styles from './SideDrawer.less';
 
 type Props = {

@@ -368,7 +368,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
               <>
                 {/* Agent message */}
                 <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 text-sm leading-relaxed text-ice/80 mb-4">
-                  ¡Hola <strong>{form.first_name || 'marino'}</strong>! Analicé tu rango como{' '}
+                  ¡Hola <strong>{form.first_name || 'tripulante'}</strong>! Analicé tu rango como{' '}
                   <strong className="text-cyan">{RANKS.find((r) => r.id === form.rank)?.label || form.rank}</strong>.<br /><br />
                   Aquí están los documentos requeridos. Súbelos en PDF — se abrirán en una nueva pestaña para que puedas revisarlos.
                   Los marcados <span className="text-red-400 font-semibold">CRÍTICO</span> son obligatorios.

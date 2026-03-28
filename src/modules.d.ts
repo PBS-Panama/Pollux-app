@@ -3,6 +3,6 @@ declare module '*.less' {
     export = resource;
 }
 
-declare module 'stremio-router';
-declare module 'stremio/components/NavBar';
-declare module 'stremio/components/ModalDialog';
+declare module 'leto-router';
+declare module 'leto/components/NavBar';
+declare module 'leto/components/ModalDialog';

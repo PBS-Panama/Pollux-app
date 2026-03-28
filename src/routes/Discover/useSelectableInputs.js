@@ -3,7 +3,7 @@
 
 const React = require('react');
 const { getCrewDepartment, getCrewRank, getCrewNationality,
-    STCW_DEPARTMENTS, STCW_RANKS, NATIONALITIES_AMERICAS } = require('stremio/common/crewData');
+    STCW_DEPARTMENTS, STCW_RANKS, NATIONALITIES_AMERICAS } = require('leto/common/crewData');
 
 const useSelectableInputs = (discover) => {
     // State: sets of selected values for each filter category

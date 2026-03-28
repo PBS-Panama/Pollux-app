@@ -1,7 +1,7 @@
 import React from 'react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'stremio/components';
+import { Button } from 'leto/components';
 import { SECTIONS } from '../constants';
 import styles from './Menu.less';
 

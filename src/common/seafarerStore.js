@@ -2,7 +2,7 @@
 // Manages availability periods, interview confirmations, exam bookings
 // Uses localStorage for immediate reads + syncs to backend API when available
 
-const api = require('stremio/common/apiClient');
+const api = require('leto/common/apiClient');
 
 const AVAILABILITY_KEY = 'pbs_seafarer_availability';
 const CONFIRMED_KEY = 'pbs_confirmed_interviews';

@@ -4,10 +4,10 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const debounce = require('lodash.debounce');
-const useTranslate = require('stremio/common/useTranslate');
+const useTranslate = require('leto/common/useTranslate');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { withCoreSuspender, getVisibleChildrenRange } = require('stremio/common');
-const { Image, MainNavBars, MetaItem, MetaRow } = require('stremio/components');
+const { withCoreSuspender, getVisibleChildrenRange } = require('leto/common');
+const { Image, MainNavBars, MetaItem, MetaRow } = require('leto/components');
 const useSearch = require('./useSearch');
 const styles = require('./styles');
 

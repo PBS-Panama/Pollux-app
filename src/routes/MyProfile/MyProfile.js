@@ -4,15 +4,15 @@
 
 const React = require('react');
 const classnames = require('classnames');
-const { VerticalNavBar, HorizontalNavBar, SearchBar } = require('stremio/components');
-const { default: Button } = require('stremio/components/Button');
-const MetaLinks = require('stremio/components/MetaPreview/MetaLinks');
-const ActionButton = require('stremio/components/MetaPreview/ActionButton');
-const CategoryBar = require('stremio/routes/MetaDetails/VideosList/SeasonsBar');
-const metaPreviewStyles = require('stremio/components/MetaPreview/styles');
+const { VerticalNavBar, HorizontalNavBar, SearchBar } = require('leto/components');
+const { default: Button } = require('leto/components/Button');
+const MetaLinks = require('leto/components/MetaPreview/MetaLinks');
+const ActionButton = require('leto/components/MetaPreview/ActionButton');
+const CategoryBar = require('leto/routes/MetaDetails/VideosList/SeasonsBar');
+const metaPreviewStyles = require('leto/components/MetaPreview/styles');
 const styles = require('./styles');
-const api = require('stremio/common/apiClient');
-const { CREW_DOC_LABELS, CREW_DOC_CATEGORIES, RANK_REQUIRED_DOCS, getComplianceStatus, getExpiryStatus, CREW_ALL_DOCS } = require('stremio/common/crewDocData');
+const api = require('leto/common/apiClient');
+const { CREW_DOC_LABELS, CREW_DOC_CATEGORIES, RANK_REQUIRED_DOCS, getComplianceStatus, getExpiryStatus, CREW_ALL_DOCS } = require('leto/common/crewDocData');
 
 const STATUS_STYLES = {
     uploaded: { background: 'rgba(46,204,113,0.25)', color: '#2ecc71', label: 'Valid' },
@@ -379,8 +379,6 @@ const MyProfile = () => {
                         <ActionButton className={classnames(metaPreviewStyles['action-button'], metaPreviewStyles['show-button'])} icon={'crew-full-profile'} label={'Settings'} href={'#/settings'} />
                     </div>
                 </div>
-
-                <div className={styles['spacing']} />
 
                 {/* Right: Documents panel */}
                 <div className={styles['documents-panel']}>

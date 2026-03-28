@@ -3,9 +3,9 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { useRouteFocused } = require('stremio-router');
-const useAnimationFrame = require('stremio/common/useAnimationFrame');
-const useLiveRef = require('stremio/common/useLiveRef');
+const { useRouteFocused } = require('leto-router');
+const useAnimationFrame = require('leto/common/useAnimationFrame');
+const useLiveRef = require('leto/common/useLiveRef');
 const styles = require('./styles');
 
 const Slider = ({ className, value, buffered, minimumValue, maximumValue, disabled, onSlide, onComplete, audioBoost }) => {

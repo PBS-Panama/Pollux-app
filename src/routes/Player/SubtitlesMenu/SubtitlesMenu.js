@@ -3,9 +3,9 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { comparatorWithPriorities, languages } = require('stremio/common');
-const { SUBTITLES_SIZES } = require('stremio/common/CONSTANTS');
-const { Button } = require('stremio/components');
+const { comparatorWithPriorities, languages } = require('leto/common');
+const { SUBTITLES_SIZES } = require('leto/common/CONSTANTS');
+const { Button } = require('leto/components');
 const styles = require('./styles');
 const { t } = require('i18next');
 const { default: Stepper } = require('./Stepper');

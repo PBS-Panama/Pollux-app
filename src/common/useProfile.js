@@ -1,6 +1,6 @@
 // Copyright (C) 2017-2023 Smart code 203358507
 
-const useModelState = require('stremio/common/useModelState');
+const useModelState = require('leto/common/useModelState');
 
 // Stable sentinel — same reference every render so deepEqual short-circuits on ===
 const NEVER_DISMISSED = new Date(NaN);

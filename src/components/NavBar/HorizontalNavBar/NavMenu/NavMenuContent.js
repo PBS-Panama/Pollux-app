@@ -5,8 +5,8 @@ const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { useTranslation } = require('react-i18next');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { Button } = require('stremio/components');
-const { withCoreSuspender } = require('stremio/common/CoreSuspender');
+const { Button } = require('leto/components');
+const { withCoreSuspender } = require('leto/common/CoreSuspender');
 const styles = require('./styles');
 
 // Read the authenticated Leto user from localStorage (set by landing page on login)

@@ -4,12 +4,12 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
-const { useProfile } = require('stremio/common');
-const { Image, SearchBar, Video } = require('stremio/components');
+const { useProfile } = require('leto/common');
+const { Image, SearchBar, Video } = require('leto/components');
 const CategoryBar = require('./SeasonsBar');
 const styles = require('./styles');
 
-const { CREW_ALL_DOCS, CREW_DOC_CATEGORIES, getExpiryStatus } = require('stremio/common/crewDocData');
+const { CREW_ALL_DOCS, CREW_DOC_CATEGORIES, getExpiryStatus } = require('leto/common/crewDocData');
 
 // Hash function for deterministic per-crew randomization
 const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); };

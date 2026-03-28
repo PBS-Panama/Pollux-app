@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { interfaceLanguages, useLanguageSorting } from 'stremio/common';
-import { useServices } from 'stremio/services';
+import { interfaceLanguages, useLanguageSorting } from 'leto/common';
+import { useServices } from 'leto/services';
 
 const useInterfaceOptions = (profile: Profile) => {
     const { core } = useServices();

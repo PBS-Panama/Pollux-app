@@ -4,8 +4,8 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { CONSTANTS, useProfile } = require('stremio/common');
-const { Button, Image } = require('stremio/components');
+const { CONSTANTS, useProfile } = require('leto/common');
+const { Button, Image } = require('leto/components');
 const styles = require('./styles');
 const { useTranslation } = require('react-i18next');
 

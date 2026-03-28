@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import classnames from 'classnames';
-import { VerticalNavBar, HorizontalNavBar } from 'stremio/components/NavBar';
+import { VerticalNavBar, HorizontalNavBar } from 'leto/components/NavBar';
 import styles from './MainNavBars.less';
 
 // PBS Crewing Module: STCW navigation tabs
