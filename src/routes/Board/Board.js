@@ -10,10 +10,33 @@ const useBoard = require('./useBoard');
 const useContinueWatchingPreview = require('./useContinueWatchingPreview');
 const styles = require('./styles');
 const { default: StreamingServerWarning } = require('./StreamingServerWarning');
+const CompanyHome = require('./CompanyHome');
+
+const getUserRole = () => {
+    try {
+        const data = localStorage.getItem('leto-user');
+        if (data) return JSON.parse(data).role || 'seafarer';
+    } catch { /* silent */ }
+    return 'seafarer';
+};
 
 const THRESHOLD = 5;
 
 const Board = () => {
+    const role = getUserRole();
+
+    // Company users get their own dashboard
+    if (role === 'company') {
+        return (
+            <div className={styles['board-container']}>
+                <MainNavBars className={styles['board-content-container']} route={'companyDashboard'}>
+                    <CompanyHome />
+                </MainNavBars>
+            </div>
+        );
+    }
+
+    // Seafarer dashboard (original Board content below)
     const t = useTranslate();
     const streamingServer = useStreamingServer();
     const continueWatchingPreview = useContinueWatchingPreview();

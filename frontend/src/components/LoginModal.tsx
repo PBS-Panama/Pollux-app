@@ -35,7 +35,6 @@ interface Props { onClose: () => void }
 export default function LoginModal({ onClose }: Props) {
   const navigate = useNavigate()
   const login = useAuthStore((s) => s.login)
-  const [role, setRole] = useState<'seafarer' | 'company'>('seafarer')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -57,11 +56,13 @@ export default function LoginModal({ onClose }: Props) {
         await fetch(`/crewing-api/users/${user.id}/init`, { method: 'POST' })
       } catch { /* non-critical */ }
       localStorage.setItem('leto-user', JSON.stringify({
-        id: user.id, email: user.email,
+        id: user.id, email: user.email, role: user.role,
         rank: user.rank ?? null,
         first_name: user.first_name ?? null,
         last_name: user.last_name ?? null,
         date_of_birth: user.date_of_birth ?? null,
+        company_id: user.company_id ?? null,
+        company_name: user.company_name ?? null,
       }))
       onClose()
       navigate('/dashboard')
@@ -86,14 +87,6 @@ export default function LoginModal({ onClose }: Props) {
       <div className="p-6">
         <h2 className="font-grotesk text-lg font-semibold mb-1">Iniciar Sesión</h2>
         <p className="text-ice/40 text-sm mb-5">Accede a tu cuenta Leto</p>
-        <div className="flex gap-1.5 p-1 bg-white/[0.04] rounded-lg mb-5">
-          {(['seafarer','company'] as const).map((r) => (
-            <button key={r} onClick={() => setRole(r)}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${role===r ? 'bg-cyan text-navy' : 'text-ice/50 hover:text-ice'}`}>
-              {r==='seafarer' ? '⚓ Tripulante' : '🏢 Empresa'}
-            </button>
-          ))}
-        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-ice/60 mb-1.5 tracking-wide">Correo Electrónico</label>

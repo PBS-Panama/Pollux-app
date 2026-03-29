@@ -461,6 +461,12 @@ A `vite.config.js` exists with 7 custom plugins for CJS/Less/JSX interop with Vi
 
 ## Session Log
 
+### 2026-03-29 — Role-based UI, Company dashboard, Fleet management
+
+See [sessions/session_2026-03-29.md](sessions/session_2026-03-29.md) para el log completo.
+
+**Resumen:** UI role-aware completa. Sidebar muestra tabs diferentes para seafarer vs company. Board renderiza CompanyHome para empresas (fleet overview + quick actions). MyProfile renderiza CompanyProfile para empresas (info empresa + fleet panel con inline add vessel). Endpoint POST vessels. LoginModal sin toggle de rol. Vessel type icons con colores únicos.
+
 ### 2026-03-28 — Company registration, Stremio→Leto rename, landing page overhaul
 
 See [sessions/session_2026-03-28.md](sessions/session_2026-03-28.md) para el log completo.
@@ -524,8 +530,13 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 - [x] DarkSelect custom dropdown (replace native select) — **Done 2026-03-28**
 - [x] Landing page: action-based nav, "Tripulante" naming, single CTA — **Done 2026-03-28**
 - [x] Modal form persistence + scroll lock — **Done 2026-03-28**
-- [ ] Company-specific post-login dashboard (fleet overview, crew stats)
-- [ ] Role-based sidebar tabs (company vs seafarer see different tabs)
+- [x] Company-specific post-login dashboard (CompanyHome) — **Done 2026-03-29**
+- [x] Role-based sidebar tabs (company vs seafarer) — **Done 2026-03-29**
+- [x] CompanyProfile with fleet management — **Done 2026-03-29**
+- [x] POST /api/companies/{id}/vessels endpoint — **Done 2026-03-29**
+- [x] LoginModal role toggle removed (auto-detect) — **Done 2026-03-29**
+- [ ] Custom SVG vessel type icons (replace emoji with nav-style SVGs)
+- [ ] Dashboard fleet cards with full vessel data
 - [ ] Wire MetaDetails crew profile to read from User Database (instead of mock hash data)
 - [ ] My Files: connect uploaded docs to SeafarerCalendar expiry alerts
 - [ ] My Files: connect to My Exams for renewal suggestions

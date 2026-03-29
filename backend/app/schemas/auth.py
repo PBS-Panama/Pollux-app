@@ -63,6 +63,7 @@ class UserResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     date_of_birth: Optional[date] = None
+    company_name: Optional[str] = None
 
     class Config:
         from_attributes = True
