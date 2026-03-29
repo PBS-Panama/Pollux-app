@@ -1,0 +1,6 @@
+name,imo_number,vessel_type,flag_state,gross_tonnage
+MV Pacific Star,9876543,Oil Tanker,Panama,45000
+MV Atlantic Voyager,1234567,Bulk Carrier,Liberia,32000
+MV Caribbean Spirit,7654321,Container Ship,Marshall Islands,28000
+MV Gulf Explorer,2345678,Chemical Tanker,Bahamas,18000
+MV Coral Princess,3456789,Cruise Ship,Malta,52000

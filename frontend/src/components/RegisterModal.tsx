@@ -215,6 +215,101 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
   const [hrSameAsLegal, setHrSameAsLegal] = useState(false)
   const [legalUseAccountEmail, setLegalUseAccountEmail] = useState(true)
 
+  // CSV import state
+  const [csvMode, setCsvMode] = useState<'choose' | 'manual' | 'upload' | 'map' | 'preview'>('choose')
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
+  const [csvRows, setCsvRows] = useState<Record<string, string>[]>([])
+  const [csvMapping, setCsvMapping] = useState<Record<string, string>>({})
+  // Our target fields
+  const CSV_FIELDS = [
+    { key: 'name', label: 'Nombre del buque', required: true },
+    { key: 'imo_number', label: 'Número IMO', required: false },
+    { key: 'vessel_type', label: 'Tipo de embarcación', required: false },
+    { key: 'flag_state', label: 'Estado de bandera', required: false },
+    { key: 'gross_tonnage', label: 'Tonelaje bruto (GT)', required: false },
+  ]
+  // Auto-detect mapping from common header names
+  const AUTO_MAP: Record<string, string[]> = {
+    name: ['name', 'ship name', 'vessel name', 'vessel', 'nombre', 'buque', 'ship'],
+    imo_number: ['imo', 'imo number', 'imo no', 'imo_number', 'numero imo'],
+    vessel_type: ['type', 'vessel type', 'ship type', 'tipo', 'vessel_type'],
+    flag_state: ['flag', 'flag state', 'registry', 'bandera', 'flag_state'],
+    gross_tonnage: ['gt', 'gross tonnage', 'tonnage', 'tonelaje', 'gross_tonnage', 'dwt'],
+  }
+
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim())
+    if (lines.length < 2) return { headers: [] as string[], rows: [] as Record<string, string>[] }
+    // Handle quoted fields
+    const parseLine = (line: string) => {
+      const result: string[] = []
+      let current = '', inQuotes = false
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i]
+        if (c === '"') { inQuotes = !inQuotes }
+        else if (c === ',' && !inQuotes) { result.push(current.trim()); current = '' }
+        else { current += c }
+      }
+      result.push(current.trim())
+      return result
+    }
+    const headers = parseLine(lines[0])
+    const rows = lines.slice(1).map(line => {
+      const values = parseLine(line)
+      const row: Record<string, string> = {}
+      headers.forEach((h, i) => { row[h] = values[i] || '' })
+      return row
+    })
+    return { headers, rows }
+  }
+
+  const handleCsvFile = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const { headers, rows } = parseCSV(text)
+      if (headers.length === 0) { setError('El archivo CSV está vacío o no tiene formato válido.'); return }
+      setCsvHeaders(headers)
+      setCsvRows(rows)
+      // Auto-detect mapping
+      const mapping: Record<string, string> = {}
+      headers.forEach(h => {
+        const lower = h.toLowerCase().trim()
+        for (const [field, aliases] of Object.entries(AUTO_MAP)) {
+          if (aliases.includes(lower) && !Object.values(mapping).includes(h)) {
+            mapping[field] = h; break
+          }
+        }
+      })
+      setCsvMapping(mapping)
+      setCsvMode('map')
+      setError('')
+    }
+    reader.readAsText(file)
+  }
+
+  const csvMappedVessels = (): VesselForm[] => {
+    return csvRows
+      .map(row => ({
+        name: csvMapping.name ? row[csvMapping.name] || '' : '',
+        imo_number: csvMapping.imo_number ? row[csvMapping.imo_number] || '' : '',
+        vessel_type: csvMapping.vessel_type ? row[csvMapping.vessel_type] || '' : '',
+        flag_state: csvMapping.flag_state ? row[csvMapping.flag_state] || '' : '',
+        gross_tonnage: csvMapping.gross_tonnage ? row[csvMapping.gross_tonnage] || '' : '',
+      }))
+      .filter(v => v.name.trim())
+  }
+
+  const confirmCsvImport = () => {
+    const mapped = csvMappedVessels()
+    setVessels(mapped.length > 0 ? mapped : [emptyVessel()])
+    setCsvMode('choose')
+    setStep(4) // go directly to summary
+  }
+
+  // Sample CSV served directly by Nginx with Content-Disposition: attachment
+  const sampleCsvUrl = '/downloads/leto_fleet_template.csv'
+
   const [form, setForm] = useState({
     // Shared
     email: '', password: '', confirm_password: '', role: 'seafarer' as 'seafarer' | 'company',
@@ -646,49 +741,208 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
               <p className="text-ice/40 text-sm mt-0.5">Paso 3 de 4 — Registre sus embarcaciones (opcional)</p>
             </div>
 
-            {vessels.map((v, i) => (
-              <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-semibold text-cyan uppercase tracking-wide">Embarcación {i + 1}</div>
-                  {vessels.length > 1 && (
-                    <button onClick={() => removeVessel(i)} className="text-ice/30 hover:text-red-400 text-sm transition-colors">🗑</button>
-                  )}
+            {/* ── Choose mode ── */}
+            {csvMode === 'choose' && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setCsvMode('manual')}
+                    className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-5 text-center hover:border-cyan/30 transition-all">
+                    <div className="text-2xl mb-2">✏️</div>
+                    <div className="font-semibold text-sm mb-1">Agregar manualmente</div>
+                    <div className="text-xs text-ice/40">Una por una con formulario</div>
+                  </button>
+                  <button onClick={() => setCsvMode('upload')}
+                    className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-5 text-center hover:border-cyan/30 transition-all">
+                    <div className="text-2xl mb-2">📄</div>
+                    <div className="font-semibold text-sm mb-1">Importar desde CSV</div>
+                    <div className="text-xs text-ice/40">Carga masiva desde Excel</div>
+                  </button>
                 </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><input value={v.name} onChange={(e) => updateVessel(i, 'name', e.target.value)} placeholder="Nombre del buque" className={inp} /></div>
-                    <div><input value={v.imo_number} onChange={(e) => updateVessel(i, 'imo_number', e.target.value)} placeholder="Número IMO" className={inp} /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <DarkSelect value={v.vessel_type} onChange={(val) => updateVessel(i, 'vessel_type', val)} placeholder="Tipo de embarcación..."
-                      options={VESSEL_TYPES.map((t) => ({ value: t, label: t }))} />
-                    <DarkSelect value={v.flag_state} onChange={(val) => updateVessel(i, 'flag_state', val)} placeholder="Estado de bandera..."
-                      options={FLAG_STATES.map((f) => ({ value: f, label: f }))} />
-                  </div>
-                  <div><input value={v.gross_tonnage} onChange={(e) => updateVessel(i, 'gross_tonnage', e.target.value.replace(/\D/g, ''))}
-                    placeholder="Tonelaje bruto (GT)" className={inp} /></div>
+
+                {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => { setStep(2); setError('') }}
+                    className="flex-1 border border-white/15 text-ice/60 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors">← Volver</button>
+                  <button onClick={() => { setVessels([emptyVessel()]); handleCompanyStep3() }}
+                    className="flex-1 border border-white/15 text-ice/50 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors text-sm">
+                    Omitir por ahora →
+                  </button>
                 </div>
-              </div>
-            ))}
+              </>
+            )}
 
-            <button onClick={addVessel}
-              className="w-full border border-dashed border-white/15 text-ice/40 py-2.5 rounded-lg hover:border-cyan/30 hover:text-cyan transition-colors text-sm">
-              + Agregar otra embarcación
-            </button>
+            {/* ── Manual entry ── */}
+            {csvMode === 'manual' && (
+              <>
+                {vessels.map((v, i) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-cyan uppercase tracking-wide">Embarcación {i + 1}</div>
+                      {vessels.length > 1 && (
+                        <button onClick={() => removeVessel(i)} className="text-ice/30 hover:text-red-400 text-sm transition-colors">🗑</button>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><input value={v.name} onChange={(e) => updateVessel(i, 'name', e.target.value)} placeholder="Nombre del buque" className={inp} /></div>
+                        <div><input value={v.imo_number} onChange={(e) => updateVessel(i, 'imo_number', e.target.value)} placeholder="Número IMO" className={inp} /></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <DarkSelect value={v.vessel_type} onChange={(val) => updateVessel(i, 'vessel_type', val)} placeholder="Tipo de embarcación..."
+                          options={VESSEL_TYPES.map((t) => ({ value: t, label: t }))} />
+                        <DarkSelect value={v.flag_state} onChange={(val) => updateVessel(i, 'flag_state', val)} placeholder="Estado de bandera..."
+                          options={FLAG_STATES.map((f) => ({ value: f, label: f }))} />
+                      </div>
+                      <div><input value={v.gross_tonnage} onChange={(e) => updateVessel(i, 'gross_tonnage', e.target.value.replace(/\D/g, ''))}
+                        placeholder="Tonelaje bruto (GT)" className={inp} /></div>
+                    </div>
+                  </div>
+                ))}
 
-            <div className="text-xs text-ice/40 text-center">
-              {vessels.filter((v) => v.name.trim()).length} embarcación(es) registrada(s)
-            </div>
+                <button onClick={addVessel}
+                  className="w-full border border-dashed border-white/15 text-ice/40 py-2.5 rounded-lg hover:border-cyan/30 hover:text-cyan transition-colors text-sm">
+                  + Agregar otra embarcación
+                </button>
 
-            {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
-            <div className="flex gap-3">
-              <button onClick={() => { setStep(2); setError('') }}
-                className="flex-1 border border-white/15 text-ice/60 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors">← Volver</button>
-              <button onClick={handleCompanyStep3}
-                className="flex-1 bg-cyan text-navy font-semibold py-2.5 rounded-lg hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
-                {vessels.some((v) => v.name.trim()) ? 'Continuar →' : 'Completar después →'}
-              </button>
-            </div>
+                <div className="text-xs text-ice/40 text-center">
+                  {vessels.filter((v) => v.name.trim()).length} embarcación(es) registrada(s)
+                </div>
+
+                {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => setCsvMode('choose')}
+                    className="flex-1 border border-white/15 text-ice/60 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors">← Volver</button>
+                  <button onClick={handleCompanyStep3}
+                    className="flex-1 bg-cyan text-navy font-semibold py-2.5 rounded-lg hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
+                    Continuar →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── CSV Upload ── */}
+            {csvMode === 'upload' && (
+              <>
+                <div className="bg-white/[0.03] border-2 border-dashed border-white/15 rounded-xl p-8 text-center hover:border-cyan/30 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('csv-file-input')?.click()}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'rgba(0,240,255,0.5)' }}
+                  onDragLeave={(e) => { e.currentTarget.style.borderColor = '' }}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = ''; const f = e.dataTransfer.files[0]; if (f) handleCsvFile(f) }}>
+                  <div className="text-3xl mb-3">📎</div>
+                  <div className="font-semibold text-sm mb-1">Arrastra tu archivo CSV aquí</div>
+                  <div className="text-xs text-ice/40">o haz clic para seleccionar</div>
+                  <input id="csv-file-input" type="file" accept=".csv,.txt" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsvFile(f) }} />
+                </div>
+
+                <button type="button" onClick={() => window.open(sampleCsvUrl, '_blank')}
+                  className="w-full text-center text-sm text-cyan hover:underline transition-colors py-1">
+                  📥 Descargar plantilla de ejemplo (.csv)
+                </button>
+
+                {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => { setCsvMode('choose'); setError('') }}
+                    className="flex-1 border border-white/15 text-ice/60 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors">← Volver</button>
+                </div>
+              </>
+            )}
+
+            {/* ── CSV Column Mapping ── */}
+            {csvMode === 'map' && (
+              <>
+                <div className="text-sm text-ice/60 mb-2">
+                  {csvRows.length} filas detectadas · {csvHeaders.length} columnas
+                </div>
+
+                <div className="space-y-2">
+                  {csvHeaders.map((header) => {
+                    const mappedTo = Object.entries(csvMapping).find(([_, v]) => v === header)?.[0] || ''
+                    return (
+                      <div key={header} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.07] rounded-lg px-3 py-2">
+                        <div className="flex-1 text-sm font-semibold truncate" title={header}>"{header}"</div>
+                        <div className="text-ice/30 text-xs">→</div>
+                        <div className="flex-1">
+                          <DarkSelect value={mappedTo}
+                            onChange={(val) => {
+                              setCsvMapping((prev) => {
+                                const next = { ...prev }
+                                // Remove previous mapping for this field
+                                Object.keys(next).forEach(k => { if (next[k] === header) delete next[k] })
+                                if (val) next[val] = header
+                                return next
+                              })
+                            }}
+                            placeholder="— Ignorar —"
+                            options={[
+                              { value: '', label: '— Ignorar —' },
+                              ...CSV_FIELDS.map((f) => ({ value: f.key, label: f.label + (f.required ? ' *' : '') })),
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="text-xs text-ice/40 text-center">
+                  {Object.keys(csvMapping).length} de {CSV_FIELDS.length} campos mapeados
+                  {!csvMapping.name && <span className="text-red-400 ml-2">· Falta: Nombre del buque</span>}
+                </div>
+
+                {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => { setCsvMode('upload'); setError('') }}
+                    className="flex-1 border border-white/15 text-ice/60 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors">← Volver</button>
+                  <button onClick={() => {
+                    if (!csvMapping.name) { setError('Debes mapear al menos el nombre del buque.'); return }
+                    setError(''); setCsvMode('preview')
+                  }}
+                    className="flex-1 bg-cyan text-navy font-semibold py-2.5 rounded-lg hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
+                    Ver preview →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── CSV Preview ── */}
+            {csvMode === 'preview' && (() => {
+              const mapped = csvMappedVessels()
+              const skipped = csvRows.length - mapped.length
+              const imoSet = new Set<string>()
+              let dupes = 0
+              mapped.forEach(v => { if (v.imo_number) { if (imoSet.has(v.imo_number)) dupes++; imoSet.add(v.imo_number) } })
+              return (
+                <>
+                  <div className="flex flex-wrap gap-2 text-xs mb-3">
+                    <span className="bg-cyan/15 text-cyan px-2 py-1 rounded">{mapped.length} embarcaciones</span>
+                    {skipped > 0 && <span className="bg-amber-500/15 text-amber-400 px-2 py-1 rounded">{skipped} omitidas (sin nombre)</span>}
+                    {dupes > 0 && <span className="bg-red-500/15 text-red-400 px-2 py-1 rounded">{dupes} IMO duplicados</span>}
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto space-y-1">
+                    {mapped.slice(0, 50).map((v, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.07] rounded-lg px-3 py-2 text-sm">
+                        <span className="font-semibold flex-1 truncate">{v.name}</span>
+                        {v.imo_number && <span className="text-ice/40 text-xs">IMO {v.imo_number}</span>}
+                        {v.vessel_type && <span className="text-ice/30 text-xs">· {v.vessel_type}</span>}
+                      </div>
+                    ))}
+                    {mapped.length > 50 && <div className="text-xs text-ice/40 text-center py-1">... y {mapped.length - 50} más</div>}
+                  </div>
+
+                  {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>}
+                  <div className="flex gap-3">
+                    <button onClick={() => setCsvMode('map')}
+                      className="flex-1 border border-white/15 text-ice/60 font-semibold py-2.5 rounded-lg hover:border-white/30 transition-colors">← Volver</button>
+                    <button onClick={confirmCsvImport}
+                      className="flex-1 bg-cyan text-navy font-semibold py-2.5 rounded-lg hover:shadow-[0_0_18px_rgba(0,240,255,0.4)] transition-all">
+                      Importar {mapped.length} embarcaciones →
+                    </button>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         )}
 
