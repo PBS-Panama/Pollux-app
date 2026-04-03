@@ -90,7 +90,7 @@ const Library = () => {
         let cancelled = false;
         (async () => {
             try {
-                const data = await api.getSettings(api.DEFAULT_USER_ID);
+                const data = await api.getSettings(api.getUserId());
                 if (cancelled) return;
                 const rank = data?.rank || null;
                 setUserRank(rank);
@@ -131,7 +131,7 @@ const Library = () => {
     // Preview URL for the selected doc
     const previewUrl = React.useMemo(() => {
         if (!hasFileInDb) return null;
-        return api.getDownloadUrl(api.DEFAULT_USER_ID, selectedDocRecord.savedName);
+        return api.getDownloadUrl(api.getUserId(), selectedDocRecord.savedName);
     }, [hasFileInDb, selectedDocRecord]);
 
     const filteredDocOptions = React.useMemo(() => {
@@ -171,9 +171,9 @@ const Library = () => {
                 if (finalExpiry !== undefined) updates.expiryDate = finalExpiry;
                 if (validity !== undefined) updates.validityYears = validity;
 
-                const updated = await api.updateUploadMeta(api.DEFAULT_USER_ID, selectedDocRecord.id, updates);
+                const updated = await api.updateUploadMeta(api.getUserId(), selectedDocRecord.id, updates);
                 // Refresh local state
-                const result = await api.getUploads(api.DEFAULT_USER_ID);
+                const result = await api.getUploads(api.getUserId());
                 // We can't call setUploadedDocs directly from here — trigger via addUpload's parent
                 // Instead, reload the page data
                 window.dispatchEvent(new CustomEvent('pbs-uploads-changed'));
@@ -214,12 +214,12 @@ const Library = () => {
                 // Normalize rotation to number of 90-degree CW steps
                 const normalized = ((previewRotation % 360) + 360) % 360; // 0, 90, 180, 270
                 if (normalized === 90) {
-                    await api.rotateDocument(api.DEFAULT_USER_ID, selectedDocRecord.id, 'cw');
+                    await api.rotateDocument(api.getUserId(), selectedDocRecord.id, 'cw');
                 } else if (normalized === 180) {
-                    await api.rotateDocument(api.DEFAULT_USER_ID, selectedDocRecord.id, 'cw');
-                    await api.rotateDocument(api.DEFAULT_USER_ID, selectedDocRecord.id, 'cw');
+                    await api.rotateDocument(api.getUserId(), selectedDocRecord.id, 'cw');
+                    await api.rotateDocument(api.getUserId(), selectedDocRecord.id, 'cw');
                 } else if (normalized === 270) {
-                    await api.rotateDocument(api.DEFAULT_USER_ID, selectedDocRecord.id, 'ccw');
+                    await api.rotateDocument(api.getUserId(), selectedDocRecord.id, 'ccw');
                 }
             }
             setPreviewRotation(0);
@@ -713,7 +713,7 @@ const Library = () => {
                             {/* Inline preview — shows when user clicks an uploaded doc */}
                             {(() => {
                                 const listDoc = listPreviewDocId ? filteredUploads.find((d) => d.id === listPreviewDocId) : null;
-                                const listUrl = listDoc && listDoc.savedName ? api.getDownloadUrl(api.DEFAULT_USER_ID, listDoc.savedName) : null;
+                                const listUrl = listDoc && listDoc.savedName ? api.getDownloadUrl(api.getUserId(), listDoc.savedName) : null;
                                 if (!listUrl) return null;
                                 return (
                                     <div style={{ flex: 1, minHeight: '14rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>

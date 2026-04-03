@@ -77,6 +77,7 @@ See [docs/STRUCTURE.md](docs/STRUCTURE.md) for the complete file tree.
 ## Key Features
 
 ### Seafarer Side
+- **Dashboard** (`#/company-dashboard`) — Welcome view with compliance progress, missing docs, and exam priorities
 - **My Profile** (`#/my-profile`) — Editable profile with languages, vessels, companies, about me
 - **My Files** (`#/myfiles`) — Upload and manage STCW documents with expiry tracking
 - **My Calendar** (`#/calendar`) — Availability periods (embarking, days off, available)
@@ -84,6 +85,7 @@ See [docs/STRUCTURE.md](docs/STRUCTURE.md) for the complete file tree.
 - **Compliance Banner** — Real-time document compliance status per rank
 
 ### Company Side
+- **Dashboard** (`#/company-dashboard`) — Welcome view with fleet overview and quick actions
 - **Crew Database** (`#/company-crewdb`) — Browse and search crew profiles
 - **Company Calendar** (`#/company-calendar`) — Schedule interviews, manage events
 - **Interview System** — Book interviews, track confirmations
@@ -104,6 +106,9 @@ docker compose up --build -d
 
 # Rebuild only the crewing module (after changes in /src/)
 docker compose up --build -d crewing
+
+# Crewing UI is baked into the image, so src/ changes require a rebuild
+docker compose up -d --build crewing nginx
 
 # Rebuild only the frontend (after changes in /frontend/)
 docker compose build --no-cache frontend && docker compose up -d frontend
@@ -143,6 +148,7 @@ docker exec -it leto-crewing-1 sh
 | [AUTH-FLOW.md](docs/AUTH-FLOW.md) | How authentication works across landing page and crewing module |
 | [CREWING-MODULE.md](docs/CREWING-MODULE.md) | Full architecture reference, routes, data stores, session history |
 | [STRUCTURE.md](docs/STRUCTURE.md) | Complete project file tree with annotations |
+| [session_2026-04-03.md](docs/sessions/session_2026-04-03.md) | Sidebar restoration, UUID document preview fix, seafarer dashboard |
 
 ## License
 

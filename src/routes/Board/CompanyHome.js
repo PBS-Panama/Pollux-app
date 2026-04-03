@@ -4,6 +4,7 @@
 const React = require('react');
 const { default: Button } = require('leto/components/Button');
 const api = require('leto/common/apiClient');
+const { VesselIcon, getVesselColor } = require('leto/common/vesselIcons');
 const styles = require('./styles');
 
 const getLetoUser = () => {
@@ -77,23 +78,39 @@ const CompanyHome = () => {
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {vessels.map((v) => (
-                            <div key={v.id} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                                borderRadius: '8px', padding: '0.8rem 1.2rem',
-                            }}>
-                                <div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#fff' }}>{v.name}</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#8899aa', marginTop: '0.15rem' }}>
-                                        {[v.vessel_type, v.flag_state, v.imo_number ? `IMO ${v.imo_number}` : null].filter(Boolean).join(' · ')}
+                        {vessels.map((v) => {
+                            const vc = getVesselColor(v.vessel_type);
+                            return (
+                                <div key={v.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.8rem',
+                                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                                    borderRadius: '10px', padding: '1rem 1.2rem',
+                                    borderLeft: `3px solid ${vc}`,
+                                    transition: 'background 0.15s',
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
+                                    <VesselIcon type={v.vessel_type} size={'3rem'} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '1rem', color: '#fff' }}>{v.name}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#8899aa', marginTop: '0.2rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+                                            {v.vessel_type && <span style={{ background: `${vc}20`, color: vc, padding: '1px 8px', borderRadius: '3px', fontSize: '0.7rem', fontWeight: 600 }}>{v.vessel_type}</span>}
+                                            {v.flag_state && <span>{v.flag_state}</span>}
+                                            {v.imo_number && <span>IMO {v.imo_number}</span>}
+                                        </div>
                                     </div>
+                                    {v.gross_tonnage && (
+                                        <div style={{
+                                            background: 'rgba(255,255,255,0.06)', borderRadius: '6px',
+                                            padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 600,
+                                            color: '#8899aa', whiteSpace: 'nowrap', flexShrink: 0,
+                                        }}>
+                                            {v.gross_tonnage.toLocaleString()} GT
+                                        </div>
+                                    )}
                                 </div>
-                                {v.gross_tonnage && (
-                                    <div style={{ fontSize: '0.75rem', color: '#556677' }}>{v.gross_tonnage.toLocaleString()} GT</div>
-                                )}
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

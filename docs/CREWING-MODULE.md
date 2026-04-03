@@ -531,12 +531,18 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 - [x] Landing page: action-based nav, "Tripulante" naming, single CTA — **Done 2026-03-28**
 - [x] Modal form persistence + scroll lock — **Done 2026-03-28**
 - [x] Company-specific post-login dashboard (CompanyHome) — **Done 2026-03-29**
+- [x] Seafarer-specific post-login dashboard (SeafarerHome) — **Done 2026-04-03**
 - [x] Role-based sidebar tabs (company vs seafarer) — **Done 2026-03-29**
 - [x] CompanyProfile with fleet management — **Done 2026-03-29**
 - [x] POST /api/companies/{id}/vessels endpoint — **Done 2026-03-29**
 - [x] LoginModal role toggle removed (auto-detect) — **Done 2026-03-29**
-- [ ] Custom SVG vessel type icons (replace emoji with nav-style SVGs)
-- [ ] Dashboard fleet cards with full vessel data
+- [x] Custom SVG vessel type icons (5 categories, shared component) — **Done 2026-03-29** (IDM-vessel-icons)
+- [x] Dashboard fleet cards with full vessel data + icons — **Done 2026-03-29** (IDM-vessel-icons)
+- [x] My Profile sidebar restored for seafarer + company — **Done 2026-04-03**
+- [x] Permanent My Profile nav item above Settings — **Done 2026-04-03**
+- [x] My Files UUID-based preview/download fix — **Done 2026-04-03**
+- [ ] DarkDropdown testing (fixed positioning for overflow:hidden parents)
+- [ ] Edit/delete vessels from fleet panel
 - [ ] Wire MetaDetails crew profile to read from User Database (instead of mock hash data)
 - [ ] My Files: connect uploaded docs to SeafarerCalendar expiry alerts
 - [ ] My Files: connect to My Exams for renewal suggestions
@@ -545,3 +551,17 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 - [ ] IMO number validation against public registries
 - [ ] Deploy to Cloud Run as parte del stack Leto completo
 - [ ] Integration with Neptune ERP for vessel/fleet data
+
+---
+
+## Latest Session
+
+### 2026-04-03 — Sidebar, UUID preview fix, seafarer dashboard
+
+- Fixed My Files PDF preview/download/rotate flows to use the logged-in UUID instead of the legacy `SF-001` fallback
+- Restored the My Profile sidebar for both role variants with explicit role-based tabs inside `MyProfile`
+- Added a permanent `My Profile` / `Mi Flota` nav item directly above `Settings`
+- Added `SeafarerHome` as the new seafarer post-login dashboard
+- Confirmed Docker rebuild is required for crewing module source changes and rebuilt `crewing` + `nginx`
+
+See [sessions/session_2026-04-03.md](sessions/session_2026-04-03.md) for the full log.

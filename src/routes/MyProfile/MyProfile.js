@@ -13,6 +13,70 @@ const metaPreviewStyles = require('leto/components/MetaPreview/styles');
 const styles = require('./styles');
 const api = require('leto/common/apiClient');
 const { CREW_DOC_LABELS, CREW_DOC_CATEGORIES, RANK_REQUIRED_DOCS, getComplianceStatus, getExpiryStatus, CREW_ALL_DOCS } = require('leto/common/crewDocData');
+const { VesselIcon, getVesselColor } = require('leto/common/vesselIcons');
+
+const SEAFARER_PROFILE_TABS = [
+    { id: 'companyDashboard', label: 'Dashboard', icon: 'crew-dashboard', href: '#/company-dashboard' },
+    { id: 'companyCrewdb', label: 'Crew Database', icon: 'crew-person', href: '#/company-crewdb' },
+    { id: 'myfiles', label: 'My Files', icon: 'crew-folder', href: '#/myfiles' },
+    { id: 'calendar', label: 'Mi Calendario', icon: 'crew-anchor', href: '#/calendar' },
+    { id: 'dashboard', label: 'My Schedule', icon: 'crew-ship', href: '#/dashboard' },
+    { id: 'myexams', label: 'My Exams', icon: 'crew-exam', href: '#/myexams' },
+    { id: 'myprofile', label: 'My Profile', icon: 'crew-person', href: '#/my-profile' },
+    { id: 'settings', label: 'Settings', icon: 'crew-settings', href: '#/settings' },
+];
+
+const COMPANY_PROFILE_TABS = [
+    { id: 'companyDashboard', label: 'Dashboard', icon: 'crew-dashboard', href: '#/company-dashboard' },
+    { id: 'companyCrewdb', label: 'Crew Database', icon: 'crew-person', href: '#/company-crewdb' },
+    { id: 'companyCalendar', label: 'Calendario', icon: 'crew-calendar', href: '#/company-calendar' },
+    { id: 'myprofile', label: 'Mi Flota', icon: 'crew-ship', href: '#/my-profile' },
+    { id: 'settings', label: 'Settings', icon: 'crew-settings', href: '#/settings' },
+];
+
+// Dark dropdown for inline forms — uses fixed positioning to escape overflow:hidden parents
+const DarkDropdown = ({ value, onChange, options, placeholder }) => {
+    const [open, setOpen] = React.useState(false);
+    const btnRef = React.useRef(null);
+    const dropRef = React.useRef(null);
+    const [pos, setPos] = React.useState({ top: 0, left: 0, width: 0 });
+
+    React.useEffect(() => {
+        if (!open) return;
+        const handler = (e) => {
+            if (btnRef.current && btnRef.current.contains(e.target)) return;
+            if (dropRef.current && dropRef.current.contains(e.target)) return;
+            setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const toggleOpen = () => {
+        if (!open && btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            setPos({ top: rect.bottom + 2, left: rect.left, width: rect.width });
+        }
+        setOpen(!open);
+    };
+
+    const selected = options.find((o) => o.value === value);
+
+    return React.createElement('div', { style: { position: 'relative', width: '100%' } },
+        React.createElement('button', {
+            ref: btnRef, type: 'button', onClick: toggleOpen,
+            style: { width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: selected ? '#fff' : '#888', fontSize: '0.8rem', outline: 'none', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+        }, React.createElement('span', null, selected ? selected.label : placeholder), React.createElement('span', { style: { fontSize: '0.6rem', color: '#556677' } }, open ? '▲' : '▼')),
+        open && React.createElement('div', {
+            ref: dropRef,
+            style: { position: 'fixed', zIndex: 9999, top: pos.top, left: pos.left, width: pos.width, background: '#0d1f3c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', maxHeight: '12rem', overflowY: 'auto' }
+        }, options.map((o) => React.createElement('button', {
+            key: o.value, type: 'button',
+            onClick: () => { onChange(o.value); setOpen(false); },
+            style: { display: 'block', width: '100%', textAlign: 'left', padding: '0.4rem 0.7rem', fontSize: '0.8rem', border: 'none', background: value === o.value ? 'rgba(0,210,211,0.15)' : 'transparent', color: value === o.value ? '#00d2d3' : '#d0d0d0', cursor: 'pointer' }
+        }, o.label)))
+    );
+};
 
 const STATUS_STYLES = {
     uploaded: { background: 'rgba(46,204,113,0.25)', color: '#2ecc71', label: 'Valid' },
@@ -129,33 +193,6 @@ const UnsavedModal = ({ onDiscard, onCancel }) => (
         </div>
     </div>
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// Vessel type → icon + color mapping
-// ═══════════════════════════════════════════════════════════════════
-const VESSEL_ICONS = {
-    'Oil Tanker':    { icon: '🛢️', color: '#e67e22' },
-    'Chemical Tanker': { icon: '⚗️', color: '#9b59b6' },
-    'LNG Carrier':   { icon: '🧊', color: '#3498db' },
-    'LPG Carrier':   { icon: '💨', color: '#1abc9c' },
-    'Container Ship': { icon: '📦', color: '#2ecc71' },
-    'Bulk Carrier':  { icon: '⛏️', color: '#95a5a6' },
-    'General Cargo': { icon: '📋', color: '#7f8c8d' },
-    'PSV (Platform Supply Vessel)': { icon: '🏗️', color: '#f39c12' },
-    'AHTS (Anchor Handling)': { icon: '⚓', color: '#00d2d3' },
-    'Tug':           { icon: '🚤', color: '#e74c3c' },
-    'Barge':         { icon: '🚢', color: '#34495e' },
-    'FPSO':          { icon: '🏭', color: '#d35400' },
-    'Offshore Drill Ship': { icon: '🔩', color: '#c0392b' },
-    'Ro-Ro':         { icon: '🚗', color: '#2980b9' },
-    'Car Carrier':   { icon: '🚙', color: '#27ae60' },
-    'Cruise Ship':   { icon: '🛳️', color: '#8e44ad' },
-    'Ferry':         { icon: '⛴️', color: '#16a085' },
-    'Cable Layer':   { icon: '🔌', color: '#f1c40f' },
-    'Dredger':       { icon: '🏖️', color: '#e67e22' },
-    'Icebreaker':    { icon: '❄️', color: '#ecf0f1' },
-};
-const getVesselIcon = (type) => VESSEL_ICONS[type] || { icon: '🚢', color: '#00d2d3' };
 
 // ═══════════════════════════════════════════════════════════════════
 // CompanyProfile — shown when role === 'company'
@@ -319,6 +356,7 @@ const CompanyProfile = () => {
             {showModal && <UnsavedModal onDiscard={handleDiscard} onCancel={handleCancelModal} />}
             <HorizontalNavBar className={styles['nav-bar']} backButton={true} fullscreenButton={true} navMenu={true} />
             <div className={styles['myprofile-content']}>
+                <VerticalNavBar className={styles['vertical-nav-bar']} tabs={COMPANY_PROFILE_TABS} selected={'myprofile'} />
                 {/* Left: Company info */}
                 <div className={classnames(styles['profile-panel'], metaPreviewStyles['meta-preview-container'])}>
                     <div className={metaPreviewStyles['meta-info-container']}>
@@ -377,36 +415,27 @@ const CompanyProfile = () => {
                             <>
                                 {/* Vessel list */}
                                 {companyVessels.map((v) => {
-                                    const vi = getVesselIcon(v.vessel_type);
+                                    const vc = getVesselColor(v.vessel_type);
                                     return (
                                         <div key={v.id} style={{
                                             display: 'flex', alignItems: 'center', gap: '0.7rem',
                                             padding: '0.8rem', margin: '0 0.2rem 0.4rem',
                                             background: 'rgba(255,255,255,0.04)', borderRadius: '8px',
-                                            borderLeft: `3px solid ${vi.color}`,
+                                            borderLeft: `3px solid ${vc}`,
                                             transition: 'background 0.15s',
                                             cursor: 'default',
                                         }}
                                         onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
                                         onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}>
-                                            {/* Icon */}
-                                            <div style={{
-                                                width: '2.5rem', height: '2.5rem', borderRadius: '8px',
-                                                background: `${vi.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: '1.2rem', flexShrink: 0,
-                                            }}>
-                                                {vi.icon}
-                                            </div>
-                                            {/* Info */}
+                                            <VesselIcon type={v.vessel_type} />
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}>{v.name}</div>
-                                                <div style={{ color: '#8899aa', fontSize: '0.7rem', marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                                                    {v.vessel_type && <span style={{ background: `${vi.color}20`, color: vi.color, padding: '1px 6px', borderRadius: '3px', fontSize: '0.65rem', fontWeight: 600 }}>{v.vessel_type}</span>}
+                                                <div style={{ color: '#8899aa', fontSize: '0.7rem', marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '0.3rem', alignItems: 'center' }}>
+                                                    {v.vessel_type && <span style={{ background: `${vc}20`, color: vc, padding: '1px 6px', borderRadius: '3px', fontSize: '0.65rem', fontWeight: 600 }}>{v.vessel_type}</span>}
                                                     {v.flag_state && <span>{v.flag_state}</span>}
                                                     {v.imo_number && <span>IMO {v.imo_number}</span>}
                                                 </div>
                                             </div>
-                                            {/* GT badge */}
                                             {v.gross_tonnage && (
                                                 <div style={{
                                                     background: 'rgba(255,255,255,0.06)', borderRadius: '4px',
@@ -432,16 +461,10 @@ const CompanyProfile = () => {
                                                     style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.8rem', outline: 'none' }} />
                                             </div>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                                <select value={newVessel.vessel_type} onChange={(e) => setVesselField('vessel_type', e.target.value)}
-                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: newVessel.vessel_type ? '#fff' : '#888', fontSize: '0.8rem', outline: 'none', colorScheme: 'dark' }}>
-                                                    <option value="">Tipo...</option>
-                                                    {VESSEL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                                                </select>
-                                                <select value={newVessel.flag_state} onChange={(e) => setVesselField('flag_state', e.target.value)}
-                                                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: newVessel.flag_state ? '#fff' : '#888', fontSize: '0.8rem', outline: 'none', colorScheme: 'dark' }}>
-                                                    <option value="">Bandera...</option>
-                                                    {FLAG_STATES.map((f) => <option key={f} value={f}>{f}</option>)}
-                                                </select>
+                                                <DarkDropdown value={newVessel.vessel_type} onChange={(val) => setVesselField('vessel_type', val)} placeholder="Tipo..."
+                                                    options={VESSEL_TYPES.map((t) => ({ value: t, label: t }))} />
+                                                <DarkDropdown value={newVessel.flag_state} onChange={(val) => setVesselField('flag_state', val)} placeholder="Bandera..."
+                                                    options={FLAG_STATES.map((f) => ({ value: f, label: f }))} />
                                             </div>
                                             <input value={newVessel.gross_tonnage} onChange={(e) => setVesselField('gross_tonnage', e.target.value.replace(/\D/g, ''))} placeholder="Tonelaje bruto (GT)"
                                                 style={{ width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.8rem', outline: 'none' }} />
@@ -693,6 +716,7 @@ const MyProfile = () => {
                 navMenu={true}
             />
             <div className={styles['myprofile-content']}>
+                <VerticalNavBar className={styles['vertical-nav-bar']} tabs={SEAFARER_PROFILE_TABS} selected={'myprofile'} />
                 {/* Left: Profile */}
                 <div className={classnames(styles['profile-panel'], metaPreviewStyles['meta-preview-container'])}>
                     <div className={metaPreviewStyles['meta-info-container']}>

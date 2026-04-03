@@ -13,14 +13,15 @@ const SEAFARER_TABS = [
     { id: 'calendar', label: 'Mi Calendario', icon: 'crew-anchor', href: '#/calendar' },
     { id: 'dashboard', label: 'My Schedule', icon: 'crew-ship', href: '#/dashboard' },
     { id: 'myexams', label: 'My Exams', icon: 'crew-exam', href: '#/myexams' },
+    { id: 'myprofile', label: 'My Profile', icon: 'crew-person', href: '#/my-profile' },
     { id: 'settings', label: 'Settings', icon: 'crew-settings', href: '#/settings' },
 ];
 
 const COMPANY_TABS = [
     { id: 'companyDashboard', label: 'Dashboard', icon: 'crew-dashboard', href: '#/company-dashboard' },
     { id: 'companyCrewdb', label: 'Crew Database', icon: 'crew-person', href: '#/company-crewdb' },
-    { id: 'myprofile', label: 'Mi Flota', icon: 'crew-ship', href: '#/my-profile' },
     { id: 'companyCalendar', label: 'Calendario', icon: 'crew-calendar', href: '#/company-calendar' },
+    { id: 'myprofile', label: 'Mi Flota', icon: 'crew-ship', href: '#/my-profile' },
     { id: 'settings', label: 'Settings', icon: 'crew-settings', href: '#/settings' },
 ];
 
