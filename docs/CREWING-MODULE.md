@@ -189,7 +189,10 @@ All sidebar icons are custom inline SVGs defined in `NavTabButton.js` (prefixed 
 
 ## Data Architecture
 
-All data is currently stored in **localStorage** (no backend yet). Cross-component sync uses `window.dispatchEvent(new CustomEvent(...))`.
+The module now runs on a **hybrid data architecture**:
+- Backend APIs (PostgreSQL-backed) for auth, company vessels, crew listing, and vessel assignments
+- Filesystem JSON store (`User database/`) for per-user operational modules (myfiles/calendar/myexams/dashboard/settings)
+- localStorage + CustomEvent sync for selected UI state and client-side interactions
 
 ### localStorage Keys
 
@@ -208,14 +211,14 @@ All data is currently stored in **localStorage** (no backend yet). Cross-compone
 | `pbs-pending-changed` | `crewStore.togglePendingInterview()` | MetaItem, MetaPreview | `{ id, added }` |
 | `pbs-interview-confirmed` | SeafarerCalendar | Calendar | `{ eventId }` |
 
-### Mock Data Sources
+### Static/Derived Data Sources
 
 | File | Data |
 |------|------|
-| `crewData.js` | Deterministic crew profiles (name → department, rank, nationality) via hash functions |
-| `crewDocData.js` | Mock documents and certificates |
-| `calendarData.js` | Mock company events, month constants, categories |
-| `seafarerData.js` | Availability types, certificate expiry dates, default periods |
+| `crewData.js` | Legacy deterministic crew helpers (no longer source of truth for company crew DB) |
+| `crewDocData.js` | STCW/document category constants and UI mappings |
+| `calendarData.js` | Calendar constants/categories (company mock defaults removed) |
+| `seafarerData.js` | Availability/certificate constants (default mock periods removed) |
 
 ---
 
@@ -511,6 +514,97 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 
 ---
 
+## STCW Matrix Documentation
+
+### Objective
+
+Establish one STCW competency matrix to drive:
+1. My Profile compliance status.
+2. My Exams recommendations and booking.
+3. Recruiter eligibility and readiness scoring.
+
+### Current Source Mapping
+
+1. Rank-required documents map:
+  - `src/common/crewDocData.js` (`RANK_REQUIRED_DOCS`, `getComplianceStatus`)
+2. Registration rank guidance:
+  - `frontend/src/components/RegisterModal.tsx` (`DOCS` and rank notes)
+3. Training and exam catalog:
+  - `src/routes/Calendar/examData.js` (`EXAMS`, `STCW_LEVELS`, `EXAM_DEPARTMENTS`)
+4. Exam booking persistence:
+  - `src/common/seafarerStore.js` and `src/common/apiClient.js`
+
+### Matrix Model (Canonical)
+
+1. Requirement Catalog:
+  - `requirement_id`
+  - `title`
+  - `stcw_ref`
+  - `requirement_type` (`document`, `exam`, `training`)
+  - `validity_months`
+  - `refresher_window_days`
+2. Rule Mapping:
+  - `rank_id`
+  - `requirement_id`
+  - `rule_level` (`universal`, `rank`, `conditional`)
+  - `condition_expression` (vessel type, GT/kW, route, flag, company policy)
+  - `priority` (`critical`, `high`, `standard`)
+3. User Requirement Status:
+  - `user_id`
+  - `requirement_id`
+  - `status`
+  - `evidence_id`
+  - `expires_at`
+  - `last_verified_at`
+  - `source` (`upload`, `exam_booking`, `manual_verification`)
+
+### Rank Tracks in System
+
+1. Deck: `bosun`, `ab`, `3rd-officer`, `2nd-officer`, `chief-officer`, `master`
+2. Engine: `2nd-engineer`, `chief-engineer`
+3. Electro-technical: `electrician`
+4. Catering: `cook`
+
+### Compliance Lifecycle
+
+1. `missing`
+2. `booked`
+3. `in-progress`
+4. `passed`
+5. `valid`
+6. `expiring`
+7. `expired`
+8. `waived`
+
+### Evaluation Order
+
+1. Apply universal rules.
+2. Apply rank-required rules.
+3. Apply conditional overlays (vessel, route, flag, company).
+4. Merge evidence from uploaded docs and booked/passed exams.
+5. Return compliance summary with explicit blocker reasons.
+
+### Output Contracts
+
+Seafarer output:
+1. Missing critical items.
+2. Expiring items in 90/60/30-day buckets.
+3. Suggested next courses in My Exams.
+
+Recruiter output:
+1. Eligible or blocked for vacancy.
+2. Blocking requirements with reason codes.
+3. Readiness score inputs (compliance + continuity + contract rating when enabled).
+
+### Implementation Notes
+
+1. Keep naming parity between rank IDs and matrix `rank_id` values.
+2. Keep requirement titles normalized across docs and exams to avoid duplicate logic.
+3. Treat the matrix as source of truth; UI lists are derived from matrix output.
+4. Add flag-state and company overrides as additive layers, not hardcoded UI branches.
+
+---
+
 ## Future Plans
 
 - [ ] Separate Company and Seafarer layouts (different sidebar tabs per role)
@@ -543,12 +637,22 @@ See [sessions/session_2026-03-17.md](sessions/session_2026-03-17.md) for full de
 - [x] My Files UUID-based preview/download fix — **Done 2026-04-03**
 - [ ] DarkDropdown testing (fixed positioning for overflow:hidden parents)
 - [ ] Edit/delete vessels from fleet panel
-- [ ] Wire MetaDetails crew profile to read from User Database (instead of mock hash data)
+- [x] Wire Crew Database route/profile rendering to backend company crew API — **Done 2026-04-03**
 - [ ] My Files: connect uploaded docs to SeafarerCalendar expiry alerts
 - [ ] My Files: connect to My Exams for renewal suggestions
-- [ ] Assignments table (seafarer ↔ vessel linking)
+- [x] Assignments table + company linking workflow (list/create/delete endpoints + Crew Manager modal) — **Done 2026-04-03**
+- [ ] Assignment edit UX (PATCH role/dates/status in Crew Manager)
+- [x] Career section: rank change, years of experience, availability toggle — **Done 2026-04-10**
+- [x] Profile persistence: city, bio, languages, vessels, companies → PostgreSQL — **Done 2026-04-10**
+- [x] STCW matrix integration: My Exams rank filter, My Files banner, My Profile docs panel — **Done 2026-04-10**
+- [x] Mobility Profile form relocated to My Profile with structured sections — **Done 2026-04-10**
+- [x] Token refresh endpoint + authFetch 401 retry — **Done 2026-04-10**
+- [x] Tag input UX with +Add button and individual tag removal — **Done 2026-04-10**
+- [x] Visa/nationality filter in recruiter Crew Database — **Done 2026-04-10**
 - [ ] CSV import for vessels (bulk fleet registration)
 - [ ] IMO number validation against public registries
+- [ ] CV upload and auto-population (ROADMAP D2)
+- [ ] Full i18n translation pass (ROADMAP D4)
 - [ ] Deploy to Cloud Run as parte del stack Leto completo
 - [ ] Integration with Neptune ERP for vessel/fleet data
 

@@ -28,10 +28,12 @@
  */
 
 export default function Dashboard() {
+  const appSrc = `/app/?v=${Date.now()}`
+
   return (
     <div className="h-screen w-screen overflow-hidden">
       <iframe
-        src="/app/"
+        src={appSrc}
         className="w-full h-full border-none"
         title="Leto Crewing Module"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

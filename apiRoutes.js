@@ -38,6 +38,46 @@ router.post('/users/:userId/init', async (req, res) => {
     }
 });
 
+// ─── Mobility Summary: bulk visa/nationality/passport readiness ─────
+// GET /api/users/mobility-summary?ids=a,b,c
+// Returns a compact map of user_id -> { has_visa, visa_country, visa_expiry,
+//   double_nationality, nationality_primary, nationality_secondary,
+//   passport_1_country, passport_1_expiry, passport_2_country, passport_2_expiry,
+//   departure_airport_iata, linked_passport }
+// Used by the recruiter Crew Database to apply mobility filters.
+router.get('/users/mobility-summary', async (req, res) => {
+    try {
+        const raw = typeof req.query.ids === 'string' ? req.query.ids : '';
+        const ids = raw.split(',').map((s) => s.trim()).filter(Boolean);
+        const summary = {};
+        for (const id of ids) {
+            try {
+                const data = await dm.readPageData(id, 'settings');
+                summary[id] = {
+                    has_visa: Boolean(data?.visa?.has_visa),
+                    visa_country: data?.visa?.country || '',
+                    visa_type: data?.visa?.type || '',
+                    visa_expiry: data?.visa?.expiry_date || '',
+                    linked_passport: data?.visa?.linked_passport || '',
+                    double_nationality: Boolean(data?.identity?.double_nationality),
+                    nationality_primary: data?.identity?.nationality_primary || '',
+                    nationality_secondary: data?.identity?.nationality_secondary || '',
+                    passport_1_country: data?.identity?.passport_1?.country || '',
+                    passport_1_expiry: data?.identity?.passport_1?.expiry_date || '',
+                    passport_2_country: data?.identity?.passport_2?.country || '',
+                    passport_2_expiry: data?.identity?.passport_2?.expiry_date || '',
+                    departure_airport_iata: data?.travel?.departure_airport_iata || '',
+                };
+            } catch {
+                summary[id] = null;
+            }
+        }
+        res.json({ summary });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ─── Rank: store/retrieve user rank ─────────────────────────────────
 
 // PATCH /api/users/:userId/settings/rank — set rank (called from Leto on registration)

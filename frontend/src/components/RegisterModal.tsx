@@ -315,6 +315,7 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
     email: '', password: '', confirm_password: '', role: 'seafarer' as 'seafarer' | 'company',
     // Seafarer
     first_name: '', last_name: '', nationality: '', phone: '', date_of_birth: '', rank: '',
+    seafarer_city: '', years_experience: '',
     // Company
     company_name: '', ruc: '', country: '', city: '', address: '', website: '', sector: '', company_size: '',
     legal_rep_name: '', legal_rep_phone: '', legal_rep_email: '',
@@ -413,6 +414,8 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
         payload.phone = form.phone
         payload.rank = form.rank
         payload.date_of_birth = form.date_of_birth || null
+        payload.city = form.seafarer_city || null
+        payload.years_experience = form.years_experience ? parseInt(form.years_experience, 10) : null
       }
 
       await api.post('/auth/register', payload)
@@ -532,6 +535,12 @@ export default function RegisterModal({ onClose, onSwitchToLogin }: Props) {
                     <input value={form.nationality} onChange={(e) => set('nationality', e.target.value)} placeholder="Panameña" className={inp} /></div>
                   <div><label className="block text-xs font-semibold text-ice/60 mb-1.5">Teléfono</label>
                     <input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+507 6000 0000" className={inp} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-ice/60 mb-1.5">Ciudad</label>
+                    <input value={form.seafarer_city} onChange={(e) => set('seafarer_city', e.target.value)} placeholder="Ciudad de Panamá" className={inp} /></div>
+                  <div><label className="block text-xs font-semibold text-ice/60 mb-1.5">Años de experiencia</label>
+                    <input type="number" min="0" max="60" value={form.years_experience} onChange={(e) => set('years_experience', e.target.value)} placeholder="6" className={inp} /></div>
                 </div>
                 <div><label className="block text-xs font-semibold text-ice/60 mb-1.5">Fecha de Nacimiento</label>
                   <input type="date" value={form.date_of_birth} onChange={(e) => set('date_of_birth', e.target.value)} className={`${inp} [color-scheme:dark]`} /></div>

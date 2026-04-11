@@ -41,6 +41,24 @@
             padding: 0 4rem 2rem 4rem;
             padding-left: max(1rem, calc(4rem - var(--safe-area-inset-left)));
             overflow-y: auto;
+
+            // Visible scrollbar for dark theme
+            &::-webkit-scrollbar {
+                width: 6px;
+            }
+            &::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 3px;
+            }
+            &::-webkit-scrollbar-thumb {
+                background: rgba(0, 210, 211, 0.35);
+                border-radius: 3px;
+                &:hover {
+                    background: rgba(0, 210, 211, 0.55);
+                }
+            }
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 210, 211, 0.35) rgba(255, 255, 255, 0.03);
         }
 
         .spacing {

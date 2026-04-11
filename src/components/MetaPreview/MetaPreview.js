@@ -19,7 +19,6 @@ const MetaPreviewPlaceholder = require('./MetaPreviewPlaceholder');
 const styles = require('./styles');
 const { Ratings } = require('./Ratings');
 const { togglePendingInterview, isPendingInterview } = require('leto/common/crewStore');
-const { getCrewDepartment, getCrewRank, getCrewNationality } = require('leto/common/crewData');
 
 // PBS Crewing Module: corporate default profile image
 const CREW_DEFAULT_POSTER = 'images/profileimg.png';
@@ -44,7 +43,7 @@ const CREW_LAST_NAMES = [
     'Campos', 'Espinoza', 'Arias', 'Rojas', 'Molina', 'Silva', 'Guerrero',
 ];
 const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); };
-const getCrewName = (n) => { if (typeof n !== 'string' || !n.length) return ''; const h = hashStr(n); return `${CREW_FIRST_NAMES[h % CREW_FIRST_NAMES.length]} ${CREW_LAST_NAMES[(h >>> 4) % CREW_LAST_NAMES.length]}`; };
+const getCrewName = (n) => (typeof n === 'string' ? n : '');
 
 // ─── PBS Crewing: random crew profile data ──────────────────────────
 const CITIES = [
@@ -138,16 +137,28 @@ const ALLOWED_LINK_REDIRECTS = [
     routesRegexp.metadetails.regexp
 ];
 
-const MetaPreview = React.forwardRef(({ className, compact, name, logo, background, runtime, releaseInfo, released, description, deepLinks, links, trailerStreams, inLibrary, toggleInLibrary, ratingInfo }, ref) => {
+const MetaPreview = React.forwardRef(({ className, compact, name, logo, background, runtime, releaseInfo, released, description, department, rank, nationality, yearsExperience, email, metaId, deepLinks, links, trailerStreams, inLibrary, toggleInLibrary, ratingInfo }, ref) => {
     const { t } = useTranslation();
     const crewName = React.useMemo(() => getCrewName(name), [name]);
     const [shareModalOpen, openShareModal, closeShareModal] = useBinaryState(false);
 
     // PBS Crewing: "Add to list" toggle synced with card button via crewStore
-    const crewDepartmentPreview = React.useMemo(() => getCrewDepartment(name), [name]);
-    const crewRankPreview = React.useMemo(() => getCrewRank(name), [name]);
-    const crewNationalityPreview = React.useMemo(() => getCrewNationality(name), [name]);
-    const crewId = name || '';
+    const crewDepartmentPreview = React.useMemo(() => {
+        if (typeof department === 'string' && department.length > 0) return department;
+        const fromLinks = Array.isArray(links) ? links.find((link) => link?.category === 'Department')?.name : null;
+        return fromLinks || '';
+    }, [department, links]);
+    const crewRankPreview = React.useMemo(() => {
+        if (typeof rank === 'string' && rank.length > 0) return rank;
+        if (typeof runtime === 'string' && runtime.length > 0) return runtime;
+        return '';
+    }, [rank, runtime]);
+    const crewNationalityPreview = React.useMemo(() => {
+        if (typeof nationality === 'string' && nationality.length > 0) return nationality;
+        if (typeof releaseInfo === 'string' && releaseInfo.length > 0) return releaseInfo;
+        return '';
+    }, [nationality, releaseInfo]);
+    const crewId = (typeof metaId === 'string' && metaId.length > 0) ? metaId : (name || '');
     const [addedToList, setAddedToList] = React.useState(() => isPendingInterview(crewId));
     // Re-check when name changes (navigating between crew)
     React.useEffect(() => {
@@ -167,39 +178,41 @@ const MetaPreview = React.forwardRef(({ className, compact, name, logo, backgrou
         setAddedToList(nowAdded);
     }, [crewId, crewName, crewDepartmentPreview, crewRankPreview, crewNationalityPreview]);
 
-    // PBS Crewing: generate deterministic crew profile data
-    const crewHash = React.useMemo(() => hashStr(name || ''), [name]);
-    const crewAge = React.useMemo(() => getCrewAge(crewHash), [crewHash]);
-    const crewCity = React.useMemo(() => getCrewCity(crewHash), [crewHash]);
-    const crewExperience = React.useMemo(() => getCrewExperience(crewHash), [crewHash]);
-    const crewAbout = React.useMemo(() => getCrewAbout(crewHash), [crewHash]);
-    const crewVessels = React.useMemo(() => getCrewVessels(crewHash), [crewHash]);
-    const crewCompanies = React.useMemo(() => getCrewCompanies(crewHash), [crewHash]);
-    const crewLanguages = React.useMemo(() => getCrewLanguages(crewHash, links), [crewHash, links]);
+    const crewExperience = React.useMemo(() => {
+        if (Number.isFinite(yearsExperience)) return Number(yearsExperience);
+        const fromLinks = Array.isArray(links) ? links.find((link) => link?.category === 'Experience')?.name : null;
+        if (typeof fromLinks === 'string') {
+            const parsed = parseFloat(fromLinks);
+            if (Number.isFinite(parsed)) return parsed;
+        }
+        return null;
+    }, [yearsExperience, links]);
+    const crewAbout = React.useMemo(() => (typeof description === 'string' ? description : ''), [description]);
 
     const linksGroups = React.useMemo(() => {
         const groups = new Map();
 
-        // Keep IMDB / SHARE from original links if present
         if (Array.isArray(links)) {
-            links.filter((link) => link && typeof link.category === 'string' && typeof link.url === 'string')
-                .forEach(({ category, name: linkName, url }) => {
-                    const { hostname } = UrlUtils.parse(url);
-                    if (category === CONSTANTS.IMDB_LINK_CATEGORY && hostname === 'imdb.com') {
-                        groups.set(category, { label: linkName, href: `https://www.stremio.com/warning#${encodeURIComponent(url)}` });
-                    } else if (category === CONSTANTS.SHARE_LINK_CATEGORY) {
-                        groups.set(category, { label: linkName, href: url });
-                    }
-                });
+            links.forEach((link) => {
+                if (!link || typeof link.category !== 'string' || typeof link.name !== 'string') return;
+                if (
+                    link.category === CONSTANTS.IMDB_LINK_CATEGORY ||
+                    link.category === CONSTANTS.SHARE_LINK_CATEGORY ||
+                    link.category === CONSTANTS.WRITERS_LINK_CATEGORY
+                ) {
+                    return;
+                }
+                if (!groups.has(link.category)) groups.set(link.category, []);
+                groups.get(link.category).push({ label: link.name, href: link.url });
+            });
         }
 
-        // PBS Crewing: override with Languages, Vessel Types, Companies
-        groups.set('Languages', crewLanguages.map((lang) => ({ label: lang })));
-        groups.set('Vessels', crewVessels.map((v) => ({ label: v })));
-        groups.set('Companies', crewCompanies.map((c) => ({ label: c })));
+        if (typeof email === 'string' && email.length > 0 && !groups.has('Contact')) {
+            groups.set('Contact', [{ label: email }]);
+        }
 
         return groups;
-    }, [links, crewLanguages, crewVessels, crewCompanies]);
+    }, [links, email]);
     const showHref = React.useMemo(() => {
         return deepLinks ?
             typeof deepLinks.player === 'string' ?
@@ -234,9 +247,14 @@ const MetaPreview = React.forwardRef(({ className, compact, name, logo, backgrou
                 {
                     typeof name === 'string' && name.length > 0 ?
                         <div className={styles['runtime-release-info-container']}>
-                            <div className={styles['runtime-label']}>{'Age: ' + crewAge}</div>
-                            <div className={styles['release-info-label']}>{'City: ' + crewCity}</div>
-                            <div className={styles['release-info-label']}>{'Exp: ' + crewExperience.toFixed(1) + ' years'}</div>
+                            <div className={styles['runtime-label']}>{`Rank: ${crewRankPreview || 'N/A'}`}</div>
+                            <div className={styles['release-info-label']}>{`Nationality: ${crewNationalityPreview || 'N/A'}`}</div>
+                            {
+                                Number.isFinite(crewExperience) ?
+                                    <div className={styles['release-info-label']}>{`Exp: ${crewExperience.toFixed(1)} years`}</div>
+                                    :
+                                    null
+                            }
                         </div>
                         :
                         null
@@ -332,6 +350,12 @@ MetaPreview.propTypes = {
     releaseInfo: PropTypes.string,
     released: PropTypes.instanceOf(Date),
     description: PropTypes.string,
+    department: PropTypes.string,
+    rank: PropTypes.string,
+    nationality: PropTypes.string,
+    yearsExperience: PropTypes.number,
+    email: PropTypes.string,
+    metaId: PropTypes.string,
     deepLinks: PropTypes.shape({
         metaDetailsVideos: PropTypes.string,
         metaDetailsStreams: PropTypes.string,

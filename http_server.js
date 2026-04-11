@@ -3,7 +3,8 @@
 // Leto Crewing Module — Production Server
 // Serves static build + API routes for User Database
 
-const INDEX_CACHE = 7200;
+const INDEX_CACHE = 'no-store';
+const DYNAMIC_CACHE = 'no-cache, must-revalidate';
 const ASSETS_CACHE = 2629744;
 const HTTP_PORT = 8080;
 
@@ -37,8 +38,13 @@ app.use('/api', apiRoutes);
 // ─── Static Files (build/) ──────────────────────────────────────────
 app.use(express.static(build_path, {
     setHeaders: (res, filePath) => {
-        if (filePath === index_path) res.set('cache-control', `public, max-age: ${INDEX_CACHE}`);
-        else res.set('cache-control', `public, max-age: ${ASSETS_CACHE}`);
+        if (filePath === index_path) {
+            res.set('cache-control', INDEX_CACHE);
+        } else if (filePath.endsWith('service-worker.js') || filePath.endsWith('manifest.json')) {
+            res.set('cache-control', DYNAMIC_CACHE);
+        } else {
+            res.set('cache-control', `public, max-age: ${ASSETS_CACHE}, immutable`);
+        }
     }
 }));
 

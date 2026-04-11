@@ -6,16 +6,7 @@
 const EventEmitter = require('eventemitter3');
 
 // ─── Mock crew database for Discover (company-crewdb) ─────────────
-const CREW_SEEDS = [
-    'Carlos Rodríguez', 'Miguel González', 'José Martínez', 'Ricardo López',
-    'Andrés Hernández', 'Fernando García', 'Diego Pérez', 'Luis Sánchez',
-    'Roberto Ramírez', 'Alejandro Torres', 'Manuel Flores', 'Gabriel Rivera',
-    'Daniel Gómez', 'Marco Díaz', 'Eduardo Cruz', 'Héctor Morales',
-    'Raúl Reyes', 'Sergio Gutiérrez', 'Víctor Ortiz', 'Pablo Ramos',
-    'Javier Vargas', 'Óscar Castillo', 'Tomás Jiménez', 'Enrique Moreno',
-    'Arturo Romero', 'Rafael Alvarado', 'Iván Ruiz', 'Felipe Mendoza',
-    'Adrián Aguilar', 'Gonzalo Medina', 'Santiago Castro', 'Martín Herrera',
-];
+const CREW_SEEDS = [];
 const VESSEL_TYPES = ['Bulk Carrier', 'Container Ship', 'Oil Tanker', 'LNG Carrier', 'General Cargo', 'Ro-Ro', 'Chemical Tanker', 'Offshore Supply'];
 const RANKS_SHORT = [
     'II/2 – Master', 'II/2 – Chief Mate', 'II/1 – OOW Navigation',
@@ -31,40 +22,6 @@ const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h <
 
 // Build a crew profile for MetaDetails from a crew name
 const buildCrewProfile = (crewName) => {
-    const h = hashStr(crewName);
-    const rank = RANKS_SHORT[h % RANKS_SHORT.length];
-    const nationality = NATIONALITIES[h % NATIONALITIES.length];
-    const vessel = VESSEL_NAMES[h % VESSEL_NAMES.length];
-    const vesselType = VESSEL_TYPES[h % VESSEL_TYPES.length];
-    const department = DEPARTMENTS[h % DEPARTMENTS.length];
-    const imo = IMO_NUMBERS[h % IMO_NUMBERS.length];
-    // Generate document "videos" (categories 1-5, ~3 docs each)
-    const docCategories = [
-        { cat: 1, label: 'STCW Certificates', docs: ['Certificate of Competency', 'STCW Basic Safety Training', 'Medical First Aid', 'Advanced Fire Fighting', 'Proficiency in Survival Craft'] },
-        { cat: 2, label: 'Flag State Documents', docs: ['Seaman Book', 'Flag State Endorsement', 'Yellow Fever Certificate', 'Passport'] },
-        { cat: 3, label: 'Company Certificates', docs: ['Company Familiarization', 'Drug & Alcohol Test', 'Pre-Employment Medical'] },
-        { cat: 4, label: 'Training Records', docs: ['ECDIS Training', 'BRM/ERM Course', 'Ship Security Officer'] },
-        { cat: 5, label: 'Personal Documents', docs: ['National ID', 'Birth Certificate'] },
-    ];
-    const videos = [];
-    docCategories.forEach(({ cat, docs }) => {
-        docs.forEach((title, j) => {
-            const dh = ((h * 31 + j * 17 + cat * 7) >>> 0) % 100;
-            if (dh < 70 || j < 2) { // ~70% chance or guarantee first 2
-                const offsetDays = ((h + j * 13) % 361) - 180;
-                const issued = new Date(Date.now() - (365 + offsetDays) * 86400000);
-                videos.push({
-                    id: `${crewName}:${cat}:${j}`,
-                    title: title,
-                    season: cat,
-                    episode: j + 1,
-                    released: issued.toISOString(),
-                    overview: `${title} — Issued ${issued.toISOString().split('T')[0]}`,
-                    thumbnail: null,
-                });
-            }
-        });
-    });
     return {
         selected: {
             metaPath: { resource: 'meta', type: 'crew', id: crewName, extra: [] },
@@ -80,18 +37,14 @@ const buildCrewProfile = (crewName) => {
                     poster: null,
                     logo: null,
                     background: null,
-                    description: `${rank}\n${department}\nNationality: ${nationality}\nVessel: ${vessel} (${vesselType})\nIMO: ${imo}`,
-                    releaseInfo: nationality,
-                    runtime: rank,
+                    description: '',
+                    releaseInfo: '',
+                    runtime: '',
                     released: new Date().toISOString(),
-                    links: [
-                        { name: department, category: 'Department', url: '#' },
-                        { name: nationality, category: 'Nationality', url: '#' },
-                        { name: vessel, category: 'Current Vessel', url: '#' },
-                    ],
+                    links: [],
                     trailerStreams: [],
                     inLibrary: true,
-                    videos: videos,
+                    videos: [],
                     behaviorHints: {},
                 },
             },

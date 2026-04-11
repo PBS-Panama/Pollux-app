@@ -1,33 +1,22 @@
 import React, { forwardRef, useState, useCallback } from 'react';
 import { MultiselectMenu } from 'leto/components';
 import { Section, Option } from '../components';
-import useInterfaceOptions from './useInterfaceOptions';
 
 type Props = {
     profile: Profile,
 };
 
 const Interface = forwardRef<HTMLDivElement, Props>(({ profile }: Props, ref) => {
-    const {
-        interfaceLanguageSelect,
-    } = useInterfaceOptions(profile);
-
     const [shortcutsEnabled, setShortcutsEnabled] = useState(() => {
         try { return localStorage.getItem('leto-keyboard-shortcuts') !== 'off'; }
         catch { return true; }
     });
 
-    const toggleShortcuts = useCallback(() => {
-        const next = !shortcutsEnabled;
-        setShortcutsEnabled(next);
-        localStorage.setItem('leto-keyboard-shortcuts', next ? 'on' : 'off');
-    }, [shortcutsEnabled]);
-
     const shortcutsSelect = {
-        title: () => shortcutsEnabled ? 'Activados' : 'Desactivados',
+        title: () => shortcutsEnabled ? 'Enabled' : 'Disabled',
         options: [
-            { label: 'Activados', value: 'on' },
-            { label: 'Desactivados', value: 'off' },
+            { label: 'Enabled', value: 'on' },
+            { label: 'Disabled', value: 'off' },
         ],
         onSelect: (val: string) => {
             const on = val === 'on';
@@ -39,13 +28,7 @@ const Interface = forwardRef<HTMLDivElement, Props>(({ profile }: Props, ref) =>
 
     return (
         <Section ref={ref} label={'PREFERENCES'}>
-            <Option label={'SETTINGS_UI_LANGUAGE'}>
-                <MultiselectMenu
-                    className={'multiselect'}
-                    {...interfaceLanguageSelect}
-                />
-            </Option>
-            <Option label={'Atajos de teclado (1-6 cambia tabs)'}>
+            <Option label={'Keyboard shortcuts (1-6 switches tabs)'}>
                 <MultiselectMenu
                     className={'multiselect'}
                     {...shortcutsSelect}

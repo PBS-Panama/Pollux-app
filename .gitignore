@@ -4,6 +4,12 @@
 /npm-debug.log
 .DS_Store
 .prettierignore
+.env
 
-# User database (uploaded files — don't commit user data)
-/User database/*/myfiles/uploads/
+# Python bytecode cache — auto-generated, never commit
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# User database (per-user runtime data — don't commit)
+/User database/

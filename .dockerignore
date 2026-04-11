@@ -1,6 +1,9 @@
 node_modules
 build
 .git
+**/__pycache__
+**/*.pyc
+**/*.pyo
 .gitignore
 *.md
 LICENSE.md

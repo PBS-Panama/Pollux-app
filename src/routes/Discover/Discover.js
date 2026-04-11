@@ -5,77 +5,156 @@ const { useTranslation } = require('react-i18next');
 const PropTypes = require('prop-types');
 const classnames = require('classnames');
 const { default: Icon } = require('@stremio/stremio-icons/react');
-const { useServices } = require('leto/services');
-const { CONSTANTS, useBinaryState, useOnScrollToBottom, withCoreSuspender } = require('leto/common');
-const { AddonDetailsModal, Button, DelayedRenderer, Image, MainNavBars, MetaItem, MetaPreview, ModalDialog, MultiselectMenu } = require('leto/components');
-const useDiscover = require('./useDiscover');
+const { useBinaryState, withCoreSuspender } = require('leto/common');
+const { Button, DelayedRenderer, Image, MainNavBars, MetaItem, MetaPreview, ModalDialog, MultiselectMenu } = require('leto/components');
 const useSelectableInputs = require('./useSelectableInputs');
 const styles = require('./styles');
 
-const SCROLL_TO_BOTTOM_THRESHOLD = 400;
+const getAuthToken = () => {
+    try {
+        const data = localStorage.getItem('leto-auth');
+        return data ? JSON.parse(data)?.state?.accessToken || '' : '';
+    } catch {
+        return '';
+    }
+};
 
-const Discover = ({ urlParams, queryParams }) => {
+const getLetoUser = () => {
+    try {
+        const data = localStorage.getItem('leto-user');
+        return data ? JSON.parse(data) : null;
+    } catch {
+        return null;
+    }
+};
+
+const buildCrewMetaItem = (crew) => {
+    const first = (crew.first_name || '').trim();
+    const last = (crew.last_name || '').trim();
+    const name = [first, last].filter(Boolean).join(' ') || crew.email?.split('@')[0] || 'Unnamed Seafarer';
+    const nationality = crew.nationality || 'Unknown Nationality';
+    const rank = crew.rank || 'Rank not assigned';
+    const experience = Number.isFinite(crew.years_experience) ? `${crew.years_experience} years` : 'N/A';
+
+    return {
+        id: crew.id,
+        type: 'crew',
+        name,
+        email: crew.email,
+        department: crew.department || 'Safety & Survival',
+        rank,
+        nationality,
+        years_experience: crew.years_experience || 0,
+        poster: null,
+        logo: null,
+        background: null,
+        posterShape: 'poster',
+        description: crew.bio || `${rank}\nDepartment: ${crew.department || 'Safety & Survival'}\nNationality: ${nationality}`,
+        releaseInfo: nationality,
+        runtime: rank,
+        released: new Date(crew.created_at),
+        links: [
+            { name: crew.department || 'Safety & Survival', category: 'Department', url: '#' },
+            { name: nationality, category: 'Nationality', url: '#' },
+            { name: experience, category: 'Experience', url: '#' },
+            { name: crew.email, category: 'Contact', url: '#' },
+        ],
+        deepLinks: { metaDetailsVideos: null, player: null },
+        trailerStreams: [],
+        inLibrary: true,
+        watched: false,
+    };
+};
+
+const Discover = () => {
     const { t } = useTranslation();
-    const { core } = useServices();
-    const [discover, loadNextPage] = useDiscover(urlParams, queryParams);
-    const [selectInputs, hasNextPage, filterItem] = useSelectableInputs(discover);
+    const [crewItems, setCrewItems] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [errorMessage, setErrorMessage] = React.useState('');
+
+    const [selectInputs,, filterItem] = useSelectableInputs(crewItems);
     const [inputsModalOpen, openInputsModal, closeInputsModal] = useBinaryState(false);
-    const [addonModalOpen, openAddonModal, closeAddonModal] = useBinaryState(false);
     const [selectedMetaItemIndex, setSelectedMetaItemIndex] = React.useState(0);
 
-    const metasContainerRef = React.useRef();
     const metaPreviewRef = React.useRef();
 
     React.useEffect(() => {
-        if (discover.catalog?.content?.type === 'Loading') {
-            metasContainerRef.current.scrollTop = 0;
-        }
-    }, [discover.catalog]);
-    React.useEffect(() => {
-        if (hasNextPage && metasContainerRef.current) {
-            const containerHeight = metasContainerRef.current.scrollHeight;
-            const viewportHeight = metasContainerRef.current.clientHeight;
-            if (containerHeight <= viewportHeight + SCROLL_TO_BOTTOM_THRESHOLD) {
-                loadNextPage();
+        let cancelled = false;
+        (async () => {
+            try {
+                const user = getLetoUser();
+                const companyId = user?.company_id;
+                const token = getAuthToken();
+
+                if (!companyId || !token) {
+                    if (!cancelled) {
+                        setErrorMessage('Company account data is missing. Please log in again.');
+                        setCrewItems([]);
+                    }
+                    return;
+                }
+
+                const res = await fetch(`/api/companies/${companyId}/crew`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Crew API request failed (${res.status})`);
+                }
+
+                const data = await res.json();
+                const mapped = Array.isArray(data) ? data.map(buildCrewMetaItem) : [];
+
+                // Enrich with mobility summary (visa / nationality / passport)
+                // from the crewing filesystem store. Non-fatal on failure.
+                let mobilityMap = {};
+                if (mapped.length > 0) {
+                    try {
+                        const idsParam = mapped.map((m) => m.id).join(',');
+                        const mobRes = await fetch(`/crewing-api/users/mobility-summary?ids=${encodeURIComponent(idsParam)}`);
+                        if (mobRes.ok) {
+                            const mobJson = await mobRes.json();
+                            mobilityMap = mobJson?.summary || {};
+                        }
+                    } catch {
+                        // ignore — filter will just treat visa data as empty
+                    }
+                }
+
+                const enriched = mapped.map((item) => {
+                    const mob = mobilityMap[item.id] || {};
+                    return { ...item, mobility: mob };
+                });
+
+                if (!cancelled) {
+                    setCrewItems(enriched);
+                    setSelectedMetaItemIndex(0);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setErrorMessage(err instanceof Error ? err.message : 'Failed to load crew data');
+                    setCrewItems([]);
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
             }
-        }
-    }, [hasNextPage, loadNextPage]);
+        })();
+
+        return () => { cancelled = true; };
+    }, []);
+
     const filteredItems = React.useMemo(() => {
-        if (discover.catalog === null || !discover.catalog.content || discover.catalog.content.type !== 'Ready') return [];
-        return discover.catalog.content.content.filter((item) => filterItem(item.name));
-    }, [discover.catalog, filterItem]);
+        return crewItems.filter((item) => filterItem(item));
+    }, [crewItems, filterItem]);
+
     React.useEffect(() => {
         setSelectedMetaItemIndex(0);
-    }, [filterItem]);
+    }, [filteredItems.length]);
+
     const selectedMetaItem = React.useMemo(() => {
         return filteredItems[selectedMetaItemIndex] ?? null;
     }, [filteredItems, selectedMetaItemIndex]);
-    const addToLibrary = React.useCallback(() => {
-        if (selectedMetaItem === null) {
-            return;
-        }
 
-        core.transport.dispatch({
-            action: 'Ctx',
-            args: {
-                action: 'AddToLibrary',
-                args: selectedMetaItem
-            }
-        });
-    }, [selectedMetaItem]);
-    const removeFromLibrary = React.useCallback(() => {
-        if (selectedMetaItem === null) {
-            return;
-        }
-
-        core.transport.dispatch({
-            action: 'Ctx',
-            args: {
-                action: 'RemoveFromLibrary',
-                args: selectedMetaItem.id
-            }
-        });
-    }, [selectedMetaItem]);
     const metaItemsOnFocusCapture = React.useCallback((event) => {
         if (event.target.dataset.index !== null && !isNaN(event.target.dataset.index)) {
             setSelectedMetaItemIndex(parseInt(event.target.dataset.index, 10));
@@ -88,17 +167,7 @@ const Discover = ({ urlParams, queryParams }) => {
             event.currentTarget.focus();
         }
     }, [selectedMetaItemIndex]);
-    const onScrollToBottom = React.useCallback(() => {
-        if (hasNextPage) {
-            loadNextPage();
-        }
-    }, [hasNextPage, loadNextPage]);
-    const onScroll = useOnScrollToBottom(onScrollToBottom, SCROLL_TO_BOTTOM_THRESHOLD);
-    React.useEffect(() => {
-        closeInputsModal();
-        closeAddonModal();
-        setSelectedMetaItemIndex(0);
-    }, [discover.selected]);
+
     return (
         <MainNavBars className={styles['discover-container']} route={'companyCrewdb'}>
             <div className={styles['discover-content']}>
@@ -124,66 +193,47 @@ const Discover = ({ urlParams, queryParams }) => {
                         </div>
                     </div>
                     {
-                        discover.catalog !== null && discover.catalog.content && !discover.catalog.installed ?
-                            <div className={styles['missing-addon-warning-container']}>
-                                <div className={styles['warning-label']}>{t('ERR_ADDON_NOT_INSTALLED')}</div>
-                                <Button className={styles['install-button']} title={t('INSTALL_ADDON')} onClick={openAddonModal}>
-                                    <div className={styles['label']}>{t('ADDON_INSTALL')}</div>
-                                </Button>
-                            </div>
-                            :
-                            null
-                    }
-                    {
-                        discover.catalog === null ?
+                        loading ?
                             <DelayedRenderer delay={500}>
                                 <div className={styles['message-container']}>
                                     <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
-                                    <div className={styles['message-label']}>{t('NO_CATALOG_SELECTED')}</div>
+                                    <div className={styles['message-label']}>{'Loading crew database...'}</div>
                                 </div>
                             </DelayedRenderer>
                             :
-                            discover.catalog.content && discover.catalog.content.type === 'Err' ?
+                            errorMessage ?
                                 <div className={styles['message-container']}>
                                     <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
-                                    <div className={styles['message-label']}>{discover.catalog.content.content}</div>
+                                    <div className={styles['message-label']}>{errorMessage}</div>
                                 </div>
                                 :
-                                discover.catalog.content && discover.catalog.content.type === 'Loading' ?
-                                    <div ref={metasContainerRef} className={classnames(styles['meta-items-container'], 'animation-fade-in')}>
-                                        {Array(CONSTANTS.CATALOG_PAGE_SIZE).fill(null).map((_, index) => (
-                                            <div key={index} className={styles['meta-item-placeholder']}>
-                                                <div className={styles['poster-container']} />
-                                                <div className={styles['title-bar-container']}>
-                                                    <div className={styles['title-label']} />
-                                                </div>
-                                            </div>
-                                        ))}
+                                filteredItems.length === 0 ?
+                                    <div className={styles['message-container']}>
+                                        <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
+                                        <div className={styles['message-label']}>{'No crew members match the selected filters'}</div>
                                     </div>
                                     :
-                                    filteredItems.length === 0 ?
-                                        <div className={styles['message-container']}>
-                                            <Image className={styles['image']} src={require('/assets/images/empty.png')} alt={' '} />
-                                            <div className={styles['message-label']}>{'No crew members match the selected filters'}</div>
-                                        </div>
-                                        :
-                                        <div ref={metasContainerRef} className={classnames(styles['meta-items-container'], 'animation-fade-in')} onScroll={onScroll} onFocusCapture={metaItemsOnFocusCapture}>
-                                            {filteredItems.map((metaItem, index) => (
-                                                <MetaItem
-                                                    key={index}
-                                                    className={classnames({ 'selected': selectedMetaItemIndex === index })}
-                                                    type={metaItem.type}
-                                                    name={metaItem.name}
-                                                    poster={metaItem.poster}
-                                                    posterShape={metaItem.posterShape}
-                                                    playname={selectedMetaItemIndex === index}
-                                                    deepLinks={metaItem.deepLinks}
-                                                    watched={metaItem.watched}
-                                                    data-index={index}
-                                                    onClick={metaItemOnClick}
-                                                />
-                                            ))}
-                                        </div>
+                                    <div className={classnames(styles['meta-items-container'], 'animation-fade-in')} onFocusCapture={metaItemsOnFocusCapture}>
+                                        {filteredItems.map((metaItem, index) => (
+                                            <MetaItem
+                                                key={metaItem.id}
+                                                className={classnames({ 'selected': selectedMetaItemIndex === index })}
+                                                type={metaItem.type}
+                                                name={metaItem.name}
+                                                crewId={metaItem.id}
+                                                department={metaItem.department}
+                                                rank={metaItem.rank}
+                                                nationality={metaItem.nationality}
+                                                poster={metaItem.poster}
+                                                posterShape={metaItem.posterShape}
+                                                playname={selectedMetaItemIndex === index}
+                                                deepLinks={metaItem.deepLinks}
+                                                watched={metaItem.watched}
+                                                data-index={index}
+                                                onClick={metaItemOnClick}
+                                            />
+                                        ))}
+                                    </div>
                     }
                 </div>
                 {
@@ -199,16 +249,21 @@ const Discover = ({ urlParams, queryParams }) => {
                             releaseInfo={selectedMetaItem.releaseInfo}
                             released={selectedMetaItem.released}
                             description={selectedMetaItem.description}
+                            department={selectedMetaItem.department}
+                            rank={selectedMetaItem.rank}
+                            nationality={selectedMetaItem.nationality}
+                            yearsExperience={selectedMetaItem.years_experience}
+                            email={selectedMetaItem.email}
                             links={selectedMetaItem.links}
                             deepLinks={selectedMetaItem.deepLinks}
                             trailerStreams={selectedMetaItem.trailerStreams}
                             inLibrary={selectedMetaItem.inLibrary}
-                            toggleInLibrary={selectedMetaItem.inLibrary ? removeFromLibrary : addToLibrary}
+                            toggleInLibrary={null}
                             metaId={selectedMetaItem.id}
-                            like={selectedMetaItem.like}
+                            like={null}
                         />
                         :
-                        discover.catalog !== null && discover.catalog.content && discover.catalog.content.type === 'Loading' ?
+                        loading ?
                             <div className={styles['meta-preview-container']} />
                             :
                             null
@@ -234,23 +289,13 @@ const Discover = ({ urlParams, queryParams }) => {
                     :
                     null
             }
-            {
-                addonModalOpen && discover.selected !== null ?
-                    <AddonDetailsModal transportUrl={discover.selected.request.base} onCloseRequest={closeAddonModal} />
-                    :
-                    null
-            }
         </MainNavBars>
     );
 };
 
 Discover.propTypes = {
-    urlParams: PropTypes.shape({
-        transportUrl: PropTypes.string,
-        type: PropTypes.string,
-        catalogId: PropTypes.string
-    }),
-    queryParams: PropTypes.instanceOf(URLSearchParams)
+    urlParams: PropTypes.object,
+    queryParams: PropTypes.instanceOf(URLSearchParams),
 };
 
 const DiscoverFallback = () => (

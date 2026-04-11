@@ -4,7 +4,7 @@ const React = require('react');
 const { useState, useMemo, useCallback, useEffect } = React;
 const { MainNavBars } = require('leto/components');
 const { MONTHS, WEEKDAYS_SHORT } = require('../Calendar/calendarData');
-const { AVAILABILITY_TYPES, SEAFARER_CATEGORIES, getCertExpiryForMonth, getCertificateAlerts, DEFAULT_AVAILABILITY } = require('./seafarerData');
+const { AVAILABILITY_TYPES, SEAFARER_CATEGORIES, getCertExpiryForMonth, getCertificateAlerts } = require('./seafarerData');
 const { getAvailability, addAvailability, removeAvailability, getAvailabilityForMonth, confirmInterview, isInterviewConfirmed, getBookedExams } = require('leto/common/seafarerStore');
 const { getCustomEvents } = require('leto/common/crewStore');
 const styles = require('./SeafarerCalendar.less');
@@ -90,16 +90,8 @@ const SeafarerCalendar = () => {
     const [selectedDay, setSelectedDay] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
 
-    // Load availability (seed defaults on first run)
-    const [availability, setAvailability] = useState(() => {
-        let stored = getAvailability();
-        if (stored.length === 0) {
-            // Seed with demo data
-            DEFAULT_AVAILABILITY.forEach((p) => addAvailability(p));
-            stored = getAvailability();
-        }
-        return stored;
-    });
+    // Load only persisted availability; no demo seed in production runtime
+    const [availability, setAvailability] = useState(() => getAvailability());
 
     // Interviews booked by companies (from custom events store)
     const [companyEvents, setCompanyEvents] = useState(getCustomEvents());

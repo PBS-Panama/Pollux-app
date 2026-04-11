@@ -15,7 +15,29 @@ const DEFAULT_DATA = {
     calendar: { availability: [], confirmedInterviews: [] },
     dashboard: { currentContract: null, rotationHistory: [], portCalls: [] },
     myexams: { bookedExams: [] },
-    settings: { preferences: {}, rank: null },
+    settings: {
+        preferences: {},
+        rank: null,
+        identity: {
+            double_nationality: false,
+            nationality_primary: '',
+            nationality_secondary: '',
+            passport_1: { number: '', country: '', expiry_date: '' },
+            passport_2: { number: '', country: '', expiry_date: '' },
+        },
+        visa: {
+            has_visa: false,
+            number: '',
+            country: '',
+            type: '',
+            expiry_date: '',
+            linked_passport: '',
+        },
+        travel: {
+            departure_airport_iata: '',
+            departure_airport_name: '',
+        },
+    },
 };
 
 // ─── Folder Management ──────────────────────────────────────────────
@@ -65,7 +87,38 @@ const readPageData = (userId, page) => {
     const dataPath = path.join(USER_DB_ROOT, userId, page, 'data.json');
     try {
         const raw = fs.readFileSync(dataPath, 'utf8');
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        const defaults = DEFAULT_DATA[page] || {};
+
+        // Backward compatible deep merge for settings shape growth.
+        if (page === 'settings') {
+            return {
+                ...defaults,
+                ...parsed,
+                identity: {
+                    ...(defaults.identity || {}),
+                    ...(parsed.identity || {}),
+                    passport_1: {
+                        ...((defaults.identity && defaults.identity.passport_1) || {}),
+                        ...((parsed.identity && parsed.identity.passport_1) || {}),
+                    },
+                    passport_2: {
+                        ...((defaults.identity && defaults.identity.passport_2) || {}),
+                        ...((parsed.identity && parsed.identity.passport_2) || {}),
+                    },
+                },
+                visa: {
+                    ...(defaults.visa || {}),
+                    ...(parsed.visa || {}),
+                },
+                travel: {
+                    ...(defaults.travel || {}),
+                    ...(parsed.travel || {}),
+                },
+            };
+        }
+
+        return { ...defaults, ...parsed };
     } catch {
         return DEFAULT_DATA[page] || {};
     }

@@ -46,7 +46,8 @@ module.exports = (env, argv) => ({
     },
     output: {
         path: path.join(__dirname, 'build'),
-        filename: `${COMMIT_HASH}/scripts/[name].js`,
+        filename: 'assets/scripts/[name].[contenthash:8].js',
+        chunkFilename: 'assets/scripts/[name].[contenthash:8].chunk.js',
         clean: true,
     },
     module: {
@@ -217,7 +218,7 @@ module.exports = (env, argv) => ({
         new webpack.EnvironmentPlugin({
             SENTRY_DSN: null,
             ...env,
-            SERVICE_WORKER_DISABLED: false,
+            SERVICE_WORKER_DISABLED: true,
             DEBUG: argv.mode !== 'production',
             VERSION: packageJson.version,
             COMMIT_HASH
@@ -225,12 +226,6 @@ module.exports = (env, argv) => ({
         new webpack.ProvidePlugin({
             Buffer: ['buffer', 'Buffer']
         }),
-        argv.mode === 'production' &&
-            new WorkboxPlugin.GenerateSW({
-                maximumFileSizeToCacheInBytes: 20000000,
-                clientsClaim: true,
-                skipWaiting: true
-            }),
         new CopyWebpackPlugin({
             patterns: [
                 { from: 'assets/favicons', to: 'favicons' },
@@ -242,7 +237,8 @@ module.exports = (env, argv) => ({
             ]
         }),
         new MiniCssExtractPlugin({
-            filename: `${COMMIT_HASH}/styles/[name].css`
+            filename: 'assets/styles/[name].[contenthash:8].css',
+            chunkFilename: 'assets/styles/[name].[contenthash:8].chunk.css',
         }),
         new HtmlWebPackPlugin({
             template: './src/index.html',

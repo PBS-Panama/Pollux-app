@@ -22,6 +22,8 @@ class RegisterRequest(BaseModel):
     phone: Optional[str] = None
     rank: Optional[str] = None
     date_of_birth: Optional[date] = None
+    years_experience: Optional[int] = None
+    bio: Optional[str] = None
     # Company fields
     company_name: Optional[str] = None
     ruc: Optional[str] = None
@@ -63,7 +65,32 @@ class UserResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     date_of_birth: Optional[date] = None
+    nationality: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    years_experience: Optional[int] = None
+    bio: Optional[str] = None
+    languages: Optional[str] = None
+    vessels_worked: Optional[str] = None
+    companies_worked: Optional[str] = None
+    is_available: Optional[bool] = None
     company_name: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class SeafarerUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    nationality: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    rank: Optional[str] = None
+    years_experience: Optional[int] = None
+    bio: Optional[str] = None
+    languages: Optional[str] = None
+    vessels_worked: Optional[str] = None
+    companies_worked: Optional[str] = None
+    is_available: Optional[bool] = None
+    date_of_birth: Optional[date] = None

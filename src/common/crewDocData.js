@@ -16,6 +16,8 @@ const CREW_ALL_DOCS = {
         { title: "Seaman's Book", baseDate: '2023-03-15', validityYears: 5 },
         { title: 'National ID Card', baseDate: '2022-08-20', validityYears: 10 },
         { title: 'Passport', baseDate: '2022-11-05', validityYears: 10 },
+        { title: 'Passport 2', baseDate: '2022-11-05', validityYears: 10 },
+        { title: 'Visa / Entry Permit', baseDate: '2024-01-15', validityYears: 5 },
         { title: 'Flag State CoC', baseDate: '2023-01-10', validityYears: 5 },
         { title: 'Endorsement of Recognition', baseDate: '2023-06-05', validityYears: 5 },
         { title: 'Discharge Book', baseDate: '2021-11-22', validityYears: null },

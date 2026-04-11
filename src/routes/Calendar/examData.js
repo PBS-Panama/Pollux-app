@@ -430,4 +430,59 @@ const EXAMS = [
     },
 ];
 
-module.exports = { EXAMS, STCW_LEVELS, EXAM_DEPARTMENTS };
+// ─── Rank → required exam IDs mapping ────────────────────────────────
+// Based on STCW regulations per rank. "All Levels" exams are required
+// for every rank (basic safety). Rank-specific exams are additive.
+const RANK_REQUIRED_EXAMS = {
+    master: [
+        /* All Levels */ 'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03', 'imo-1.14',
+        /* OOW deck */ 'imo-oow-nav', 'imo-1.07', 'imo-1.27', 'imo-1.22',
+        /* Management deck */ 'imo-7.01', 'imo-brm-mgmt',
+        /* GMDSS */ 'imo-1.25',
+        /* Medical */ 'imo-1.15',
+        /* Leadership */ 'imo-leadership',
+    ],
+    'chief-officer': [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03', 'imo-1.14',
+        'imo-oow-nav', 'imo-1.07', 'imo-1.27', 'imo-1.22',
+        'imo-7.01', 'imo-brm-mgmt',
+        'imo-1.25', 'imo-1.15', 'imo-leadership',
+    ],
+    '2nd-officer': [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03', 'imo-1.14',
+        'imo-oow-nav', 'imo-1.07', 'imo-1.27', 'imo-1.22',
+        'imo-1.25',
+    ],
+    '3rd-officer': [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03',
+        'imo-oow-nav', 'imo-1.27',
+    ],
+    'chief-engineer': [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03', 'imo-1.14',
+        'imo-oow-eng', 'imo-2.07',
+        'imo-7.02', 'imo-1.15', 'imo-leadership',
+    ],
+    '2nd-engineer': [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03',
+        'imo-oow-eng', 'imo-2.07',
+        'imo-7.02', 'imo-leadership',
+    ],
+    electrician: [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23', 'imo-2.03',
+        'imo-eto', 'imo-etr',
+    ],
+    bosun: [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23',
+        'imo-7.15', 'imo-7.03r',
+    ],
+    ab: [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27', 'imo-1.23',
+        'imo-7.15', 'imo-7.03r',
+    ],
+    cook: [
+        'imo-1.19', 'imo-1.20', 'imo-1.13', 'imo-1.21', 'imo-3.27',
+        'imo-1.33',
+    ],
+};
+
+module.exports = { EXAMS, STCW_LEVELS, EXAM_DEPARTMENTS, RANK_REQUIRED_EXAMS };

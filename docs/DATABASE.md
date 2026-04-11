@@ -19,65 +19,83 @@ PostgreSQL (leto_db)              Filesystem (User database/)
 ## Entity Relationship Diagram
 
 ```
-                         ┌──────────────────────┐
-                         │       users           │
-                         │ (authentication)      │
-                         ├──────────────────────┤
-                         │ id          UUID PK   │
-                         │ email       unique     │
-                         │ hashed_pw   string     │
-                         │ role        enum       │
-                         │ company_id  FK ──────────────┐
-                         │ created_at  timestamp  │     │
-                         └──────────┬─────────────┘     │
-                                    │                    │
-                     role = ?       │                    │
-                                    │                    │
-              ┌─────────────────────┴──────┐             │
-              │                            │             │
-         "seafarer"                   "company"          │
-              │                            │             │
-   ┌──────────┴──────────┐    ┌────────────┴──────────┐  │
-   │     seafarers       │    │      companies        │◄─┘
-   │  (crew profiles)    │    │  (business profiles)  │
-   ├─────────────────────┤    ├───────────────────────┤
-   │ id        FK→users  │    │ id          UUID PK   │
-   │ first_name string   │    │ name        string    │
-   │ last_name  string   │    │ ruc         string    │
-   │ nationality string  │    │ country     string    │
-   │ phone      string   │    │ city        string    │
-   │ rank       string   │    │ address     string    │
-   │ date_of_birth date  │    │ website     string    │
-   │ years_exp  int      │    │ sector      string    │
-   │ bio        text     │    │ company_size string   │
-   │ is_available bool   │    │ contact_email string  │
-   │ created_at ts       │    │ fleet_size  int       │
-   └─────────────────────┘    │ is_verified bool      │
-                              │                       │
-                              │ legal_rep_name  str   │
-                              │ legal_rep_phone str   │
-                              │ legal_rep_email str   │
-                              │ hr_rep_name     str   │
-                              │ hr_rep_phone    str   │
-                              │ hr_rep_email    str   │
-                              │ created_at      ts    │
-                              └───────────┬───────────┘
-                                          │
-                                     1 : many
-                                          │
-                              ┌───────────┴───────────┐
-                              │       vessels         │
-                              │  (fleet registry)     │
-                              ├───────────────────────┤
-                              │ id          UUID PK   │
-                              │ company_id  FK→co.    │
-                              │ name        string    │
-                              │ imo_number  string    │
-                              │ vessel_type string    │
-                              │ flag_state  string    │
-                              │ gross_tonnage int     │
-                              │ created_at  ts        │
-                              └───────────────────────┘
+          ┌─────────────────────────────┐
+          │            users            │
+          │      (authentication)       │
+          ├─────────────────────────────┤
+          │ id              string PK   │
+          │ email           unique      │
+          │ hashed_password string      │
+          │ role            enum        │
+          │ company_id      string?     │
+          │ is_active       bool        │
+          │ created_at      timestamptz │
+          │ updated_at      timestamptz │
+          └─────────────┬───────────────┘
+                  │
+         role = seafarer   │  role = company
+                  │
+         ┌─────────────────┘
+         │
+    ┌──────────▼──────────┐
+    │      seafarers      │
+    │   (crew profiles)   │
+    ├─────────────────────┤
+    │ id        PK, FK→users.id │
+    │ first_name       string   │
+    │ last_name        string   │
+    │ nationality      string?  │
+    │ date_of_birth    date?    │
+    │ phone            string?  │
+    │ rank             string?  │
+    │ years_experience int      │
+    │ bio              string?  │
+    │ is_available     bool     │
+    │ created_at       timestamptz │
+    └────────────────────────────┘
+
+   users.company_id (logical link)
+      │
+      ▼
+   ┌──────────────────────────┐
+   │         companies        │
+   │    (business profiles)   │
+   ├──────────────────────────┤
+   │ id              string PK│
+   │ name            string   │
+   │ ruc             string?  │
+   │ country         string?  │
+   │ city            string?  │
+   │ address         string?  │
+   │ website         string?  │
+   │ sector          string?  │
+   │ company_size    string?  │
+   │ contact_email   unique   │
+   │ fleet_size      int      │
+   │ is_verified     bool     │
+   │ legal_rep_name  string?  │
+   │ legal_rep_phone string?  │
+   │ legal_rep_email string?  │
+   │ hr_rep_name     string?  │
+   │ hr_rep_phone    string?  │
+   │ hr_rep_email    string?  │
+   │ created_at      timestamptz │
+   └───────────────┬──────────┘
+          │ 1 : many
+          ▼
+      ┌─────────────────────┐
+      │       vessels       │
+      │   (fleet registry)  │
+      ├─────────────────────┤
+      │ id            string PK │
+      │ company_id    FK→companies.id │
+      │ name          string      │
+      │ imo_number    string?     │
+      │ vessel_type   string?     │
+      │ flag_state    string?     │
+      │ gross_tonnage int?        │
+      │ created_at    timestamptz │
+      └───────────────────────────┘
 ```
 
 ---
@@ -237,17 +255,17 @@ GET  /crewing-api/users/{UUID}/settings → rank, preferences
 ### Company login flow
 ```
 POST /api/auth/login → JWT token
-GET  /api/auth/me    → { id, email, role, company_id }
+GET  /api/auth/me    → { id, email, role, company_id, company_name }
                        (JOINs users + companies for company data)
-GET  /api/companies/{id} → full company profile + fleet (FUTURE)
-GET  /api/companies/{id}/vessels → list of vessels (FUTURE)
+GET  /api/companies/{id}/vessels → list of vessels (IMPLEMENTED)
+POST /api/companies/{id}/vessels → add vessel to fleet (IMPLEMENTED)
 ```
 
 ### Company viewing crew
 ```
 The crewing module's Crew Database (#/company-crewdb) reads from
-Stremio Core's mock data (crewData.js). In the future, this will
-query real seafarer profiles from PostgreSQL.
+the backend endpoint `GET /api/companies/{company_id}/crew`, which
+returns real PostgreSQL-backed seafarer profiles for that company.
 ```
 
 ---
@@ -261,9 +279,9 @@ DATABASE_URL: postgresql://leto_user:leto_pass@postgres:5432/leto_db
 # backend/app/core/config.py
 class Settings:
     DATABASE_URL: str = "postgresql://leto_user:leto_pass@postgres:5432/leto_db"
-    JWT_SECRET: str = "..."
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+  SECRET_KEY: str = "change-me"
+  ALGORITHM: str = "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 ```
 
@@ -271,23 +289,25 @@ class Settings:
 
 ## Roadmap
 
-### Phase 1 — Current session (v0.5.x)
+### Phase 1 — Core foundations
 - [x] `users` table with JWT auth
 - [x] `seafarers` table with profile data
-- [x] `companies` table (basic: name, contact_email)
-- [ ] Expand `companies` table (ruc, address, reps, sector, size)
-- [ ] Create `vessels` table
-- [ ] Company registration flow (4-step modal)
-- [ ] Company-specific `/me` response with company data
+- [x] `companies` table (expanded fields: legal/HR reps, sector, size, address)
+- [x] `vessels` table
+- [x] Company registration flow (4-step modal)
+- [x] Company-specific `/me` response with company data (`company_id`, `company_name`)
+- [x] `GET /api/companies/{id}/vessels`
+- [x] `POST /api/companies/{id}/vessels`
 
-### Phase 2 — Role-based views
-- [ ] Separate sidebar tabs by role (company vs seafarer)
-- [ ] Company dashboard with fleet overview + crew stats
-- [ ] Company profile page (editable, like My Profile for seafarers)
-- [ ] Crew Database reads from real PostgreSQL seafarer profiles (not mock data)
+### Phase 2 — Role-based product views
+- [x] Separate sidebar tabs by role (company vs seafarer)
+- [x] Company dashboard with fleet overview
+- [x] Company profile page (`#/my-profile`) with fleet management
+- [x] Seafarer dashboard home with compliance and exam priorities
+- [x] Crew Database reads from real PostgreSQL seafarer profiles
 
 ### Phase 3 — Crew management
-- [ ] `assignments` table — link seafarers to vessels with embark/disembark dates
+- [x] `assignments` table — link seafarers to vessels with embark/disembark dates
 - [ ] Contract management (offers, acceptances, rotations)
 - [ ] Crew change planning calendar
 - [ ] Vessel-specific crew requirements (by GT and vessel type)
@@ -306,3 +326,34 @@ class Settings:
 - [ ] Email service (SendGrid/SES) for notifications
 - [ ] File storage migration (local → GCS/S3)
 - [ ] API rate limiting + audit logging
+
+---
+
+## Current State (2026-04-10)
+
+### Data stores currently running
+
+- PostgreSQL 15 (`postgres` Docker service) for auth, profiles, fleet, and assignments
+- Filesystem JSON store (`User database/`) mounted into `crewing` for operational module data (calendar, myfiles, myexams, settings/mobility)
+
+### Confirmed implemented database-facing capabilities
+
+- JWT auth with access + refresh tokens backed by PostgreSQL users table
+- Full seafarer profile persistence: rank, city, bio, years_experience, languages, vessels_worked, companies_worked, is_available
+- `/api/auth/me` returns full profile including nationality, phone, city, bio, tag fields
+- `PATCH /api/seafarers/me` for partial profile updates (all editable fields)
+- `POST /api/auth/refresh` for token refresh on 401
+- Company fleet persistence in PostgreSQL vessels table
+- Assignment CRUD (create, list, update, delete) for vessel↔seafarer linking
+- Per-user operational folders for myfiles/calendar/myexams/dashboard/settings
+- UUID-isolated document metadata and file serving via `/crewing-api`
+- Bulk mobility summary endpoint `/crewing-api/users/mobility-summary` for recruiter filtering
+- STCW matrix engine: universal + rank + conditional requirements, compliance evaluation
+- Rank-based exam filtering in My Exams via `RANK_REQUIRED_EXAMS` mapping
+
+### Still pending in database domain
+
+- Vessel edit/delete endpoints
+- Assignment editing UX in crewing module (role/dates/status via PATCH)
+- CompanyProfile extra fields migration from localStorage to DB
+- Full i18n translation pass (mixed English/Spanish strings)

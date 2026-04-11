@@ -19,9 +19,6 @@
  * ║  3. Stores JWT + user in Zustand (authStore)                        ║
  * ║  4. Navigates to /dashboard                                         ║
  * ║                                                                      ║
- * ║  DEMO ACCOUNT:                                                       ║
- * ║  Email: demo@leto.com  |  Password: Demo1234!                       ║
- * ║                                                                      ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 

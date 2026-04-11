@@ -15,35 +15,35 @@ const styles = require('./styles');
 
 // PBS Crewing Module: corporate default profile image for all cards
 const CREW_DEFAULT_POSTER = 'images/profileimg.png';
-const { getCrewName, getCrewDepartment, getCrewRank, getCrewNationality, getCrewFlagPath } = require('leto/common/crewData');
+const { getCrewFlagPath } = require('leto/common/crewData');
 const { togglePendingInterview, isPendingInterview } = require('leto/common/crewStore');
 
-const MetaItem = React.memo(({ className, type, name, poster, posterShape, posterChangeCursor, progress, newVideos, options, deepLinks, dataset, optionOnSelect, onDismissClick, onPlayClick, watched, ...props }) => {
+const MetaItem = React.memo(({ className, type, name, department, rank, nationality, crewId, poster, posterShape, posterChangeCursor, progress, newVideos, options, deepLinks, dataset, optionOnSelect, onDismissClick, onPlayClick, watched, ...props }) => {
     const { t } = useTranslation();
     const [menuOpen, onMenuOpen, onMenuClose] = useBinaryState(false);
-    const crewName = React.useMemo(() => getCrewName(name), [name]);
-    const crewDepartment = React.useMemo(() => getCrewDepartment(name), [name]);
-    const crewRank = React.useMemo(() => getCrewRank(name), [name]);
-    const crewNationality = React.useMemo(() => getCrewNationality(name), [name]);
+    const crewName = React.useMemo(() => (typeof name === 'string' ? name : ''), [name]);
+    const crewDepartment = React.useMemo(() => (typeof department === 'string' ? department : ''), [department]);
+    const crewRank = React.useMemo(() => (typeof rank === 'string' ? rank : ''), [rank]);
+    const crewNationality = React.useMemo(() => (typeof nationality === 'string' ? nationality : ''), [nationality]);
     const crewFlagSrc = React.useMemo(() => getCrewFlagPath(crewNationality), [crewNationality]);
-    const crewId = name || '';
-    const [addedToList, setAddedToList] = React.useState(() => isPendingInterview(crewId));
+    const pendingCrewId = React.useMemo(() => (typeof crewId === 'string' && crewId.length > 0 ? crewId : crewName), [crewId, crewName]);
+    const [addedToList, setAddedToList] = React.useState(() => isPendingInterview(pendingCrewId));
     // Listen for sync events from the detail panel button
     React.useEffect(() => {
         const handler = (e) => {
-            if (e.detail && e.detail.id === crewId) setAddedToList(e.detail.added);
+            if (e.detail && e.detail.id === pendingCrewId) setAddedToList(e.detail.added);
         };
         window.addEventListener('pbs-pending-changed', handler);
         return () => window.removeEventListener('pbs-pending-changed', handler);
-    }, [crewId]);
+    }, [pendingCrewId]);
     const onAddToList = React.useCallback((event) => {
         event.preventDefault();
         event.stopPropagation();
         event.nativeEvent.selectPrevented = true;
-        const crew = { id: crewId, name: crewName, department: crewDepartment, rank: crewRank, nationality: crewNationality };
+        const crew = { id: pendingCrewId, name: crewName, department: crewDepartment, rank: crewRank, nationality: crewNationality };
         const nowAdded = togglePendingInterview(crew);
         setAddedToList(nowAdded);
-    }, [crewId, crewName, crewDepartment, crewRank, crewNationality]);
+    }, [pendingCrewId, crewName, crewDepartment, crewRank, crewNationality]);
     const href = React.useMemo(() => {
         return deepLinks ?
             typeof deepLinks.player === 'string' ?
@@ -239,6 +239,10 @@ MetaItem.propTypes = {
     className: PropTypes.string,
     type: PropTypes.string,
     name: PropTypes.string,
+    department: PropTypes.string,
+    rank: PropTypes.string,
+    nationality: PropTypes.string,
+    crewId: PropTypes.string,
     poster: PropTypes.string,
     posterShape: PropTypes.oneOf(['poster', 'landscape', 'square']),
     posterChangeCursor: PropTypes.bool,

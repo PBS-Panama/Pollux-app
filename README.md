@@ -15,11 +15,11 @@ docker compose up --build -d
 
 Open **http://localhost:3000**
 
-### Demo Account
+### Test Accounts
 
 ```
-Email:    demo@leto.com
-Password: Demo1234!
+Company:  demobis@leto.com / Dev12345!
+Seafarer: qa.seafarer@leto.com / Crew1234!
 ```
 
 ## Architecture
@@ -37,8 +37,8 @@ localhost:3000
 | Service | Stack | Purpose |
 |---|---|---|
 | **nginx** | Nginx Alpine | Reverse proxy, single entry point |
-| **postgres** | PostgreSQL 15 | User accounts, auth data |
-| **backend** | Python 3.11 + FastAPI | JWT authentication, user management |
+| **postgres** | PostgreSQL 15 | Users, profiles, fleet, assignments |
+| **backend** | Python 3.11 + FastAPI | JWT auth, seafarer profiles, fleet + crew management |
 | **frontend** | Node 20 + Vite + Tailwind | Landing page, login/register modals |
 | **crewing** | Node 20 + Webpack + Express | Crew management module (documents, calendar, exams) |
 
@@ -46,10 +46,11 @@ localhost:3000
 
 Login on the landing page authenticates across the entire platform via shared `localStorage`:
 
-1. `POST /api/auth/login` → JWT tokens
-2. `GET /api/auth/me` → user profile (name, rank, date of birth)
-3. `localStorage['leto-user']` bridges identity to the crewing module iframe
-4. Same origin (`localhost:3000`) = same `localStorage` = seamless auth
+1. `POST /api/auth/login` → JWT access + refresh tokens
+2. `GET /api/auth/me` → full user profile (name, rank, nationality, city, bio, tag fields)
+3. `POST /api/auth/refresh` → token renewal on 401
+4. `localStorage['leto-user']` bridges identity to the crewing module iframe
+5. Same origin (`localhost:3000`) = same `localStorage` = seamless auth
 
 See [docs/AUTH-FLOW.md](docs/AUTH-FLOW.md) for the full diagram.
 
@@ -65,6 +66,8 @@ Leto/
 ├── docs/                       # Architecture docs + session logs
 │   ├── AUTH-FLOW.md            # Identity bridge documentation
 │   ├── CREWING-MODULE.md       # Full crewing module reference
+│   ├── DATABASE.md             # Entity relationships, API endpoints, roadmap
+│   ├── ROADMAP.md              # Full product roadmap from investor feedback
 │   ├── STRUCTURE.md            # Complete file tree
 │   └── sessions/               # Development session logs
 ├── User database/              # Filesystem DB (per-user folders by UUID)
@@ -77,23 +80,25 @@ See [docs/STRUCTURE.md](docs/STRUCTURE.md) for the complete file tree.
 ## Key Features
 
 ### Seafarer Side
-- **Dashboard** (`#/company-dashboard`) — Welcome view with compliance progress, missing docs, and exam priorities
-- **My Profile** (`#/my-profile`) — Editable profile with languages, vessels, companies, about me
-- **My Files** (`#/myfiles`) — Upload and manage STCW documents with expiry tracking
+- **Dashboard** (`#/dashboard`) — Compliance progress, travel blocks, missing docs, exam priorities
+- **My Profile** (`#/my-profile`) — Full profile: career (rank, years, availability), mobility (passports, visa, travel), languages, vessels, companies, bio. All backed by PostgreSQL
+- **My Files** (`#/myfiles`) — Upload STCW documents with expiry tracking, pre-upload quality reminder, document rules per type
 - **My Calendar** (`#/calendar`) — Availability periods (embarking, days off, available)
-- **My Exams** (`#/myexams`) — STCW exam booking with department/level filters
-- **Compliance Banner** — Real-time document compliance status per rank
+- **My Exams** (`#/myexams`) — STCW exam catalog with rank-based filtering. "My rank" toggle shows only required exams with REQUIRED badges
+- **Compliance Banner** — Real-time document compliance + STCW matrix (travel blocks, certification window)
 
 ### Company Side
-- **Dashboard** (`#/company-dashboard`) — Welcome view with fleet overview and quick actions
-- **Crew Database** (`#/company-crewdb`) — Browse and search crew profiles
+- **Dashboard** (`#/company-dashboard`) — Fleet overview with vessel type icons
+- **Crew Database** (`#/company-crewdb`) — Browse real seafarer profiles from PostgreSQL. Filter by department, rank, nationality, and visa/mobility status
+- **My Profile** (`#/my-profile`) — Fleet management with vessel cards, Crew Manager modal for vessel↔seafarer assignments
 - **Company Calendar** (`#/company-calendar`) — Schedule interviews, manage events
-- **Interview System** — Book interviews, track confirmations
 
 ### Platform
-- **JWT Authentication** — Secure login with access/refresh tokens
-- **UUID Isolation** — Each user has their own data folder
-- **STCW Compliance Matrix** — 28+ required documents per rank
+- **JWT Authentication** — Access + refresh tokens, 401 auto-retry
+- **PATCH /api/seafarers/me** — Full seafarer profile editing (rank, city, bio, tag fields, availability)
+- **STCW Compliance Matrix** — Universal + rank-required + conditional (visa, passport) document requirements
+- **Rank-based exam requirements** — `RANK_REQUIRED_EXAMS` mapping for all 10 STCW ranks
+- **UUID Isolation** — Each user has their own data folder for operational modules
 - **Swagger API Docs** — Available at `/api/docs`
 
 ## Development
@@ -112,6 +117,24 @@ docker compose up -d --build crewing nginx
 
 # Rebuild only the frontend (after changes in /frontend/)
 docker compose build --no-cache frontend && docker compose up -d frontend
+
+# Seed realistic dev Crew DB data (company + seafarers + vessels)
+powershell -ExecutionPolicy Bypass -File .\scripts\seed-dev-data.ps1
+
+# This also seeds QA calendar availability data for qa.seafarer@leto.com
+
+# Optional: run same script with custom config file
+powershell -ExecutionPolicy Bypass -File .\scripts\seed-dev-data.ps1 -ConfigPath .\scripts\seed-dev-data.json
+
+# Optional: seed users/vessels only (skip assignments)
+powershell -ExecutionPolicy Bypass -File .\scripts\seed-dev-data.ps1 -SkipAssignments
+
+# Seed login credentials (for QA)
+# Company: demobis@leto.com / Dev12345!
+# Seafarer: qa.seafarer@leto.com / Crew1234!
+
+# Cleanup seeded fake data (including user calendar files in User database/)
+powershell -ExecutionPolicy Bypass -File .\scripts\clear-dev-seed-data.ps1
 
 # View logs
 docker logs leto-crewing-1 -f

@@ -7,6 +7,7 @@ const { default: Button } = require('leto/components/Button');
 const { MainNavBars } = require('leto/components');
 const { default: Placeholder } = require('./Placeholder');
 const { getExpiryStatus, getComplianceStatus } = require('leto/common/crewDocData');
+const { getDocumentRules, evaluateStcwMatrix } = require('leto/common/stcwMatrix');
 const api = require('leto/common/apiClient');
 const useDocumentUpload = require('./useDocumentUpload');
 const styles = require('./styles');
@@ -82,26 +83,46 @@ const Library = () => {
 
     // ── Compliance: rank-based document requirements ──────────────────
     const [userRank, setUserRank] = React.useState(null);
+    const [settingsData, setSettingsData] = React.useState(null);
     const [compliance, setCompliance] = React.useState(null); // { missing, expiring, expired, compliant }
+    const [matrixStatus, setMatrixStatus] = React.useState(null);
     const [bannerVisible, setBannerVisible] = React.useState(false);
+    const [showUploadReminder, setShowUploadReminder] = React.useState(false);
+    const [reminderAccepted, setReminderAccepted] = React.useState({ quality: false, rules: false });
 
-    // Fetch rank and compute compliance whenever uploaded docs change
+    // Fetch rank/settings and compute compliance whenever uploads change.
     React.useEffect(() => {
         let cancelled = false;
         (async () => {
             try {
-                const data = await api.getSettings(api.getUserId());
-                if (cancelled) return;
-                const rank = data?.rank || null;
-                setUserRank(rank);
-                if (rank) {
-                    const status = getComplianceStatus(rank, uploadedDocs);
-                    setCompliance(status);
-                    setBannerVisible(true);
-                    // Auto-hide green banner after 3s
-                    if (status.compliant && status.expiring.length === 0) {
-                        setTimeout(() => { if (!cancelled) setBannerVisible(false); }, 3000);
+                const userId = api.getUserId();
+                if (!userId) {
+                    // No userId yet — still evaluate matrix with no rank for universal requirements.
+                    const matrix = evaluateStcwMatrix(null, uploadedDocs, {});
+                    if (!cancelled) {
+                        setMatrixStatus(matrix);
+                        if (matrix.blockers.length > 0) setBannerVisible(true);
                     }
+                    return;
+                }
+                const data = await api.getSettings(userId);
+                if (cancelled) return;
+                setSettingsData(data || null);
+                // Rank may be in settings.rank (crewing FS) or in leto-user (PostgreSQL mirror).
+                // Use the first non-null source.
+                let rank = data?.rank || null;
+                if (!rank) {
+                    try { rank = JSON.parse(localStorage.getItem('leto-user') || '{}').rank || null; } catch { /* silent */ }
+                }
+                setUserRank(rank);
+                const status = getComplianceStatus(rank, uploadedDocs);
+                setCompliance(status);
+                const matrix = evaluateStcwMatrix(rank, uploadedDocs, data || {});
+                setMatrixStatus(matrix);
+                setBannerVisible(true);
+                // Auto-hide green banner after 3s
+                if (status.compliant && status.expiring.length === 0 && matrix.blockers.length === 0) {
+                    setTimeout(() => { if (!cancelled) setBannerVisible(false); }, 3000);
                 }
             } catch (_) { /* API not available */ }
         })();
@@ -142,6 +163,10 @@ const Library = () => {
 
     React.useEffect(() => { setDocFilter(''); setStagedFile(null); setShowRotateModal(false); setPreviewRotation(0); }, [selectedCategory]);
     React.useEffect(() => { setStagedFile(null); setShowRotateModal(false); setPreviewRotation(0); }, [selectedDocName]);
+    React.useEffect(() => {
+        setReminderAccepted({ quality: false, rules: false });
+        setShowUploadReminder(false);
+    }, [selectedDocName, stagedFile]);
 
     const onDragOver = React.useCallback((e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }, []);
     const onDragLeave = React.useCallback((e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }, []);
@@ -158,7 +183,7 @@ const Library = () => {
         if (e.target.files && e.target.files.length > 0) { setStagedFile(e.target.files[0]); e.target.value = ''; }
     }, []);
 
-    const onSave = React.useCallback(async () => {
+    const proceedSave = React.useCallback(async () => {
         if (!selectedDocName) return;
 
         if (hasFileInDb && !stagedFile) {
@@ -171,11 +196,7 @@ const Library = () => {
                 if (finalExpiry !== undefined) updates.expiryDate = finalExpiry;
                 if (validity !== undefined) updates.validityYears = validity;
 
-                const updated = await api.updateUploadMeta(api.getUserId(), selectedDocRecord.id, updates);
-                // Refresh local state
-                const result = await api.getUploads(api.getUserId());
-                // We can't call setUploadedDocs directly from here — trigger via addUpload's parent
-                // Instead, reload the page data
+                await api.updateUploadMeta(api.getUserId(), selectedDocRecord.id, updates);
                 window.dispatchEvent(new CustomEvent('pbs-uploads-changed'));
             } catch (err) {
                 console.error('Update failed:', err);
@@ -183,7 +204,6 @@ const Library = () => {
         } else if (stagedFile) {
             // New upload or replace existing
             if (hasFileInDb) {
-                // Remove old file first, then upload new
                 await removeUpload(selectedDocRecord.id);
             }
             await addUpload(stagedFile);
@@ -193,7 +213,29 @@ const Library = () => {
         setStagedFile(null);
         setPreviewKey((k) => k + 1);
         setTimeout(() => setSavedDocName(null), 3000);
-    }, [stagedFile, selectedDocName, addUpload, hasFileInDb, selectedDocRecord, removeUpload, issuedDate, expiryDate, noExpiry]);
+    }, [
+        selectedDocName,
+        hasFileInDb,
+        stagedFile,
+        noExpiry,
+        expiryDate,
+        issuedDate,
+        selectedDocRecord,
+        removeUpload,
+        addUpload,
+    ]);
+
+    const onSave = React.useCallback(async () => {
+        if (!selectedDocName) return;
+
+        // For fresh file uploads, enforce pre-upload regulation reminder acceptance.
+        if (stagedFile && !(reminderAccepted.quality && reminderAccepted.rules)) {
+            setShowUploadReminder(true);
+            return;
+        }
+
+        await proceedSave();
+    }, [selectedDocName, stagedFile, reminderAccepted, proceedSave]);
 
     const onRemove = React.useCallback(async () => {
         if (!selectedDocRecord) return;
@@ -246,20 +288,25 @@ const Library = () => {
         electrician: 'Electricista', bosun: 'Contramaestre', ab: 'Marinero AB', cook: 'Cocinero Jefe',
     };
     const rankLabel = userRank ? RANK_LABELS[userRank] || userRank : '';
-    const isGreen = compliance && compliance.compliant && compliance.expiring.length === 0;
-    const isYellow = compliance && compliance.compliant && compliance.expiring.length > 0;
-    const isRed = compliance && !compliance.compliant;
+    const travelBlocks = matrixStatus ? matrixStatus.blockers.length : 0;
+    const certWindow90 = matrixStatus ? matrixStatus.certificationWindow.expiring90 : 0;
+    const certExpired = matrixStatus ? matrixStatus.certificationWindow.expired : 0;
+    const hasMatrixIssues = travelBlocks > 0 || certWindow90 > 0 || certExpired > 0;
+    const isGreen = compliance && compliance.compliant && compliance.expiring.length === 0 && !hasMatrixIssues;
+    const isYellow = (compliance && compliance.compliant && compliance.expiring.length > 0) || (certWindow90 > 0);
+    const isRed = (compliance && !compliance.compliant) || travelBlocks > 0;
     const bannerBgColor = isRed ? 'rgba(231,76,60,0.13)' : isYellow ? 'rgba(241,196,15,0.10)' : 'rgba(46,204,113,0.10)';
     const bannerBorderColor = isRed ? 'rgba(231,76,60,0.4)' : isYellow ? 'rgba(241,196,15,0.4)' : 'rgba(46,204,113,0.4)';
     const bannerTextColor = isRed ? '#e74c3c' : isYellow ? '#f1c40f' : '#2ecc71';
     const bannerIcon = isRed ? '🔴' : isYellow ? '🟡' : '✅';
+    const currentDocRules = React.useMemo(() => getDocumentRules(selectedDocName), [selectedDocName]);
 
     return (
         <MainNavBars className={styles['library-container']} route={'myfiles'}>
             <div className={styles['library-content']} style={{ flexDirection: 'column' }}>
 
                 {/* ── Compliance Alert Banner (full-width, above the row) ── */}
-                {bannerVisible && compliance && userRank && (
+                {bannerVisible && (compliance || matrixStatus) && (
                     <div style={{
                         flexShrink: 0,
                         margin: '0.6rem 1rem 0',
@@ -300,9 +347,16 @@ const Library = () => {
                                     )}
                                 </span>
                             )}
-                            {isYellow && (
+                            {isYellow && compliance && (
                                 <span style={{ color: '#f1c40f' }}>
                                     {compliance.expiring.length} documento{compliance.expiring.length !== 1 ? 's' : ''} por expirar pronto
+                                </span>
+                            )}
+                            {matrixStatus && (travelBlocks > 0 || certWindow90 > 0 || certExpired > 0) && (
+                                <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem' }}>
+                                    {travelBlocks > 0 && <span style={{ color: '#00d2d3' }}> · {travelBlocks} travel block{travelBlocks !== 1 ? 's' : ''}</span>}
+                                    {certWindow90 > 0 && <span style={{ color: '#f1c40f' }}> · {certWindow90} expiring within 90d</span>}
+                                    {certExpired > 0 && <span style={{ color: '#e74c3c' }}> · {certExpired} expired</span>}
                                 </span>
                             )}
                         </div>
@@ -468,6 +522,24 @@ const Library = () => {
                                 )}
                             </div>
 
+                            {selectedDocName && currentDocRules.length > 0 ? (
+                                <div style={{
+                                    padding: '0.55rem 0.7rem',
+                                    borderRadius: '7px',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    background: 'rgba(255,255,255,0.03)',
+                                }}>
+                                    <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.74rem', marginBottom: '0.35rem' }}>
+                                        Upload rules: {selectedDocName}
+                                    </div>
+                                    {currentDocRules.map((rule) => (
+                                        <div key={rule} style={{ color: '#9ab', fontSize: '0.72rem', lineHeight: 1.45 }}>
+                                            • {rule}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+
                             {/* Buttons row: SAVE + REMOVE */}
                             <div style={{ display: 'flex', gap: '0.75rem', flex: 'none' }}>
                                 <button type="button" onClick={onSave} disabled={!canSave}
@@ -615,6 +687,78 @@ const Library = () => {
                                                     cursor: !rotating ? 'pointer' : 'not-allowed',
                                                 }}>
                                                 {rotating ? 'Applying...' : 'Save Rotation'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {/* Pre-upload Reminder Modal */}
+                            {showUploadReminder && stagedFile ? (
+                                <div style={{
+                                    position: 'fixed', inset: 0, zIndex: 1001,
+                                    background: 'rgba(0,0,0,0.75)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <div style={{
+                                        width: 'min(42rem, 92vw)',
+                                        background: '#13233f',
+                                        border: '1px solid rgba(255,255,255,0.12)',
+                                        borderRadius: '10px',
+                                        padding: '1rem',
+                                    }}>
+                                        <div style={{ color: '#fff', fontWeight: 700, marginBottom: '0.35rem' }}>Before upload: quality and requirements</div>
+                                        <div style={{ color: '#9ab', fontSize: '0.8rem', marginBottom: '0.55rem' }}>
+                                            Document: {selectedDocName || 'N/A'} · File: {stagedFile.name}
+                                        </div>
+                                        <div style={{ marginBottom: '0.65rem' }}>
+                                            {currentDocRules.map((rule) => (
+                                                <div key={rule} style={{ color: '#d2dbe5', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                                                    • {rule}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <label style={{ display: 'flex', gap: '0.5rem', color: '#d2dbe5', fontSize: '0.78rem', marginBottom: '0.35rem' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={reminderAccepted.quality}
+                                                onChange={(e) => setReminderAccepted((prev) => ({ ...prev, quality: e.target.checked }))}
+                                            />
+                                            I confirm the file quality is readable and complete.
+                                        </label>
+                                        <label style={{ display: 'flex', gap: '0.5rem', color: '#d2dbe5', fontSize: '0.78rem', marginBottom: '0.8rem' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={reminderAccepted.rules}
+                                                onChange={(e) => setReminderAccepted((prev) => ({ ...prev, rules: e.target.checked }))}
+                                            />
+                                            I confirm this document meets the listed requirements.
+                                        </label>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowUploadReminder(false)}
+                                                style={{ ...btnBase, flex: 'none', padding: '0.45rem 1rem', background: 'rgba(255,255,255,0.08)', color: '#b7c2ce', border: '1px solid rgba(255,255,255,0.15)' }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={!(reminderAccepted.quality && reminderAccepted.rules)}
+                                                onClick={async () => {
+                                                    await proceedSave();
+                                                    setShowUploadReminder(false);
+                                                }}
+                                                style={{
+                                                    ...btnBase,
+                                                    flex: 'none',
+                                                    padding: '0.45rem 1rem',
+                                                    background: reminderAccepted.quality && reminderAccepted.rules ? '#2ecc71' : 'rgba(255,255,255,0.08)',
+                                                    color: reminderAccepted.quality && reminderAccepted.rules ? '#000' : '#667',
+                                                    cursor: reminderAccepted.quality && reminderAccepted.rules ? 'pointer' : 'not-allowed',
+                                                }}
+                                            >
+                                                Confirm and Upload
                                             </button>
                                         </div>
                                     </div>

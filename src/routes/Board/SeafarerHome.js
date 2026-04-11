@@ -5,6 +5,7 @@ const React = require('react');
 const { default: Button } = require('leto/components/Button');
 const api = require('leto/common/apiClient');
 const { RANK_REQUIRED_DOCS, getComplianceStatus } = require('leto/common/crewDocData');
+const { evaluateStcwMatrix } = require('leto/common/stcwMatrix');
 
 const getLetoUser = () => {
     try {
@@ -67,11 +68,13 @@ const SeafarerHome = () => {
     const rank = settings?.rank || user?.rank || null;
     const requiredDocs = React.useMemo(() => RANK_REQUIRED_DOCS[rank] || [], [rank]);
     const compliance = React.useMemo(() => getComplianceStatus(rank, uploads), [rank, uploads]);
+    const matrix = React.useMemo(() => evaluateStcwMatrix(rank, uploads, settings), [rank, uploads, settings]);
 
     const totalRequired = requiredDocs.length;
     const totalMissing = compliance.missing.length;
     const totalExpired = compliance.expired.length;
     const totalExpiring = compliance.expiring.length;
+    const totalBlockers = matrix.blockers.length;
     const completed = Math.max(0, totalRequired - totalMissing);
     const completionPct = totalRequired > 0 ? Math.round((completed / totalRequired) * 100) : 0;
 
@@ -102,7 +105,7 @@ const SeafarerHome = () => {
                 <StatCard label={'Completion'} value={`${completionPct}%`} hint={`${completed}/${totalRequired || 0} required docs`} accent={progressColor} />
                 <StatCard label={'Missing'} value={String(totalMissing)} hint={'Documents not uploaded'} accent={'#f39c12'} />
                 <StatCard label={'Expired'} value={String(totalExpired)} hint={'Need immediate renewal'} accent={'#e74c3c'} />
-                <StatCard label={'Exams To Take'} value={String(missingImoExams.length)} hint={'Missing IMO-related docs'} accent={'#00d2d3'} />
+                <StatCard label={'Travel blocks'} value={String(totalBlockers)} hint={'Mobility / docs readiness blockers'} accent={'#00d2d3'} />
             </div>
 
             <div style={{ marginBottom: '1.5rem', padding: '1rem 1.2rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -131,6 +134,8 @@ const SeafarerHome = () => {
                     <Line label={'Missing'} value={`${totalMissing} document(s)`} valueColor={'#f39c12'} />
                     <Line label={'Expired'} value={`${totalExpired} document(s)`} valueColor={'#e74c3c'} />
                     <Line label={'Expiring soon'} value={`${totalExpiring} document(s)`} valueColor={'#f1c40f'} />
+                    <Line label={'Certification window (90d)'} value={`${matrix.certificationWindow.expiring90} document(s)`} valueColor={'#f1c40f'} />
+                    <Line label={'Travel blocks'} value={`${totalBlockers} item(s)`} valueColor={'#00d2d3'} />
                     <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem' }}>
                         <QuickLink href={'#/myfiles'} label={'Go to My Files'} />
                         <QuickLink href={'#/my-profile'} label={'Open My Profile'} />

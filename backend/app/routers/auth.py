@@ -1,13 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token
+from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.deps import get_current_user
 from app.models.user import User, UserRole
 from app.models.seafarer import Seafarer
 from app.models.company import Company
 from app.models.vessel import Vessel
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserResponse
+from pydantic import BaseModel
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 router = APIRouter()
 
@@ -37,9 +42,12 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
             first_name=payload.first_name or "",
             last_name=payload.last_name or "",
             nationality=payload.nationality,
+            city=payload.city,
             phone=payload.phone,
             rank=payload.rank,
             date_of_birth=payload.date_of_birth,
+            years_experience=payload.years_experience or 0,
+            bio=payload.bio,
         )
         db.add(seafarer)
 
@@ -97,6 +105,18 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     )
 
 
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(payload: RefreshRequest):
+    data = decode_token(payload.refresh_token)
+    if not data or data.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    token_data = {"sub": data.get("sub"), "role": data.get("role"), "company_id": data.get("company_id")}
+    return TokenResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     seafarer = db.query(Seafarer).filter(Seafarer.id == current_user.id).first()
@@ -111,5 +131,14 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
         first_name=seafarer.first_name if seafarer else None,
         last_name=seafarer.last_name if seafarer else None,
         date_of_birth=seafarer.date_of_birth if seafarer else None,
+        nationality=seafarer.nationality if seafarer else None,
+        phone=seafarer.phone if seafarer else None,
+        city=seafarer.city if seafarer else None,
+        years_experience=seafarer.years_experience if seafarer else None,
+        bio=seafarer.bio if seafarer else None,
+        languages=seafarer.languages if seafarer else None,
+        vessels_worked=seafarer.vessels_worked if seafarer else None,
+        companies_worked=seafarer.companies_worked if seafarer else None,
+        is_available=seafarer.is_available if seafarer else None,
         company_name=company.name if company else None,
     )

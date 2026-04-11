@@ -3,7 +3,7 @@
 const React = require('react');
 const { useState, useMemo, useCallback, useEffect } = React;
 const { MainNavBars } = require('leto/components');
-const { MONTHS, WEEKDAYS_SHORT, EVENT_CATEGORIES, COMPANY_EVENTS } = require('./calendarData');
+const { MONTHS, WEEKDAYS_SHORT, EVENT_CATEGORIES } = require('./calendarData');
 const { getPendingInterviews, removePendingInterview, getCustomEvents, addCustomEvent, updateCustomEvent, deleteCustomEvent } = require('leto/common/crewStore');
 const { isInterviewConfirmed } = require('leto/common/seafarerStore');
 const styles = require('./Calendar.less');
@@ -214,11 +214,10 @@ const Calendar = () => {
 
     const key = monthKey(year, month);
 
-    // Merge mock + custom events for current month
+    // Use only persisted/custom events for current month
     const allEvents = useMemo(() => {
-        const mock = (COMPANY_EVENTS[key] || []).map((e) => ({ ...e, monthKey: key, source: 'mock' }));
         const custom = customEvents.filter((e) => e.monthKey === key).map((e) => ({ ...e, source: 'custom' }));
-        return [...mock, ...custom].sort((a, b) => a.day - b.day);
+        return [...custom].sort((a, b) => a.day - b.day);
     }, [key, customEvents]);
 
     const filteredEvents = useMemo(() => {

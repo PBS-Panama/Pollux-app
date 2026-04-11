@@ -2,8 +2,6 @@
 // Communicates with the Express backend for User Database persistence.
 // Falls back to localStorage when the API is not available (e.g., webpack dev server).
 
-const DEFAULT_USER_ID = 'SF-001'; // legacy fallback — use getUserId() for dynamic resolution
-
 const getUserId = () => {
     try {
         const data = typeof localStorage !== 'undefined' && localStorage.getItem('leto-user');
@@ -11,8 +9,15 @@ const getUserId = () => {
             const parsed = JSON.parse(data);
             if (parsed.id) return parsed.id;
         }
+
+        const authData = typeof localStorage !== 'undefined' && localStorage.getItem('leto-auth');
+        if (authData) {
+            const parsedAuth = JSON.parse(authData);
+            const authUserId = parsedAuth?.state?.user?.id;
+            if (authUserId) return authUserId;
+        }
     } catch { /* silent */ }
-    return DEFAULT_USER_ID;
+    return '';
 };
 
 // API base — same origin in Docker/production, configurable for dev
@@ -135,6 +140,7 @@ const cancelExam = (userId, examId) => apiDelete(`/users/${userId}/myexams/book/
 // ─── Settings ───────────────────────────────────────────────────────
 
 const getSettings = (userId) => getPageData(userId, 'settings');
+const updateUserSettings = (userId, partialSettings) => patchPageData(userId, 'settings', partialSettings);
 const updateSettings = (userId, prefs) => patchPageData(userId, 'settings', { preferences: prefs });
 
 // ─── Dashboard ──────────────────────────────────────────────────────
@@ -147,7 +153,6 @@ const updateDashboardData = (userId, data) => setPageData(userId, 'dashboard', d
 const initUser = (userId) => apiPost(`/users/${userId}/init`);
 
 module.exports = {
-    DEFAULT_USER_ID,
     getUserId,
     API_BASE,
     isApiAvailable,
@@ -174,6 +179,7 @@ module.exports = {
     cancelExam,
     // Settings
     getSettings,
+    updateUserSettings,
     updateSettings,
     // Dashboard
     getDashboardData,

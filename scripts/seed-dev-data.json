@@ -1,0 +1,281 @@
+{
+  "seed_credentials_note": "Default seafarer password is Crew1234! and company password is Dev12345!",
+  "default_seafarer_password": "Crew1234!",
+  "company": {
+    "email": "demobis@leto.com",
+    "password": "Dev12345!",
+    "company_name": "Andes Bluewater Crewing",
+    "country": "Panama",
+    "city": "Panama City",
+    "sector": "Crewing",
+    "company_size": "11-50"
+  },
+  "vessels": [
+    {
+      "name": "MV Pacific Aurora",
+      "imo_number": "9832101",
+      "vessel_type": "Container Ship",
+      "flag_state": "Panama",
+      "gross_tonnage": 38200
+    },
+    {
+      "name": "MT Atlantic Horizon",
+      "imo_number": "9645207",
+      "vessel_type": "Oil Tanker",
+      "flag_state": "Liberia",
+      "gross_tonnage": 51700
+    },
+    {
+      "name": "MV Andean Spirit",
+      "imo_number": "9786402",
+      "vessel_type": "Bulk Carrier",
+      "flag_state": "Marshall Islands",
+      "gross_tonnage": 46200
+    },
+    {
+      "name": "MV Southern Cross",
+      "imo_number": "9754312",
+      "vessel_type": "General Cargo",
+      "flag_state": "Bahamas",
+      "gross_tonnage": 28500
+    }
+  ],
+  "seafarers": [
+    {
+      "email": "qa.seafarer@leto.com",
+      "first_name": "QA",
+      "last_name": "Seafarer",
+      "nationality": "Panama",
+      "rank": "II/1 - OOW Navigation (Third Officer)",
+      "date_of_birth": "1995-05-05",
+      "phone": "+507-6000-1000"
+    },
+    {
+      "email": "mauricio.alarcon@leto.com",
+      "first_name": "Mauricio",
+      "last_name": "Alarcon",
+      "nationality": "Chile",
+      "rank": "II/2 - Chief Mate (>= 3000 GT)",
+      "date_of_birth": "1990-04-12",
+      "phone": "+56-9-8874-1200"
+    },
+    {
+      "email": "gabriela.quiroga@leto.com",
+      "first_name": "Gabriela",
+      "last_name": "Quiroga",
+      "nationality": "Peru",
+      "rank": "II/1 - OOW Navigation (Third Officer)",
+      "date_of_birth": "1994-09-27",
+      "phone": "+51-944-830-120"
+    },
+    {
+      "email": "esteban.rivera@leto.com",
+      "first_name": "Esteban",
+      "last_name": "Rivera",
+      "nationality": "Ecuador",
+      "rank": "III/1 - EOOW (Fourth Engineer)",
+      "date_of_birth": "1993-01-16",
+      "phone": "+593-98-111-4410"
+    },
+    {
+      "email": "diego.montoya@leto.com",
+      "first_name": "Diego",
+      "last_name": "Montoya",
+      "nationality": "Colombia",
+      "rank": "III/2 - Chief Engineer (>= 3000 kW)",
+      "date_of_birth": "1988-07-05",
+      "phone": "+57-320-402-9980"
+    },
+    {
+      "email": "sofia.garcia@leto.com",
+      "first_name": "Sofia",
+      "last_name": "Garcia",
+      "nationality": "Panama",
+      "rank": "IV/2 - GMDSS Radio Operator",
+      "date_of_birth": "1996-11-03",
+      "phone": "+507-6810-8832"
+    },
+    {
+      "email": "leo.navarro@leto.com",
+      "first_name": "Leo",
+      "last_name": "Navarro",
+      "nationality": "Uruguay",
+      "rank": "II/5 - Able Seafarer Deck",
+      "date_of_birth": "1999-03-22",
+      "phone": "+598-99-210-773"
+    },
+    {
+      "email": "raul.mejia@leto.com",
+      "first_name": "Raul",
+      "last_name": "Mejia",
+      "nationality": "Honduras",
+      "rank": "III/5 - Able Seafarer Engine (Motorman)",
+      "date_of_birth": "1995-08-14",
+      "phone": "+504-9321-4450"
+    },
+    {
+      "email": "victoria.luna@leto.com",
+      "first_name": "Victoria",
+      "last_name": "Luna",
+      "nationality": "Mexico",
+      "rank": "II/4 - Rating Navigational Watch (Helmsman)",
+      "date_of_birth": "1998-12-08",
+      "phone": "+52-55-4110-2201"
+    },
+    {
+      "email": "andres.ponce@leto.com",
+      "first_name": "Andres",
+      "last_name": "Ponce",
+      "nationality": "Guatemala",
+      "rank": "III/6 - Electro-Technical Officer (ETO)",
+      "date_of_birth": "1992-10-10",
+      "phone": "+502-4477-9113"
+    },
+    {
+      "email": "camila.rojas@leto.com",
+      "first_name": "Camila",
+      "last_name": "Rojas",
+      "nationality": "Dominican Republic",
+      "rank": "II/3 - Master (< 3000 GT)",
+      "date_of_birth": "1991-05-01",
+      "phone": "+1-809-445-6002"
+    },
+    {
+      "email": "jorge.velasco@leto.com",
+      "first_name": "Jorge",
+      "last_name": "Velasco",
+      "nationality": "Bolivia",
+      "rank": "III/4 - Rating Engine Watch (Oiler)",
+      "date_of_birth": "1997-06-19",
+      "phone": "+591-770-12209"
+    },
+    {
+      "email": "martina.suarez@leto.com",
+      "first_name": "Martina",
+      "last_name": "Suarez",
+      "nationality": "Argentina",
+      "rank": "II/1 - OOW Navigation (Third Officer)",
+      "date_of_birth": "1994-02-28",
+      "phone": "+54-9-11-6532-0021"
+    }
+  ],
+  "assignments": [
+    {
+      "vessel_name": "MV Pacific Aurora",
+      "seafarer_email": "mauricio.alarcon@leto.com",
+      "role_onboard": "Chief Mate",
+      "embark_date": "2026-04-15",
+      "disembark_date": "2026-07-15",
+      "status": "active"
+    },
+    {
+      "vessel_name": "MV Pacific Aurora",
+      "seafarer_email": "gabriela.quiroga@leto.com",
+      "role_onboard": "Third Officer",
+      "embark_date": "2026-04-20",
+      "disembark_date": "2026-08-20",
+      "status": "planned"
+    },
+    {
+      "vessel_name": "MT Atlantic Horizon",
+      "seafarer_email": "diego.montoya@leto.com",
+      "role_onboard": "Chief Engineer",
+      "embark_date": "2026-04-10",
+      "disembark_date": "2026-09-10",
+      "status": "active"
+    },
+    {
+      "vessel_name": "MT Atlantic Horizon",
+      "seafarer_email": "esteban.rivera@leto.com",
+      "role_onboard": "Fourth Engineer",
+      "embark_date": "2026-05-01",
+      "disembark_date": "2026-10-01",
+      "status": "planned"
+    },
+    {
+      "vessel_name": "MV Andean Spirit",
+      "seafarer_email": "leo.navarro@leto.com",
+      "role_onboard": "Able Seafarer Deck",
+      "embark_date": "2026-04-18",
+      "disembark_date": "2026-08-18",
+      "status": "active"
+    },
+    {
+      "vessel_name": "MV Andean Spirit",
+      "seafarer_email": "raul.mejia@leto.com",
+      "role_onboard": "Motorman",
+      "embark_date": "2026-04-18",
+      "disembark_date": "2026-08-18",
+      "status": "active"
+    },
+    {
+      "vessel_name": "MV Southern Cross",
+      "seafarer_email": "andres.ponce@leto.com",
+      "role_onboard": "Electro-Technical Officer",
+      "embark_date": "2026-05-12",
+      "disembark_date": "2026-09-12",
+      "status": "planned"
+    },
+    {
+      "vessel_name": "MV Southern Cross",
+      "seafarer_email": "camila.rojas@leto.com",
+      "role_onboard": "Master",
+      "embark_date": "2026-05-12",
+      "disembark_date": "2026-09-12",
+      "status": "planned"
+    }
+  ],
+  "calendar_seed": {
+    "qa.seafarer@leto.com": [
+      {
+        "type": "embarking",
+        "startDay": 14,
+        "endDay": 31,
+        "monthKey": "2026-01",
+        "label": "MV Atlantic Pioneer - At Sea"
+      },
+      {
+        "type": "embarking",
+        "startDay": 1,
+        "endDay": 28,
+        "monthKey": "2026-02",
+        "label": "MV Atlantic Pioneer - At Sea"
+      },
+      {
+        "type": "embarking",
+        "startDay": 1,
+        "endDay": 31,
+        "monthKey": "2026-03",
+        "label": "MV Atlantic Pioneer - At Sea"
+      },
+      {
+        "type": "embarking",
+        "startDay": 1,
+        "endDay": 30,
+        "monthKey": "2026-04",
+        "label": "MV Atlantic Pioneer - At Sea"
+      },
+      {
+        "type": "embarking",
+        "startDay": 1,
+        "endDay": 31,
+        "monthKey": "2026-05",
+        "label": "MV Atlantic Pioneer - At Sea"
+      },
+      {
+        "type": "embarking",
+        "startDay": 1,
+        "endDay": 30,
+        "monthKey": "2026-06",
+        "label": "MV Atlantic Pioneer - At Sea"
+      },
+      {
+        "type": "days-off",
+        "startDay": 14,
+        "endDay": 31,
+        "monthKey": "2026-07",
+        "label": "Shore Leave"
+      }
+    ]
+  }
+}
