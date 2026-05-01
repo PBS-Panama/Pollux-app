@@ -23,6 +23,61 @@ const getUserId = () => {
 // API base — same origin in Docker/production, configurable for dev
 const API_BASE = (typeof window !== 'undefined' && window.PBS_API_BASE) || '/crewing-api';
 
+// ─── Auth token helpers + authFetch with 401 refresh retry ──────────
+const getAccessToken = () => {
+    try {
+        const data = typeof localStorage !== 'undefined' && localStorage.getItem('leto-auth');
+        return data ? JSON.parse(data)?.state?.accessToken || '' : '';
+    } catch { return ''; }
+};
+
+const getRefreshToken = () => {
+    try {
+        const data = typeof localStorage !== 'undefined' && localStorage.getItem('leto-auth');
+        return data ? JSON.parse(data)?.state?.refreshToken || '' : '';
+    } catch { return ''; }
+};
+
+const setStoredTokens = (next) => {
+    try {
+        const data = JSON.parse(localStorage.getItem('leto-auth') || '{}');
+        if (!data.state) data.state = {};
+        Object.assign(data.state, next);
+        localStorage.setItem('leto-auth', JSON.stringify(data));
+    } catch { /* non-fatal */ }
+};
+
+const refreshAccessToken = async () => {
+    const refresh = getRefreshToken();
+    if (!refresh) return '';
+    try {
+        const res = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refresh }),
+        });
+        if (!res.ok) return '';
+        const data = await res.json();
+        if (data.access_token) {
+            setStoredTokens({ accessToken: data.access_token, refreshToken: data.refresh_token || refresh });
+            return data.access_token;
+        }
+    } catch { /* ignore */ }
+    return '';
+};
+
+// fetch wrapper that retries once with a refreshed token on 401.
+const authFetch = async (url, init = {}) => {
+    const token = getAccessToken();
+    const headers = { ...(init.headers || {}), Authorization: `Bearer ${token}` };
+    let res = await fetch(url, { ...init, headers });
+    if (res.status !== 401) return res;
+    const fresh = await refreshAccessToken();
+    if (!fresh) return res;
+    const headers2 = { ...(init.headers || {}), Authorization: `Bearer ${fresh}` };
+    return fetch(url, { ...init, headers: headers2 });
+};
+
 let _apiAvailable = null; // null = not checked yet
 
 /**
@@ -154,6 +209,8 @@ const initUser = (userId) => apiPost(`/users/${userId}/init`);
 
 module.exports = {
     getUserId,
+    getAccessToken,
+    authFetch,
     API_BASE,
     isApiAvailable,
     resetApiCheck,

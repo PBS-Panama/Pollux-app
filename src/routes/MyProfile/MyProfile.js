@@ -181,6 +181,42 @@ const EditableText = ({ value, onChange, placeholder }) => {
     }, value || placeholder);
 };
 
+// ─── Editable single-value field (used by CompanyProfile for Address/Website) ──
+const EditableMetaLinks = ({ label, value, onChange, placeholder }) => {
+    const [editing, setEditing] = React.useState(false);
+    const ref = React.useRef(null);
+    React.useEffect(() => { if (editing && ref.current) ref.current.focus(); }, [editing]);
+
+    if (editing) {
+        return (
+            <div style={{ marginTop: '1.5rem' }}>
+                <div style={{ textTransform: 'uppercase', fontSize: '0.95rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>{label}</div>
+                <input
+                    ref={ref}
+                    value={value || ''}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    onBlur={() => setEditing(false)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') setEditing(false); }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(0,210,211,0.3)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none' }}
+                />
+            </div>
+        );
+    }
+    return (
+        <div onClick={() => setEditing(true)} style={{ marginTop: '1.5rem', cursor: 'pointer' }}>
+            <div style={{ textTransform: 'uppercase', fontSize: '0.95rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>{label}</div>
+            {value ? (
+                <div style={{ color: '#e0e0e0', fontSize: '0.9rem' }}>{value}</div>
+            ) : (
+                <div style={{ color: '#556677', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#00d2d3', fontStyle: 'normal', marginRight: '0.3rem' }}>+</span>{placeholder}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ─── Tag input with +Add button and individual X to remove ─────────
 // Matches the original MetaLinks pill styling (rounded, overlay bg, no cyan border)
 const tagPillStyle = {
@@ -889,6 +925,11 @@ const CompanyProfile = () => {
         if (!loading && companyVessels.length === 0) setShowAddForm(true);
     }, [loading, companyVessels.length]);
     const [addingVessel, setAddingVessel] = React.useState(false);
+    const [editingVesselId, setEditingVesselId] = React.useState(null);
+    const [vesselDraft, setVesselDraft] = React.useState({ name: '', imo_number: '', vessel_type: '', flag_state: '', gross_tonnage: '' });
+    const [savingVessel, setSavingVessel] = React.useState(false);
+    const [deletingVesselId, setDeletingVesselId] = React.useState(null);
+    const [deleteError, setDeleteError] = React.useState('');
     const [newVessel, setNewVessel] = React.useState({ name: '', imo_number: '', vessel_type: '', flag_state: '', gross_tonnage: '' });
     const setVesselField = (k, v) => setNewVessel((prev) => ({ ...prev, [k]: v }));
 
@@ -901,13 +942,14 @@ const CompanyProfile = () => {
     const [selectedSeafarerId, setSelectedSeafarerId] = React.useState('');
     const [roleOnboard, setRoleOnboard] = React.useState('');
     const [crewError, setCrewError] = React.useState('');
+    const [editingAssignmentId, setEditingAssignmentId] = React.useState(null);
+    const [editDraft, setEditDraft] = React.useState({ role_onboard: '', embark_date: '', disembark_date: '', status: 'planned' });
+    const [savingEdit, setSavingEdit] = React.useState(false);
 
     const resolveCompanyId = React.useCallback(async () => {
         let companyId = user?.company_id;
         if (companyId) return companyId;
-        const token = getAuthToken();
-        if (!token) return null;
-        const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+        const meRes = await authFetch('/api/auth/me');
         if (!meRes.ok) return null;
         const me = await meRes.json();
         companyId = me.company_id;
@@ -924,17 +966,16 @@ const CompanyProfile = () => {
         setCrewError('');
         setLoadingCrewModal(true);
         try {
-            const token = getAuthToken();
             const companyId = await resolveCompanyId();
-            if (!token || !companyId) {
+            if (!companyId) {
                 setCrewError('No se encontró la empresa.');
                 setLoadingCrewModal(false);
                 return;
             }
 
             const [crewRes, assignmentsRes] = await Promise.all([
-                fetch(`/api/companies/${companyId}/crew`, { headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/companies/${companyId}/vessels/${vessel.id}/assignments`, { headers: { Authorization: `Bearer ${token}` } }),
+                authFetch(`/api/companies/${companyId}/crew`),
+                authFetch(`/api/companies/${companyId}/vessels/${vessel.id}/assignments`),
             ]);
 
             if (!crewRes.ok) throw new Error('No se pudo cargar la tripulación.');
@@ -972,13 +1013,12 @@ const CompanyProfile = () => {
         setAssigning(true);
         setCrewError('');
         try {
-            const token = getAuthToken();
             const companyId = await resolveCompanyId();
-            if (!token || !companyId) throw new Error('No se encontró la empresa.');
+            if (!companyId) throw new Error('No se encontró la empresa.');
 
-            const res = await fetch(`/api/companies/${companyId}/vessels/${crewModalVessel.id}/assignments`, {
+            const res = await authFetch(`/api/companies/${companyId}/vessels/${crewModalVessel.id}/assignments`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     seafarer_id: selectedSeafarerId,
                     role_onboard: roleOnboard || null,
@@ -1001,13 +1041,11 @@ const CompanyProfile = () => {
     const removeAssignment = async (assignmentId) => {
         if (!crewModalVessel || !assignmentId) return;
         try {
-            const token = getAuthToken();
             const companyId = await resolveCompanyId();
-            if (!token || !companyId) throw new Error('No se encontró la empresa.');
+            if (!companyId) throw new Error('No se encontró la empresa.');
 
-            const res = await fetch(`/api/companies/${companyId}/assignments/${assignmentId}`, {
+            const res = await authFetch(`/api/companies/${companyId}/assignments/${assignmentId}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -1019,20 +1057,65 @@ const CompanyProfile = () => {
         }
     };
 
+    const startEditAssignment = (assignment) => {
+        setEditingAssignmentId(assignment.id);
+        setEditDraft({
+            role_onboard: assignment.role_onboard || '',
+            embark_date: assignment.embark_date || '',
+            disembark_date: assignment.disembark_date || '',
+            status: assignment.status || 'planned',
+        });
+        setCrewError('');
+    };
+
+    const cancelEditAssignment = () => {
+        setEditingAssignmentId(null);
+        setEditDraft({ role_onboard: '', embark_date: '', disembark_date: '', status: 'planned' });
+    };
+
+    const saveEditAssignment = async () => {
+        if (!editingAssignmentId) return;
+        setSavingEdit(true);
+        setCrewError('');
+        try {
+            const companyId = await resolveCompanyId();
+            if (!companyId) throw new Error('No se encontró la empresa.');
+
+            const body = {
+                role_onboard: editDraft.role_onboard || null,
+                embark_date: editDraft.embark_date || null,
+                disembark_date: editDraft.disembark_date || null,
+                status: editDraft.status || null,
+            };
+            const res = await authFetch(`/api/companies/${companyId}/assignments/${editingAssignmentId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'No se pudo actualizar la asignación.');
+            }
+            cancelEditAssignment();
+            await loadCrewManagerData(crewModalVessel);
+        } catch (e) {
+            setCrewError(e instanceof Error ? e.message : 'Error actualizando asignación.');
+        }
+        setSavingEdit(false);
+    };
+
     const addVesselToFleet = async () => {
         if (!newVessel.name.trim()) return;
         setAddingVessel(true);
         setAddError('');
         try {
-            const token = getAuthToken();
             // Get company_id — from user or fetch from /me
             let companyId = user?.company_id;
             if (!companyId) {
-                const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+                const meRes = await authFetch('/api/auth/me');
                 if (meRes.ok) {
                     const me = await meRes.json();
                     companyId = me.company_id;
-                    // Update localStorage for next time
                     const lu = JSON.parse(localStorage.getItem('leto-user') || '{}');
                     lu.company_id = companyId;
                     lu.company_name = me.company_name;
@@ -1041,9 +1124,9 @@ const CompanyProfile = () => {
             }
             if (!companyId) { setAddError('No se encontró la empresa.'); setAddingVessel(false); return; }
 
-            const res = await fetch(`/api/companies/${companyId}/vessels`, {
+            const res = await authFetch(`/api/companies/${companyId}/vessels`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: newVessel.name,
                     imo_number: newVessel.imo_number || null,
@@ -1065,6 +1148,80 @@ const CompanyProfile = () => {
             setAddError('Error de conexión.');
         }
         setAddingVessel(false);
+    };
+
+    const startEditVessel = (v) => {
+        setEditingVesselId(v.id);
+        setVesselDraft({
+            name: v.name || '',
+            imo_number: v.imo_number || '',
+            vessel_type: v.vessel_type || '',
+            flag_state: v.flag_state || '',
+            gross_tonnage: v.gross_tonnage ? String(v.gross_tonnage) : '',
+        });
+    };
+
+    const cancelEditVessel = () => {
+        setEditingVesselId(null);
+        setVesselDraft({ name: '', imo_number: '', vessel_type: '', flag_state: '', gross_tonnage: '' });
+    };
+
+    const saveEditVessel = async () => {
+        if (!editingVesselId) return;
+        setSavingVessel(true);
+        try {
+            const companyId = user?.company_id;
+            if (!companyId) { setSavingVessel(false); return; }
+            const body = {
+                name: vesselDraft.name || null,
+                imo_number: vesselDraft.imo_number || null,
+                vessel_type: vesselDraft.vessel_type || null,
+                flag_state: vesselDraft.flag_state || null,
+                gross_tonnage: vesselDraft.gross_tonnage ? parseInt(vesselDraft.gross_tonnage, 10) : null,
+            };
+            const res = await authFetch(`/api/companies/${companyId}/vessels/${editingVesselId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setCompanyVessels((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+                cancelEditVessel();
+            } else {
+                console.error('Vessel save failed:', res.status);
+            }
+        } catch (e) { console.error('Vessel save error:', e); }
+        setSavingVessel(false);
+    };
+
+    const requestDeleteVessel = (v) => {
+        setDeletingVesselId(v.id);
+        setDeleteError('');
+    };
+
+    const cancelDeleteVessel = () => {
+        setDeletingVesselId(null);
+        setDeleteError('');
+    };
+
+    const confirmDeleteVessel = async (force = false) => {
+        if (!deletingVesselId) return;
+        try {
+            const companyId = user?.company_id;
+            if (!companyId) return;
+            const url = `/api/companies/${companyId}/vessels/${deletingVesselId}${force ? '?force=true' : ''}`;
+            const res = await authFetch(url, { method: 'DELETE' });
+            if (res.status === 204) {
+                setCompanyVessels((prev) => prev.filter((v) => v.id !== deletingVesselId));
+                cancelDeleteVessel();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setDeleteError(err.detail || 'No se pudo eliminar el buque.');
+            }
+        } catch (e) {
+            setDeleteError('Error de conexión.');
+        }
     };
 
     // Editable company fields
@@ -1129,11 +1286,7 @@ const CompanyProfile = () => {
         if (!user?.company_id) { setLoading(false); return; }
         (async () => {
             try {
-                const authData = localStorage.getItem('leto-auth');
-                const token = authData ? JSON.parse(authData)?.state?.accessToken : '';
-                const res = await fetch(`/api/companies/${user.company_id}/vessels`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const res = await authFetch(`/api/companies/${user.company_id}/vessels`);
                 if (res.ok) setCompanyVessels(await res.json());
             } catch { /* silent */ }
             setLoading(false);
@@ -1207,6 +1360,30 @@ const CompanyProfile = () => {
                                 {/* Vessel list */}
                                 {companyVessels.map((v) => {
                                     const vc = getVesselColor(v.vessel_type);
+                                    const isEditing = editingVesselId === v.id;
+                                    if (isEditing) {
+                                        const editInputStyle = { width: '100%', boxSizing: 'border-box', padding: '0.5rem 0.7rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.8rem', outline: 'none' };
+                                        return (
+                                            <div key={v.id} style={{ margin: '0.5rem 0.2rem', padding: '1rem', background: 'rgba(0,210,211,0.04)', border: '1px solid rgba(0,210,211,0.25)', borderRadius: '8px' }}>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#00d2d3', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Editar embarcación</div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                        <input value={vesselDraft.name} onChange={(e) => setVesselDraft({ ...vesselDraft, name: e.target.value })} placeholder="Nombre del buque *" style={editInputStyle} />
+                                                        <input value={vesselDraft.imo_number} onChange={(e) => setVesselDraft({ ...vesselDraft, imo_number: e.target.value })} placeholder="IMO Number" style={editInputStyle} />
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                        <DarkDropdown value={vesselDraft.vessel_type} onChange={(val) => setVesselDraft({ ...vesselDraft, vessel_type: val })} placeholder="Tipo..." options={VESSEL_TYPES.map((t) => ({ value: t, label: t }))} />
+                                                        <DarkDropdown value={vesselDraft.flag_state} onChange={(val) => setVesselDraft({ ...vesselDraft, flag_state: val })} placeholder="Bandera..." options={FLAG_STATES.map((f) => ({ value: f, label: f }))} />
+                                                    </div>
+                                                    <input value={vesselDraft.gross_tonnage} onChange={(e) => setVesselDraft({ ...vesselDraft, gross_tonnage: e.target.value.replace(/\D/g, '') })} placeholder="Tonelaje bruto (GT)" style={editInputStyle} />
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <button onClick={cancelEditVessel} style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#8899aa', fontSize: '0.8rem', cursor: 'pointer' }}>Cancelar</button>
+                                                        <button onClick={saveEditVessel} disabled={!vesselDraft.name.trim() || savingVessel} style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: '#00d2d3', color: '#0a1628', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', opacity: !vesselDraft.name.trim() || savingVessel ? 0.5 : 1 }}>{savingVessel ? 'Guardando...' : 'Guardar cambios'}</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
                                     return (
                                         <div key={v.id} style={{
                                             display: 'flex', alignItems: 'center', gap: '0.7rem',
@@ -1230,18 +1407,23 @@ const CompanyProfile = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                                                 <button
                                                     onClick={() => openCrewModal(v)}
-                                                    style={{
-                                                        padding: '0.35rem 0.55rem',
-                                                        borderRadius: '5px',
-                                                        border: '1px solid rgba(0,210,211,0.35)',
-                                                        background: 'rgba(0,210,211,0.08)',
-                                                        color: '#00d2d3',
-                                                        fontSize: '0.7rem',
-                                                        fontWeight: 600,
-                                                        cursor: 'pointer',
-                                                    }}
+                                                    style={{ padding: '0.35rem 0.55rem', borderRadius: '5px', border: '1px solid rgba(0,210,211,0.35)', background: 'rgba(0,210,211,0.08)', color: '#00d2d3', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
                                                 >
                                                     Crew
+                                                </button>
+                                                <button
+                                                    onClick={() => startEditVessel(v)}
+                                                    title="Editar"
+                                                    style={{ padding: '0.35rem 0.5rem', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#d0d0d0', fontSize: '0.7rem', cursor: 'pointer' }}
+                                                >
+                                                    ✎
+                                                </button>
+                                                <button
+                                                    onClick={() => requestDeleteVessel(v)}
+                                                    title="Eliminar"
+                                                    style={{ padding: '0.35rem 0.5rem', borderRadius: '5px', border: '1px solid rgba(231,76,60,0.35)', background: 'rgba(231,76,60,0.08)', color: '#ff9f96', fontSize: '0.7rem', cursor: 'pointer' }}
+                                                >
+                                                    🗑
                                                 </button>
                                                 {v.gross_tonnage && (
                                                     <div style={{
@@ -1316,6 +1498,35 @@ const CompanyProfile = () => {
                 </div>
             </div>
 
+            {deletingVesselId && (() => {
+                const v = companyVessels.find((x) => x.id === deletingVesselId);
+                if (!v) return null;
+                const hasActiveError = deleteError && /active|asignaci/i.test(deleteError);
+                return (
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)' }}>
+                        <div style={{ width: 'min(28rem, 92vw)', background: '#0d1f3c', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '1.25rem 1.5rem', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+                            <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem' }}>Eliminar embarcación</div>
+                            <div style={{ color: '#d0d0d0', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '0.9rem' }}>
+                                Esto eliminará <strong style={{ color: '#00d2d3' }}>{v.name}</strong> y todas sus asignaciones completadas o canceladas. Esta acción no se puede deshacer.
+                            </div>
+                            {deleteError && (
+                                <div style={{ color: '#e74c3c', fontSize: '0.78rem', marginBottom: '0.8rem', padding: '0.5rem 0.7rem', background: 'rgba(231,76,60,0.1)', borderRadius: '6px', border: '1px solid rgba(231,76,60,0.25)' }}>
+                                    {deleteError}
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                <button onClick={cancelDeleteVessel} style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#d0d0d0', fontSize: '0.85rem', cursor: 'pointer' }}>Cancelar</button>
+                                {hasActiveError ? (
+                                    <button onClick={() => confirmDeleteVessel(true)} style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', background: '#e74c3c', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>Forzar eliminación</button>
+                                ) : (
+                                    <button onClick={() => confirmDeleteVessel(false)} style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', background: '#e74c3c', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>Sí, eliminar</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {crewModalVessel && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)' }}>
                     <div style={{ width: 'min(56rem, 95vw)', maxHeight: '86vh', overflow: 'auto', borderRadius: '10px', background: '#0d1f3c', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
@@ -1364,23 +1575,59 @@ const CompanyProfile = () => {
                                 <div style={{ color: '#8899aa', fontSize: '0.8rem', padding: '1rem 0' }}>No hay tripulantes asignados a este buque.</div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                                    {assignments.map((a) => (
-                                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '0.6rem 0.7rem' }}>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>{a.seafarer_name || a.seafarer_id}</div>
-                                                <div style={{ color: '#8899aa', fontSize: '0.72rem' }}>
-                                                    {a.role_onboard || 'Sin rol definido'}
-                                                    {a.status ? ` | ${a.status}` : ''}
+                                    {assignments.map((a) => {
+                                        const isEditing = editingAssignmentId === a.id;
+                                        const inputStyle = { padding: '0.35rem 0.55rem', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '0.75rem', fontFamily: 'inherit', outline: 'none', minWidth: 0 };
+                                        if (isEditing) {
+                                            return (
+                                                <div key={a.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', background: 'rgba(0,210,211,0.05)', border: '1px solid rgba(0,210,211,0.25)', borderRadius: '7px', padding: '0.65rem 0.7rem' }}>
+                                                    <div style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>{a.seafarer_name || a.seafarer_id}</div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '0.4rem' }}>
+                                                        <input style={inputStyle} placeholder="Rol a bordo" value={editDraft.role_onboard} onChange={(e) => setEditDraft({ ...editDraft, role_onboard: e.target.value })} />
+                                                        <input type="date" style={inputStyle} value={editDraft.embark_date} onChange={(e) => setEditDraft({ ...editDraft, embark_date: e.target.value })} />
+                                                        <input type="date" style={inputStyle} value={editDraft.disembark_date} onChange={(e) => setEditDraft({ ...editDraft, disembark_date: e.target.value })} />
+                                                        <select style={inputStyle} value={editDraft.status} onChange={(e) => setEditDraft({ ...editDraft, status: e.target.value })}>
+                                                            <option value="planned">planned</option>
+                                                            <option value="active">active</option>
+                                                            <option value="completed">completed</option>
+                                                            <option value="cancelled">cancelled</option>
+                                                        </select>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                                                        <button onClick={cancelEditAssignment} style={{ border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#d0d0d0', borderRadius: '5px', padding: '0.3rem 0.7rem', fontSize: '0.72rem', cursor: 'pointer' }}>Cancelar</button>
+                                                        <button onClick={saveEditAssignment} disabled={savingEdit} style={{ border: 'none', background: '#00d2d3', color: '#0a1628', borderRadius: '5px', padding: '0.3rem 0.9rem', fontSize: '0.72rem', fontWeight: 700, cursor: savingEdit ? 'not-allowed' : 'pointer', opacity: savingEdit ? 0.6 : 1 }}>{savingEdit ? 'Guardando...' : 'Guardar'}</button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '0.6rem 0.7rem' }}>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>{a.seafarer_name || a.seafarer_id}</div>
+                                                    <div style={{ color: '#8899aa', fontSize: '0.72rem' }}>
+                                                        {a.role_onboard || 'Sin rol definido'}
+                                                        {a.status ? ` | ${a.status}` : ''}
+                                                        {(a.embark_date || a.disembark_date) ? ` | ${a.embark_date || '—'} → ${a.disembark_date || '—'}` : ''}
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+                                                    <button
+                                                        onClick={() => startEditAssignment(a)}
+                                                        style={{ border: '1px solid rgba(0,210,211,0.35)', background: 'rgba(0,210,211,0.08)', color: '#00d2d3', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer' }}
+                                                        title="Editar"
+                                                    >
+                                                        ✎
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removeAssignment(a.id)}
+                                                        style={{ border: '1px solid rgba(231,76,60,0.35)', background: 'rgba(231,76,60,0.08)', color: '#ff9f96', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer' }}
+                                                    >
+                                                        Quitar
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => removeAssignment(a.id)}
-                                                style={{ border: '1px solid rgba(231,76,60,0.35)', background: 'rgba(231,76,60,0.08)', color: '#ff9f96', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer' }}
-                                            >
-                                                Quitar
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

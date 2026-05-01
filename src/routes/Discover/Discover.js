@@ -7,17 +7,9 @@ const classnames = require('classnames');
 const { default: Icon } = require('@stremio/stremio-icons/react');
 const { useBinaryState, withCoreSuspender } = require('leto/common');
 const { Button, DelayedRenderer, Image, MainNavBars, MetaItem, MetaPreview, ModalDialog, MultiselectMenu } = require('leto/components');
+const { authFetch } = require('leto/common/apiClient');
 const useSelectableInputs = require('./useSelectableInputs');
 const styles = require('./styles');
-
-const getAuthToken = () => {
-    try {
-        const data = localStorage.getItem('leto-auth');
-        return data ? JSON.parse(data)?.state?.accessToken || '' : '';
-    } catch {
-        return '';
-    }
-};
 
 const getLetoUser = () => {
     try {
@@ -84,9 +76,8 @@ const Discover = () => {
             try {
                 const user = getLetoUser();
                 const companyId = user?.company_id;
-                const token = getAuthToken();
 
-                if (!companyId || !token) {
+                if (!companyId) {
                     if (!cancelled) {
                         setErrorMessage('Company account data is missing. Please log in again.');
                         setCrewItems([]);
@@ -94,9 +85,8 @@ const Discover = () => {
                     return;
                 }
 
-                const res = await fetch(`/api/companies/${companyId}/crew`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                // authFetch handles 401 by refreshing the access token and retrying once.
+                const res = await authFetch(`/api/companies/${companyId}/crew`);
 
                 if (!res.ok) {
                     throw new Error(`Crew API request failed (${res.status})`);
@@ -154,6 +144,25 @@ const Discover = () => {
     const selectedMetaItem = React.useMemo(() => {
         return filteredItems[selectedMetaItemIndex] ?? null;
     }, [filteredItems, selectedMetaItemIndex]);
+
+    // Per-seafarer compliance summary cache, keyed by id.
+    const [complianceCache, setComplianceCache] = React.useState({});
+    React.useEffect(() => {
+        if (!selectedMetaItem || complianceCache[selectedMetaItem.id]) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const rankQ = selectedMetaItem.rank ? `?rank=${encodeURIComponent(selectedMetaItem.rank)}` : '';
+                const res = await fetch(`/crewing-api/users/${selectedMetaItem.id}/compliance-summary${rankQ}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!cancelled) setComplianceCache((prev) => ({ ...prev, [selectedMetaItem.id]: data }));
+            } catch { /* silent */ }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedMetaItem, complianceCache]);
+
+    const selectedCompliance = selectedMetaItem ? complianceCache[selectedMetaItem.id] : null;
 
     const metaItemsOnFocusCapture = React.useCallback((event) => {
         if (event.target.dataset.index !== null && !isNaN(event.target.dataset.index)) {
@@ -261,6 +270,7 @@ const Discover = () => {
                             toggleInLibrary={null}
                             metaId={selectedMetaItem.id}
                             like={null}
+                            complianceSummary={selectedCompliance}
                         />
                         :
                         loading ?

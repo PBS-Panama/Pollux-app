@@ -4,6 +4,7 @@
 const express = require('express');
 const fs = require('fs');
 const dm = require('./userDataManager');
+const { computeComplianceSummary } = require('./complianceEngine');
 
 const router = express.Router();
 
@@ -73,6 +74,36 @@ router.get('/users/mobility-summary', async (req, res) => {
             }
         }
         res.json({ summary });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ─── Compliance Summary: per-seafarer compliance aggregate ──────────
+// GET /api/users/:userId/compliance-summary?rank=master
+// Returns {
+//   compliance_pct, required_total, missing_total, missing_critical_top3[],
+//   certification_window: { expired, expiring_90, expiring_60, expiring_30 },
+//   visa: { has_visa, country, linked_passport },
+//   identity: { double_nationality, nationality_primary },
+//   blockers: [{ type, title, reason_code, reason_detail }],
+//   compliant: boolean
+// }
+// Used by the Crew Database to render each seafarer's compliance card.
+router.get('/users/:userId/compliance-summary', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const requestedRank = typeof req.query.rank === 'string' && req.query.rank ? req.query.rank : null;
+        let settings = {};
+        let uploads = [];
+        try { settings = await dm.readPageData(userId, 'settings'); } catch { /* default empty */ }
+        try {
+            const m = await dm.readPageData(userId, 'myfiles');
+            uploads = Array.isArray(m?.uploads) ? m.uploads : [];
+        } catch { /* default empty */ }
+        const rank = requestedRank || settings?.rank || null;
+        const summary = computeComplianceSummary(rank, uploads, settings || {});
+        res.json(summary);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

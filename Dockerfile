@@ -35,6 +35,7 @@ FROM base
 COPY http_server.js /app/
 COPY apiRoutes.js /app/
 COPY userDataManager.js /app/
+COPY complianceEngine.js /app/
 COPY --from=server /app/node_modules /app/node_modules
 COPY --from=app /app/build /app/build
 

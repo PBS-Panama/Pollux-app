@@ -37,6 +37,14 @@ class VesselCreate(BaseModel):
     gross_tonnage: int | None = None
 
 
+class VesselUpdate(BaseModel):
+    name: str | None = None
+    imo_number: str | None = None
+    vessel_type: str | None = None
+    flag_state: str | None = None
+    gross_tonnage: int | None = None
+
+
 class CrewListItemResponse(BaseModel):
     id: str
     email: str
@@ -138,6 +146,49 @@ def add_vessel(company_id: str, payload: VesselCreate, db: Session = Depends(get
     db.commit()
     db.refresh(vessel)
     return vessel
+
+
+@router.patch("/companies/{company_id}/vessels/{vessel_id}", response_model=VesselResponse)
+def update_vessel(company_id: str, vessel_id: str, payload: VesselUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.company_id != company_id or current_user.role != UserRole.company:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    vessel = db.query(Vessel).filter(Vessel.id == vessel_id, Vessel.company_id == company_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(vessel, field, value)
+    db.commit()
+    db.refresh(vessel)
+    return vessel
+
+
+@router.delete("/companies/{company_id}/vessels/{vessel_id}", status_code=204)
+def delete_vessel(company_id: str, vessel_id: str, force: bool = False, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.company_id != company_id or current_user.role != UserRole.company:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    vessel = db.query(Vessel).filter(Vessel.id == vessel_id, Vessel.company_id == company_id).first()
+    if not vessel:
+        raise HTTPException(status_code=404, detail="Vessel not found")
+
+    # Block-if-active-assignments unless ?force=true
+    active = (
+        db.query(Assignment)
+        .filter(Assignment.vessel_id == vessel_id)
+        .filter(Assignment.status.in_(['planned', 'active']))
+        .count()
+    )
+    if active > 0 and not force:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Vessel has {active} active/planned assignment(s). Remove them first or pass force=true.',
+        )
+
+    # Delete all remaining assignments manually (no cascade on FK)
+    db.query(Assignment).filter(Assignment.vessel_id == vessel_id).delete(synchronize_session=False)
+    db.delete(vessel)
+    db.commit()
+    return None
 
 
 @router.get('/companies/{company_id}/crew', response_model=List[CrewListItemResponse])

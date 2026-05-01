@@ -137,7 +137,7 @@ const ALLOWED_LINK_REDIRECTS = [
     routesRegexp.metadetails.regexp
 ];
 
-const MetaPreview = React.forwardRef(({ className, compact, name, logo, background, runtime, releaseInfo, released, description, department, rank, nationality, yearsExperience, email, metaId, deepLinks, links, trailerStreams, inLibrary, toggleInLibrary, ratingInfo }, ref) => {
+const MetaPreview = React.forwardRef(({ className, compact, name, logo, background, runtime, releaseInfo, released, description, department, rank, nationality, yearsExperience, email, metaId, deepLinks, links, trailerStreams, inLibrary, toggleInLibrary, ratingInfo, complianceSummary }, ref) => {
     const { t } = useTranslation();
     const crewName = React.useMemo(() => getCrewName(name), [name]);
     const [shareModalOpen, openShareModal, closeShareModal] = useBinaryState(false);
@@ -264,6 +264,73 @@ const MetaPreview = React.forwardRef(({ className, compact, name, logo, backgrou
                         <div className={styles['description-container']}>
                             {crewAbout}
                         </div>
+                        :
+                        null
+                }
+                {
+                    complianceSummary && typeof name === 'string' && name.length > 0 ?
+                        (() => {
+                            const cs = complianceSummary;
+                            const pct = cs.compliance_pct || 0;
+                            const pctColor = pct >= 80 ? '#2ecc71' : pct >= 50 ? '#f1c40f' : '#e74c3c';
+                            const cw = cs.certification_window || {};
+                            const visa = cs.visa || {};
+                            const identity = cs.identity || {};
+                            const blockers = Array.isArray(cs.blockers) ? cs.blockers : [];
+                            const reasonColor = (code) => {
+                                if (code === 'DOC_EXPIRED' || code === 'VISA_PASSPORT_MISMATCH') return '#e74c3c';
+                                if (code === 'DOC_EXPIRING_SOON') return '#f1c40f';
+                                if (code === 'PROFILE_INCOMPLETE') return '#00d2d3';
+                                return '#8899aa';
+                            };
+                            return (
+                                <div style={{ marginTop: '1.5rem', padding: '0.8rem 0.9rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                        <div style={{ color: '#00d2d3', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Compliance Summary</div>
+                                        <div style={{ color: pctColor, fontSize: '1rem', fontWeight: 700 }}>{pct}%</div>
+                                    </div>
+                                    <div style={{ height: '0.35rem', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.7rem' }}>
+                                        <div style={{ width: `${pct}%`, height: '100%', background: pctColor, transition: 'width 250ms ease' }} />
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.4rem 0.8rem', fontSize: '0.72rem', marginBottom: '0.6rem' }}>
+                                        <div><span style={{ color: '#8899aa' }}>Missing:</span> <span style={{ color: '#fff', fontWeight: 600 }}>{cs.missing_total || 0}</span> / {cs.required_total || 0}</div>
+                                        <div><span style={{ color: '#8899aa' }}>Travel blocks:</span> <span style={{ color: blockers.length > 0 ? '#ff9f96' : '#2ecc71', fontWeight: 600 }}>{blockers.length}</span></div>
+                                        <div><span style={{ color: '#8899aa' }}>Expired:</span> <span style={{ color: cw.expired > 0 ? '#e74c3c' : '#fff', fontWeight: 600 }}>{cw.expired || 0}</span></div>
+                                        <div><span style={{ color: '#8899aa' }}>Expiring ≤90d:</span> <span style={{ color: cw.expiring_90 > 0 ? '#f1c40f' : '#fff', fontWeight: 600 }}>{cw.expiring_90 || 0}</span></div>
+                                        <div><span style={{ color: '#8899aa' }}>Visa:</span> <span style={{ color: visa.has_visa ? '#2ecc71' : '#8899aa', fontWeight: 600 }}>{visa.has_visa ? `Yes${visa.country ? ` (${visa.country})` : ''}` : 'No'}</span></div>
+                                        <div><span style={{ color: '#8899aa' }}>Dual nationality:</span> <span style={{ color: '#fff', fontWeight: 600 }}>{identity.double_nationality ? 'Yes' : 'No'}</span></div>
+                                    </div>
+                                    {Array.isArray(cs.missing_critical_top3) && cs.missing_critical_top3.length > 0 ? (
+                                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                            <div style={{ color: '#ff9f96', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.3rem' }}>Top missing docs</div>
+                                            {cs.missing_critical_top3.map((t, i) => (
+                                                <div key={i} style={{ color: '#d2dbe5', fontSize: '0.72rem', lineHeight: 1.5 }}>• {t}</div>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                    {blockers.length > 0 ? (
+                                        <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                            <div style={{ color: '#00d2d3', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.4rem' }}>Why blocked</div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                                {blockers.slice(0, 8).map((b, i) => (
+                                                    <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                                        <span style={{ flex: 'none', display: 'inline-block', padding: '0.1rem 0.35rem', borderRadius: '3px', fontSize: '0.6rem', fontWeight: 700, color: reasonColor(b.reason_code), background: `${reasonColor(b.reason_code)}20`, border: `1px solid ${reasonColor(b.reason_code)}40`, textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{(b.reason_code || '').replace(/_/g, ' ')}</span>
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{ color: '#d2dbe5', fontSize: '0.72rem', fontWeight: 500 }}>{b.title}</div>
+                                                            {b.reason_detail ? <div style={{ color: '#8899aa', fontSize: '0.68rem' }}>{b.reason_detail}</div> : null}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : cs.compliant ? (
+                                        <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', color: '#2ecc71', fontSize: '0.72rem', fontWeight: 600 }}>
+                                            ✓ Meets all requirements{rank ? ` for ${rank}` : ''}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            );
+                        })()
                         :
                         null
                 }
