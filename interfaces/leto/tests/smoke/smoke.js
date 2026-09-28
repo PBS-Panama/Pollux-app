@@ -3,10 +3,12 @@
 // Runs in a throwaway official Playwright container (nothing installed on
 // the host, no paid service): logs in as the local demo company account and
 // walks Board / Discover / the real Add to Roster flow (R5, reverted after)
-// / MyFleet / a seafarer profile (new + old URL) / Calendar / Library /
+// / MyFleet / a seafarer profile (new + old URL) / Calendar /
 // Settings / a real en->es->pt->en language switch (R8) / admin, failing on
 // console errors, uncaught page errors, 4xx/5xx from our own origin, or a
 // blank page.
+// T2 (2026-09-28): Library removed entirely (Rick's decision) — the
+// 'library' step (#/myfiles) is gone from this walk.
 //
 // Credentials come ONLY from environment variables — never hardcoded here,
 // never printed to stdout/screenshots beyond what the app itself renders.
@@ -228,9 +230,8 @@ const visit = async (page, { name, url, waitMs = 1500, screenshotName }) => {
         console.log('FAIL seafarer-profile-old-url    (sin id de marino real para probar)');
     }
 
-    // ─── Calendar / Library / Settings ──────────────────────────────────────
+    // ─── Calendar / Settings ────────────────────────────────────────────────
     await visit(page, { name: 'calendar', url: `${BASE_URL}/company/#/company-calendar` });
-    await visit(page, { name: 'library', url: `${BASE_URL}/company/#/myfiles` });
     await visit(page, { name: 'settings', url: `${BASE_URL}/company/#/settings` });
 
     // ─── Language switch en/es/pt (R8: useProfile.js replaced CoreTransport's

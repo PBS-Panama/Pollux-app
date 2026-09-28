@@ -5,4 +5,3 @@ declare module '*.less' {
 
 declare module 'pollux/common/router';
 declare module 'pollux/components/NavBar';
-declare module 'pollux/components/ModalDialog';

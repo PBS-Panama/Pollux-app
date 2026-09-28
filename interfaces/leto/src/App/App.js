@@ -4,12 +4,11 @@
 // loading gate and no ErrorDialog. Persisted UI language is applied at
 // i18n.init() time (src/index.js), not an on-mount effect here.
 // R11: no more services Context/Provider either — useKeyboardShortcuts is a
-// self-contained hook (services/index.js) called directly here, and
-// useServices() (still needed by components/LibItem/LibItem.js, untouched,
-// pending Rick's decision on Library) is a plain function now, not
-// Context-based, so nothing needs to provide it from up here. Toast/Tooltip
+// self-contained hook (services/index.js) called directly here. Toast/Tooltip
 // providers removed in R11 — both were 100% dead (SharePrompt, their only
-// real consumer, was deleted in R7).
+// real consumer, was deleted in R7). T2 (2026-09-28): useServices() itself
+// removed — its only real consumer, components/LibItem, was deleted with
+// Library by Rick's decision.
 
 const React = require('react');
 const { Router } = require('pollux/common/router');

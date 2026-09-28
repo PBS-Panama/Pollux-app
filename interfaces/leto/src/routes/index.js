@@ -4,7 +4,6 @@
 
 const CompanyDashboard = require('./CompanyDashboard');
 const SeafarerSearch = require('./SeafarerSearch');
-const Library = require('./Library');
 const Calendar = require('./Calendar').default;
 const SeafarerProfile = require('./SeafarerProfile');
 const NotFound = require('./NotFound');
@@ -14,7 +13,6 @@ const MyFleet = require('./MyFleet');
 module.exports = {
     CompanyDashboard,
     SeafarerSearch,
-    Library,
     Calendar,
     SeafarerProfile,
     NotFound,

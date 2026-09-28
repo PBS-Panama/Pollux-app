@@ -9,10 +9,6 @@ const routesRegexp = {
         regexp: /^\/company-crewdb(?:\/([^/]*)\/([^/]*)\/([^/]*))?$/,
         urlParamsNames: ['transportUrl', 'type', 'catalogId']
     },
-    myfiles: {
-        regexp: /^\/myfiles(?:\/([^/]*))?$/,
-        urlParamsNames: ['type']
-    },
     companyCalendar: {
         regexp: /^\/company-calendar(?:\/([^/]*)\/([^/]*))?$/,
         urlParamsNames: ['year', 'month']

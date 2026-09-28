@@ -9,11 +9,18 @@ type Props = {
     children: React.ReactNode,
 };
 
-const Section = forwardRef<HTMLDivElement, Props>(({ className, label, children }, ref) => (
-    <div ref={ref} className={classNames(className, styles['settings-section'])}>
-        {label && <div className={styles['section-heading']}>{t(label)}</div>}
-        {children}
-    </div>
-));
+const SectionHeading = ({ label }: { label: string }) => (
+    <div className={styles['section-heading']}>{t(label)}</div>
+);
+
+const Section = forwardRef<HTMLDivElement, Props>(({ className, label, children }, ref) => {
+    const rootClassName = classNames(className, styles['settings-section']);
+    return (
+        <div ref={ref} className={rootClassName}>
+            {label ? <SectionHeading label={label} /> : null}
+            {children}
+        </div>
+    );
+});
 
 export default Section;

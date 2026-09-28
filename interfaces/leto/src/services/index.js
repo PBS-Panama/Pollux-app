@@ -1,9 +1,7 @@
-// PBS Crewing Module — servicios (R11, reescrito desde cero)
-// No queda ningún servicio real que compartir vía React Context: nadie salvo
-// components/LibItem/LibItem.js (congelado, pendiente de tu decisión sobre
-// Library) sigue pidiendo "servicios", y solo lee core.transport.dispatch —
-// un no-op desde antes de que CoreTransport se borrara (R8). Sin Context ni
-// Provider: useServices() devuelve siempre el mismo objeto constante.
+// PBS Crewing Module — servicios (R11, reescrito desde cero; T2: sacado
+// useServices — su único consumidor real, components/LibItem/LibItem.js, se
+// borró junto con Library, MetaItem y Multiselect por decisión de Rick
+// 2026-09-28)
 // KeyboardShortcuts pasó de una clase EventEmitter con start()/stop() (que
 // nadie escuchaba — ni 'stateChanged' ni `.active` tenían consumidor real) a
 // un hook que se llama donde hace falta (hoy, solo App.js) y maneja su
@@ -11,11 +9,7 @@
 
 const React = require('react');
 
-const CORE_STUB = { transport: { dispatch: () => {} } };
-
-const useServices = () => ({ core: CORE_STUB });
-
-// Digit1-6 saltan a una pantalla real de Pollux. Se ignora con el foco en un
+// Digit1-5 saltan a una pantalla real de Pollux. Se ignora con el foco en un
 // <input> o con Ctrl/Alt/Shift/Meta apretado — eso también silenciaba
 // Backspace con Ctrl en la versión anterior (el "adelante" con
 // Ctrl+Backspace nunca podía dispararse ahí: el guard de arriba ya cortaba
@@ -23,10 +17,9 @@ const useServices = () => ({ core: CORE_STUB });
 const NAV_SHORTCUTS = {
     Digit1: '#/',
     Digit2: '#/company-crewdb',
-    Digit3: '#/myfiles',
-    Digit4: '#/company-calendar',
-    Digit5: '#/my-fleet',
-    Digit6: '#/settings',
+    Digit3: '#/company-calendar',
+    Digit4: '#/my-fleet',
+    Digit5: '#/settings',
 };
 
 const useKeyboardShortcuts = () => {
@@ -48,4 +41,4 @@ const useKeyboardShortcuts = () => {
     }, []);
 };
 
-module.exports = { useServices, useKeyboardShortcuts };
+module.exports = { useKeyboardShortcuts };

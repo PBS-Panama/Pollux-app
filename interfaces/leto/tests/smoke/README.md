@@ -5,10 +5,12 @@ Docker oficial — nada se instala en el host, sin servicios pagos. Loguea con
 el usuario demo de compañía (local, seed de desarrollo) y recorre Board,
 Discover (incluyendo el flujo real de "Agregar a mi personal" → revierte el
 dato de prueba al terminar), MyFleet, el perfil de un marino (URL nueva
-`#/seafarer/{id}` y la vieja `#/metadetails/crew/{id}`), Calendar, Library,
+`#/seafarer/{id}` y la vieja `#/metadetails/crew/{id}`), Calendar,
 Settings, un cambio de idioma real en→es→pt→en (R8 — verifica el label de
 "Crew Database" en cada idioma y escanea toda la página en busca de claves
-`ALL_CAPS` sin traducir) y admin. Falla si hay errores de consola,
+`ALL_CAPS` sin traducir) y admin. Library se sacó del recorrido (T2,
+2026-09-28 — la ruta y sus componentes fueron eliminados por decisión de
+Rick). Falla si hay errores de consola,
 `pageerror`, respuestas 4xx/5xx del propio origen, una pantalla con menos de
 10 elementos en el DOM (heurística de "en blanco"), o una clave de traducción
 visible sin resolver. Guarda una captura de cada pantalla en `output/`
@@ -60,7 +62,7 @@ dependencias del SO instaladas; `npm install` solo baja el paquete JS
 `playwright` (mismo número de versión que el tag de la imagen, para que use
 el Chromium que ya está ahí en vez de bajar uno nuevo).
 
-Sale con código 0 si las 12 pantallas/flujos pasan, 1 si alguna falla, 2 si
+Sale con código 0 si las 11 pantallas/flujos pasan, 1 si alguna falla, 2 si
 el login falla o el script se cae antes de terminar. El resumen queda en
 stdout; las capturas en `output/*.png` (una por pantalla, más
 `login-dashboard.png`, `add-to-roster.png` y `settings-lang-*.png`).

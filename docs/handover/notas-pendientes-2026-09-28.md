@@ -2118,3 +2118,172 @@ porque ya está mayormente hecho), o preferís que solo persiga hallazgos reales
 consumidores"/"código muerto" en los 42 y no fuerce reescrituras cosméticas en lo que ya es
 código propio? Cualquiera de las dos la hago — prefiero confirmar antes de gastar lotes en
 algo de bajo valor si no es lo que buscás.
+
+## T1 — Main limpio de PBS-Panama/Pollux-app (2026-09-28)
+
+Decisión de Rick (relayada por el PM): rehacer el historial de `main` en el repo remoto
+`PBS-Panama/Pollux-app` con un snapshot único y limpio del estado actual. Autorizado
+explícitamente con `--force-with-lease=main:8e63ca28`, solo para `main`. **No toqué el git
+de `pb-website`** en ningún momento — todo lo hecho con `git -C pb-website ls-files` (lectura)
+y trabajo en una carpeta temporal fuera del repo.
+
+1) **Lista de archivos:** `git ls-files -co --exclude-standard products/portal/pbsds-pollux-app`
+   desde `pb-website` → 1600 archivos. Excluí además `CLAUDE.md`, `PM_REPORT.md`, y los 2
+   archivos de `docs/legal/` (borradores pendientes de Rick) → 1596. `.grvx-harness/` ya
+   estaba gitignored en `pb-website`, no apareció. `.env.example` (x2) se mantuvieron, ningún
+   `.env` real estaba trackeado.
+
+2) **Copia a carpeta temporal + snapshot:** de los 1596 listados, **1173 existen hoy en el
+   working tree** — los otros 423 son archivos que estaban en el índice de git pero ya no
+   existen en disco (limpieza de código Stremio de fases anteriores a esta sesión y de esta
+   misma: `Toast/`, `Tooltips/`, `FileDrop/`, `AddonDetailsModal/`, `useTorrent.js`,
+   `DeepLinkHandler.js`, `ErrorDialog/`, `UpdaterBanner/`, `ServicesToaster.js`, más
+   `Dockerfile`/`eslint.config.mjs`/`http_server.js`/`interfaces/leto/Dockerfile.prod` en la
+   raíz — ya estaban borrados desde ANTES de que arrancara esta sesión, según el git status
+   inicial que vi al empezar. Verifiqué que cada uno de esos 4 últimos tiene su reemplazo
+   vigente y presente: `Dockerfile.prod` (raíz), `interfaces/leto/Dockerfile`, `interfaces/
+   leto/eslint.config.mjs` — consistente con el split a Dockerfiles por servicio). Lo marco
+   explícito porque es una diferencia grande (26% de la lista) antes de pushear algo
+   irreversible — si alguno de esos 423 debería seguir vivo, avisame antes de que se pierda
+   del historial nuevo para siempre.
+
+3) **Commit único:** `git init` en la carpeta temporal, `LICENSE.md` se mantuvo, mensaje
+   exacto `Pollux — snapshot inicial limpio (2026-09-28)`.
+
+4) **Escaneo de secretos ANTES de pushear:**
+   - `gitleaks detect` en contenedor (`zricethezav/gitleaks`, nada instalado en el host):
+     **"no leaks found"**.
+   - Grep de patrones (`SECRET_KEY=`/`PASSWORD=`/`token=` con valor real, `postgres://` con
+     usuario:clave, `-----BEGIN`): **0 hallazgos reales** — los únicos matches de
+     `postgres://` eran `${POSTGRES_PASSWORD}` (interpolación) o `<POSTGRES_PASSWORD>`/
+     `<user>:<password>` (marcadores), todos seguros.
+
+5) **Push:** confirmé con `git ls-remote` que `main` remoto estaba exactamente en
+   `8e63ca288b45bf2dc9ab0bff7662dcbd4c1e4f48` antes de pushear (coincide con el lease). Push
+   con `--force-with-lease=main:8e63ca288b45bf2dc9ab0bff7662dcbd4c1e4f48` — exitoso.
+   **SHA nuevo de `main`: `8e97c5488af9e28877d4be4a5e407bd17bd2d5f2`.**
+   `ls-remote` post-push confirma `development`, `IDM`, `IDM-vessel-icons` y los 5
+   `dependabot/*` **sin tocar**, en sus SHAs originales.
+
+6) Carpeta temporal borrada.
+
+**Resumen para Rick:** 1173 archivos en el commit nuevo, gitleaks limpio, push exitoso, ramas
+ajenas intactas. Pendiente de confirmación: los 423 archivos que quedaron fuera por ya no
+existir en el working tree (detalle arriba).
+
+---
+
+## T2 — Library fuera (2026-09-28)
+
+Decisión de Rick: Library sale por completo (ruta, LibItem, MetaItem, huérfanos). Calendar
+se queda intacto — verificado ANTES de borrar nada que no depende de ninguno de los
+archivos tocados (import ni indirecto).
+
+**Borrado (completo, carpetas enteras):**
+- `routes/Library/` (`Library.js`, `index.js`, `useDocumentUpload.js`, `styles.less`,
+  `Placeholder/`)
+- `components/LibItem/`
+- `components/MetaItem/`
+- `components/Multiselect/` — huérfano en cascada, su único consumidor real era
+  `MetaItem.js`
+- `common/CONSTANTS.js` — huérfano en cascada, exportaba solo `ICON_FOR_TYPE`, único lector
+  real era `MetaItem.js`
+
+**Editado (huérfanos que dependían de lo borrado):**
+- `routes/index.js` — sacado el require/export de `Library`
+- `components/index.ts` — sacados imports/exports de `LibItem`/`MetaItem`/`Multiselect`
+- `App/routerViewsConfig.js` — sacada la entrada de `myfiles`
+- `common/routesRegexp.js` — sacada la entrada `myfiles` (0 otras referencias confirmado
+  antes de borrar)
+- `components/MainNavBars/MainNavBars.tsx` — sacada la tab "My Files" de `COMPANY_TABS`;
+  quedan 5: Dashboard, Crew Database, My Fleet, Calendar, Settings
+- `services/index.js` — sacado `useServices`/`CORE_STUB` completo (único consumidor real
+  era `LibItem.js`); `NAV_SHORTCUTS` renumerado de 6 a 5 entradas (Digit1-5). Autocorregido
+  antes de correr build: el `module.exports` seguía referenciando `useServices` ya borrado
+  — hubiera roto toda la app al cargar (`ReferenceError`, `App.js` lo importa a nivel de
+  módulo).
+- `common/Shortcuts/shortcuts.json` — combo de `navigateTabs` de `["1".."6"]` a `["1".."5"]`
+- `App/App.js` — comentario de cabecera desactualizado (mencionaba `useServices()`/LibItem
+  como si siguieran vivos), corregido
+- `common/translations/{en,es,pt}.json` — sacadas `LIBRARY_DETAILS`, `LIBRARY_NOT_LOGGED_IN`,
+  `LIBRARY_PLAY`, `LIBRARY_REMOVE`, `LIBRARY_RESUME_DISMISS`, `"My Files"`, y dos más
+  encontradas huérfanas de paso en el mismo bloque: `NOT_LOGGED_IN_CLOUD`,
+  `NOT_LOGGED_IN_RECOMMENDATIONS` (0 consumidores fuera de `translations/` en los 3
+  catálogos, confirmado por grep)
+- `tests/smoke/smoke.js` + `tests/smoke/README.md` — sacado el paso `library` (`#/myfiles`);
+  12 pantallas pasan a 11
+
+**Verificación:**
+- Grep final de `Library|LibItem|MetaItem|Multiselect|CONSTANTS|useServices` en todo
+  `src/`: 0 referencias rotas (los únicos matches restantes son `MultiselectMenu`, componente
+  distinto que sigue vivo, y comentarios históricos ya corregidos)
+- `tsc --noEmit`: 93 errores (bajó de 98 — coherente, son archivos borrados que ya tenían
+  errores preexistentes). Ninguno de los archivos tocados en T2 aparece en el log. 0 nuevos.
+- Build: `docker compose up -d --build leto nginx` OK, sin warnings de compilación nuevos
+- Smoke ajustado (Docker Playwright oficial, sin nada instalado en el host):
+  **11/11 pantallas OK** (login, board, discover, add-to-roster, myfleet,
+  seafarer-profile-new-url, seafarer-profile-old-url, calendar, settings, language-switch,
+  admin)
+- Verificación visual (capturas `board.png`/`settings.png`): sidebar con 5 tabs (sin "My
+  Files"), "Navigate between menus" muestra "1 to 5" (no "1 to 6"), atajos de teclado sin
+  comportamiento roto
+
+**Pendiente (anotado por Rick, no accionado todavía):** revisar si `index.html` en la RAÍZ de
+`pollux-app` (distinto del `interfaces/leto/src/index.html`, que ya se confirmó como el
+template real de webpack) es resto muerto del fork de Stremio o si algo lo usa realmente.
+
+**Estado:** T2 completo. Library ya no está "congelada", está eliminada. Calendar sigue
+congelada/protegida (no se tocó, no se le agregó nada falso) — pendiente de que Rick le
+construya backend real.
+
+Ahora T2: sacar Library.
+
+---
+
+## index.html raíz + Clasificación MEDIA/BAJA (2026-09-28, continuación)
+
+**`index.html` de la raíz de `pollux-app`:** confirmado resto muerto del fork. Apuntaba a
+`/src/index.js`, que no existe en la raíz (solo en `interfaces/leto/src/`). Verificado que
+`Dockerfile.prod` (los 3 build stages solo copian `interfaces/leto/`, `interfaces/admin/`,
+`landing/`), `docker-compose.yml` (build context de `leto` es `./interfaces/leto`), `cloudbuild.yaml`
+y `infra/nginx/` no lo referencian en ningún lado. **Borrado.**
+
+**Clasificación MEDIA(42)+BAJA(17), con Calendar incluido:** detalle completo, tabla con evidencia
+por archivo, y lote ejecutado en `docs/handover/clasificacion-media-baja-2026-09-28.md`. Resumen:
+- Recalculé similitud desde cero (checkout de referencia se había perdido con el corte de contexto,
+  reclonado del mismo commit `091f94e8`) sobre el `src/` actual post-T2: 39 ALTA / 42 MEDIA / 17 BAJA
+  con equivalente real upstream (antes T2/R14 eran 137 en total).
+- De los 59 MEDIA+BAJA, solo **2 caían en columna A** (nunca reescritos genuinamente):
+  `routes/Settings/Info/Info.tsx` y `routes/Settings/components/Section/Section.tsx`. El resto (57)
+  ya tenía evidencia de reescritura R-fase o es dato/estructura propia de Pollux.
+- Ejecuté el lote de esos 2: Info.tsx con `VERSION_ROWS` array-driven, Section.tsx con subcomponente
+  `SectionHeading` extraído. Verificación: grep sin fugas, tsc 93 (mismo, 0 nuevos), build OK, smoke
+  11/11.
+- **Calendar:** clasificado sin tocar. `Calendar.tsx` es BAJA (11.1%, ya reescrito/propio).
+  `Calendar.less` da **ALTA (66.7%)** pero las 12 líneas compartidas son puramente CSS genérico
+  (flex/gap/width/height/media query) — no hay lógica ni texto de Stremio. Reportado al PM antes de
+  tocar nada, tal como se pidió.
+
+---
+
+## Cierre — script reproducible, caza de código muerto columna B, informe legal (2026-09-28)
+
+Ejecutadas las 4 decisiones del PM:
+1. **Calendar.less**: no se toca, queda como excepción "CSS genérico" en el informe legal, con la
+   revisión línea por línea ya hecha.
+2. **Script de similitud guardado en el repo**: `interfaces/leto/tests/license-audit/similarity.py`
+   + `README.md` (commit de referencia `091f94e8` fijado, instrucciones de clonado y ejecución).
+   Verificado que reproduce exactamente los mismos números (98 total, 39/42/17) que la corrida
+   suelta del scratchpad.
+3. **Caza de código muerto en columna B** (57 archivos MEDIA/BAJA ya reescritos/propios): `ts-prune`
+   sin hallazgos reales (solo falsos positivos "used in module"). Revisión manual de `.less` de
+   columna B sin selectores huérfanos. Un hallazgo real: `modules.d.ts` tenía una declaración de
+   módulo ambient (`pollux/components/ModalDialog`) sin ningún import real — **sacada**. Un segundo
+   hallazgo (`NavTabButton`'s soporte de `logo`, 0 consumidores reales hoy) se dejó sin tocar por
+   parecer scaffolding propio de Pollux, no resto de Stremio — nota abierta en el informe.
+   Verificado: tsc 93 (mismo, 0 nuevos), build OK, smoke 11/11.
+4. **Informe único para revisión legal**: `docs/legal-review/stremio-2026-09-28.md` — todas las
+   fases (R1-R14, T1, T2, index.html raíz), todas las excepciones con evidencia, estado de Calendar,
+   método reproducible, y la sección de qué falta decidir para poder quitar `LICENSE.md`.
+
+Sin commit, como se indicó.

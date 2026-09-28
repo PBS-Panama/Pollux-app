@@ -18,10 +18,6 @@ const routerViewsConfig = [
             component: routes.SeafarerSearch
         },
         {
-            ...routesRegexp.myfiles,
-            component: routes.Library
-        },
-        {
             ...routesRegexp.companyCalendar,
             component: routes.Calendar
         },

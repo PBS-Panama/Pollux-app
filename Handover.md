@@ -13773,3 +13773,48 @@ Dos fetches reales propios: `GET /company/seafarers/{id}` (perfil) y `GET /compa
 **Fuera de este plan, decisión de Rick, ya anotado en la nota 50:** páginas propias de Términos/Privacidad (TODO legal, bloquea el checkbox de registro de… — bueno, Intro se borra, así que ese checkbox desaparece con Intro; el TODO legal pasa a ser relevante para el registro real de `landing/`, si no lo tiene ya).
 
 Nada de esto se ejecutó — es plan, sin código, sin commit.
+
+---
+
+## 2026-09-28 — Cierre de sesión: R14 cerrado, T1/T2 hechos, clasificación MEDIA/BAJA
+completada, informe legal entregado
+
+Resumen de lo hecho hoy (detalle completo en `docs/handover/notas-pendientes-2026-09-28.md`,
+`docs/handover/clasificacion-media-baja-2026-09-28.md`, y el informe final
+`docs/legal-review/stremio-2026-09-28.md`):
+
+- **T2 cerrado**: Library eliminada por completo (decisión de Rick) — ruta, LibItem, MetaItem
+  y toda la cascada de huérfanos. Verificado grep/tsc/build/smoke.
+- **`index.html` raíz de `pollux-app`**: confirmado resto muerto del fork, borrado.
+- **Clasificación MEDIA(42)+BAJA(17) post-T2, con Calendar incluido**: solo 2 archivos
+  (`Info.tsx`, `Section.tsx`) nunca habían sido reescritos genuinamente — reescritos y
+  verificados. El resto ya tenía evidencia de reescritura o es propio.
+- **Calendar**: solo clasificado, NADA tocado. `Calendar.less` da 66.7% de similitud con
+  Stremio pero son líneas de CSS genérico (flex/gap/width/height) — documentado como
+  excepción, reportado al PM antes de tocar, decisión: no se toca.
+- **Script de similitud versionado**: `interfaces/leto/tests/license-audit/` (script +
+  README), reproducible con el commit de referencia `091f94e8`.
+- **Caza de código muerto en columna B**: 1 hallazgo real corregido (`modules.d.ts`, una
+  declaración de módulo ambient sin consumidor); 1 caso dudoso dejado sin tocar (soporte de
+  `logo` en `NavTabButton` — parece scaffolding propio de Pollux, no resto de Stremio, queda
+  como nota abierta).
+- **Informe único para revisión legal**: `docs/legal-review/stremio-2026-09-28.md` — cubre
+  las 14 fases (R1-R14) + T1 + T2, todas las excepciones con evidencia, Calendar, método
+  reproducible, y qué falta para poder sacar `LICENSE.md`. Aceptado por el PM.
+
+**Nota de proceso, para que quede escrita:** el resumen fase-por-fase (R1-R13) y el informe
+legal final los terminó escribiendo un sub-agente ("fork") que lancé con una instrucción
+acotada (solo extraer el resumen fase-por-fase a un archivo). Al heredar todo el contexto de
+la conversación, vio la lista completa de 4 tareas que había pedido el PM y las hizo todas,
+incluyendo escribir el informe legal final. Audité el resultado antes de darlo por bueno:
+`git status`/timestamps confirman que NO tocó nada en `interfaces/leto/src` más allá de lo que
+yo ya había hecho antes de lanzarlo (nada duplicado ni en conflicto), y leí el informe completo
+— el contenido es preciso y consistente con lo que hice en la sesión. El PM ya lo aceptó. Para
+la próxima: acotar el prompt del fork de forma más explícita ("SOLO hacé X, no continúes con
+el resto de la lista de tareas pendientes") cuando el contexto heredado incluye una lista de
+tareas más larga que la que se le está pidiendo.
+
+**Sin commits ni push** en todo lo anterior (salvo T1, autorizado explícitamente y acotado al
+remoto `PBS-Panama/Pollux-app`). Por instrucción del PM (2026-09-28, tras aceptar el informe):
+**no tocar código ni git hasta nuevo aviso** — queda todo en espera de que Rick revise el
+informe legal.

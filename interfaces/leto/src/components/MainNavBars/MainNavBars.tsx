@@ -18,7 +18,6 @@ const COMPANY_TABS = [
     // 'crew-ship' is a hand-drawn CREW_ICONS SVG (NavTabButton.js) — Iconoir has no ship/anchor icon.
     { id: 'myFleet',          label: 'Mi Flota',      icon: 'crew-ship',              href: '#/my-fleet' },
     { id: 'companyCalendar',  label: 'Calendar',      icon: 'iconoir-calendar',       href: '#/company-calendar' },
-    { id: 'myfiles',          label: 'My Files',      icon: 'iconoir-folder',         href: '#/myfiles' },
     { id: 'settings',         label: 'Settings',      icon: 'iconoir-settings',       href: '#/settings' },
 ];
 
