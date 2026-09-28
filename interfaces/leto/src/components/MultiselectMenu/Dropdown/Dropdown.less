@@ -1,0 +1,51 @@
+// Copyright (C) 2017-2024 Smart code 203358507
+
+@import (reference) '~pollux/common/screen-sizes.less';
+
+@collapsed-parent-height: 12rem;
+@item-height: 3rem;
+@visible-items: 7;
+
+// Cerrado no ocupa layout (display: none); abierto se vuelve una lista
+// scrolleable de hasta @visible-items filas — separado en dos bloques en vez
+// de un único selector con todo mezclado, para que quede claro qué es
+// "estado base" vs. "estado abierto".
+.dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+    box-shadow: var(--outer-glow);
+    // Sigue el tema del shell — ver la misma nota en Popup/styles.less.
+    background: var(--content-card-bg, var(--modal-background-color));
+    --primary-foreground-color: var(--content-text-color, rgba(255, 255, 255, 0.9));
+    --overlay-color: var(--content-border-color, rgba(255, 255, 255, 0.05));
+}
+
+.dropdown.open {
+    display: block;
+    overflow: auto;
+    max-height: calc(@item-height * @visible-items);
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    gap: 0 0.5rem;
+    padding: 0.75rem;
+    color: var(--primary-foreground-color);
+}
+
+.back-button-icon {
+    width: 1.5rem;
+}
+
+@media (orientation: landscape) and (max-width: @xsmall) {
+    .dropdown.open {
+        max-height: calc(100dvh - var(--horizontal-nav-bar-size) - @collapsed-parent-height);
+    }
+}

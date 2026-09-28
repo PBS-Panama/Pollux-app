@@ -1,0 +1,60 @@
+// Copyright (C) 2017-2023 Smart code 203358507
+
+@import (reference) '~pollux/assets/pollux-colors.less';
+
+// Las 4 clases `menu-direction-*` son la combinación de dos ejes
+// independientes (vertical: top/bottom, horizontal: left/right) — en vez de
+// 4 bloques casi iguales, se define cada eje una sola vez y se combinan por
+// selector. `visibility` arranca oculto porque, en el primer frame de un
+// popup con dirección automática, el JS todavía no calculó hacia dónde abre
+// (Popup.js) — recién se hace visible al aplicarse cualquier clase de eje
+// vertical.
+.label-container {
+    // iOS: evita el menú contextual nativo al mantener presionado un enlace.
+    -webkit-touch-callout: none !important;
+
+    position: relative;
+    overflow: visible;
+
+    .menu-container {
+        position: absolute;
+        z-index: 1;
+        overflow: hidden;
+        visibility: hidden;
+        border-radius: var(--border-radius);
+        box-shadow: var(--outer-glow);
+        cursor: auto;
+        // Sigue el tema del shell (Claro/Oscuro/Dusk) en vez del fondo
+        // siempre-oscuro original — tarjeta clara u oscura según corresponda,
+        // se abra donde se abra (Board incluido).
+        background-color: var(--content-card-bg, var(--modal-background-color));
+        --primary-foreground-color: var(--content-text-color, rgba(255, 255, 255, 0.9));
+        --overlay-color: var(--content-border-color, rgba(255, 255, 255, 0.05));
+
+        &.menu-direction-top-left,
+        &.menu-direction-top-right {
+            top: initial;
+            bottom: 100%;
+            visibility: visible;
+        }
+
+        &.menu-direction-bottom-left,
+        &.menu-direction-bottom-right {
+            top: 100%;
+            bottom: initial;
+            visibility: visible;
+        }
+
+        &.menu-direction-top-left,
+        &.menu-direction-bottom-left {
+            right: 0;
+            left: initial;
+        }
+
+        &.menu-direction-top-right,
+        &.menu-direction-bottom-right {
+            right: initial;
+            left: 0;
+        }
+    }
+}

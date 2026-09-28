@@ -1,0 +1,17 @@
+node_modules
+build
+.git
+.gitignore
+*.md
+LICENSE.md
+CODE_OF_CONDUCT.md
+CREWING-MODULE.md
+.eslintrc*
+eslint.config.mjs
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+tests

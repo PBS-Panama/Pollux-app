@@ -1,0 +1,42 @@
+/* PBS Crewing Module — router
+   Las clases (route-container, route-content, modals-container,
+   modal-container) las pinta únicamente este módulo (Router.js/context.js/
+   Modal.js) — no hace falta calificarlas con el ancestro .routes-container
+   en cada selector, ninguna otra pantalla las reutiliza. */
+
+.routes-container {
+    position: relative;
+    z-index: 0;
+}
+
+/* Cada nivel de ruta ocupa el mismo espacio, apilado; solo el último (el
+   activo) es visible — los anteriores siguen montados para conservar su
+   estado (scroll, filtros) cuando se vuelve atrás. */
+.route-container {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.route-container:not(:last-child) {
+    display: none;
+}
+
+.route-content {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.modals-container {
+    width: 0;
+    height: 0;
+}
+
+.modal-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+}

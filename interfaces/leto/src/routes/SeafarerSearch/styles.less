@@ -1,0 +1,305 @@
+// PBS Crewing Module — Seafarer Search styles
+// Same convention as CompanyDashboard/SeafarerProfile/MyFleet: --content-*
+// custom properties from App/styles.less's :root (Mannat 4-theme system).
+
+.search-container {
+    height: 100%;
+}
+
+.search-page {
+    height: 100%;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background-color: var(--content-bg, #f4f6f9);
+}
+
+.search-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.search-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--content-text-color, #061237);
+    margin: 0;
+}
+
+.search-subtitle {
+    font-size: 0.85rem;
+    color: var(--content-muted-color, #96a0b5);
+    margin: 0;
+}
+
+.error-banner {
+    background: fade(#e74c3c, 12%);
+    border: 1px solid fade(#e74c3c, 30%);
+    color: #c0392b;
+    font-size: 0.82rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+}
+
+.muted {
+    font-size: 0.84rem;
+    color: var(--content-muted-color, #96a0b5);
+    padding: 0.5rem 0;
+}
+
+.filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.text-input {
+    flex: 1;
+    min-width: 160px;
+    background: var(--content-card-bg, #fff);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+    color: var(--content-text-color, #061237);
+    font-family: inherit;
+
+    &:focus {
+        outline: none;
+        border-color: var(--content-accent-color, #3167f3);
+    }
+}
+
+.empty-state {
+    background: var(--content-card-bg, #fff);
+    border: 1px dashed var(--content-border-color, #e3ebf6);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.empty-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--content-text-color, #061237);
+}
+
+.empty-desc {
+    font-size: 0.82rem;
+    color: var(--content-muted-color, #96a0b5);
+    margin-top: 0.3rem;
+}
+
+.search-body {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    flex: 1;
+    min-height: 0;
+}
+
+.crew-grid {
+    flex: 2;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.7rem;
+    align-content: start;
+}
+
+.crew-card {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    background: var(--content-card-bg, #fff);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.15s;
+
+    &:hover { border-color: var(--content-accent-color, #3167f3); }
+
+    &.selected {
+        border-color: var(--content-accent-color, #3167f3);
+        box-shadow: 0 0 0 1px var(--content-accent-color, #3167f3);
+    }
+}
+
+.crew-avatar {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--content-bg, #f4f6f9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.crew-avatar-placeholder {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--content-muted-color, #96a0b5);
+}
+
+.crew-card-body {
+    min-width: 0;
+}
+
+.crew-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--content-text-color, #061237);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.crew-sub {
+    font-size: 0.72rem;
+    color: var(--content-muted-color, #96a0b5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail-panel {
+    flex: 1;
+    min-width: 260px;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    background: var(--content-card-bg, #fff);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 12px;
+    padding: 1.1rem;
+}
+
+.header-card {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.avatar {
+    flex: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--content-bg, #f4f6f9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-placeholder {
+    width: 1.6rem;
+    height: 1.6rem;
+    color: var(--content-muted-color, #96a0b5);
+}
+
+.header-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--content-text-color, #061237);
+}
+
+.row-sub {
+    font-size: 0.78rem;
+    color: var(--content-muted-color, #96a0b5);
+}
+
+.bio {
+    font-size: 0.82rem;
+    color: var(--content-text-color, #061237);
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.chip {
+    font-size: 0.7rem;
+    background: var(--content-bg, #f4f6f9);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    color: var(--content-text-color, #061237);
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+}
+
+.status-chip {
+    align-self: flex-start;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.12rem 0.5rem;
+    border-radius: 20px;
+    background: var(--content-border-color, #e3ebf6);
+    color: var(--content-muted-color, #96a0b5);
+
+    &[data-status='active'] { background: fade(#2ecc71, 15%); color: #27ae60; }
+    &[data-status='ended'] { background: fade(#e74c3c, 12%); color: #c0392b; }
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: fade(#3167f3, 12%);
+    border: 1px solid var(--content-accent-color, #3167f3);
+    color: var(--content-accent-color, #3167f3);
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+    &:hover:not(:disabled) { opacity: 0.85; }
+}
+
+.btn-secondary {
+    display: block;
+    background: transparent;
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    color: var(--content-text-color, #061237);
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+    &:hover:not(:disabled) { border-color: var(--content-accent-color, #3167f3); }
+}

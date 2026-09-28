@@ -1,0 +1,45 @@
+@border-radius: 2.75rem;
+@trigger-height: 3rem;
+
+// `.multiselect-menu.disabled` del original nunca se aplicaba — el `disabled`
+// de MultiselectMenu.tsx va al <Button> interno, Button.tsx no agrega esa
+// clase al contenedor. Se sacó de acá.
+.multiselect-container {
+    position: relative;
+    min-width: 8.5rem;
+    overflow: visible;
+    border-radius: @border-radius;
+}
+
+.multiselect-container:hover,
+.multiselect-container.menu-active {
+    background-color: var(--overlay-color);
+}
+
+.multiselect-trigger {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0 0.5rem;
+    height: @trigger-height;
+    padding: 0.75rem 1.5rem;
+    border-radius: @border-radius;
+}
+
+.trigger-label {
+    overflow: hidden;
+    color: var(--primary-foreground-color);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.trigger-icon {
+    width: 1rem;
+    color: var(--primary-foreground-color);
+    opacity: 0.6;
+}
+
+.trigger-icon.icon-open {
+    transform: rotate(180deg);
+}

@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 580" width="400" height="580">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#142744;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="waveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00e5ff;stop-opacity:0.9" />
+      <stop offset="50%" style="stop-color:#40f0ff;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#00bcd4;stop-opacity:0.9" />
+    </linearGradient>
+    <linearGradient id="waveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00bcd4;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#26c6da;stop-opacity:0.5" />
+      <stop offset="100%" style="stop-color:#00acc1;stop-opacity:0.6" />
+    </linearGradient>
+    <linearGradient id="circleStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d2137" />
+      <stop offset="100%" style="stop-color:#1a3a5c" />
+    </linearGradient>
+    <clipPath id="cardClip">
+      <rect x="0" y="0" width="400" height="580" rx="12" ry="12"/>
+    </clipPath>
+    <clipPath id="circleClip">
+      <circle cx="200" cy="250" r="155"/>
+    </clipPath>
+    <radialGradient id="meshGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" style="stop-color:#1a4a6e;stop-opacity:0.4" />
+      <stop offset="100%" style="stop-color:#0a1628;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Card background -->
+  <rect width="400" height="580" rx="12" ry="12" fill="url(#bgGrad)" clip-path="url(#cardClip)"/>
+
+  <!-- Subtle corner glow -->
+  <rect width="400" height="580" rx="12" ry="12" fill="url(#meshGlow)" clip-path="url(#cardClip)"/>
+
+  <!-- Main circle border -->
+  <circle cx="200" cy="250" r="158" fill="none" stroke="#0d2847" stroke-width="8"/>
+  <circle cx="200" cy="250" r="155" fill="#0b1d33"/>
+
+  <!-- Data mesh network pattern (inside circle) -->
+  <g clip-path="url(#circleClip)" opacity="0.5">
+    <!-- Mesh nodes -->
+    <circle cx="80" cy="130" r="3" fill="#2196f3" opacity="0.7"/>
+    <circle cx="140" cy="100" r="3.5" fill="#2196f3" opacity="0.6"/>
+    <circle cx="200" cy="85" r="3" fill="#2196f3" opacity="0.7"/>
+    <circle cx="260" cy="100" r="3.5" fill="#2196f3" opacity="0.6"/>
+    <circle cx="320" cy="130" r="3" fill="#2196f3" opacity="0.7"/>
+    <circle cx="60" cy="180" r="3" fill="#2196f3" opacity="0.5"/>
+    <circle cx="110" cy="160" r="4" fill="#2196f3" opacity="0.6"/>
+    <circle cx="170" cy="140" r="3" fill="#2196f3" opacity="0.5"/>
+    <circle cx="230" cy="140" r="3" fill="#2196f3" opacity="0.5"/>
+    <circle cx="290" cy="160" r="4" fill="#2196f3" opacity="0.6"/>
+    <circle cx="340" cy="180" r="3" fill="#2196f3" opacity="0.5"/>
+    <circle cx="55" cy="240" r="3" fill="#2196f3" opacity="0.4"/>
+    <circle cx="100" cy="210" r="3.5" fill="#2196f3" opacity="0.5"/>
+    <circle cx="300" cy="210" r="3.5" fill="#2196f3" opacity="0.5"/>
+    <circle cx="345" cy="240" r="3" fill="#2196f3" opacity="0.4"/>
+    <circle cx="70" cy="300" r="3" fill="#2196f3" opacity="0.4"/>
+    <circle cx="120" cy="280" r="3" fill="#2196f3" opacity="0.3"/>
+    <circle cx="280" cy="280" r="3" fill="#2196f3" opacity="0.3"/>
+    <circle cx="330" cy="300" r="3" fill="#2196f3" opacity="0.4"/>
+    <circle cx="85" cy="350" r="3" fill="#2196f3" opacity="0.3"/>
+    <circle cx="315" cy="350" r="3" fill="#2196f3" opacity="0.3"/>
+    <!-- Mesh connections -->
+    <line x1="80" y1="130" x2="140" y2="100" stroke="#2196f3" stroke-width="0.8" opacity="0.35"/>
+    <line x1="140" y1="100" x2="200" y2="85" stroke="#2196f3" stroke-width="0.8" opacity="0.35"/>
+    <line x1="200" y1="85" x2="260" y2="100" stroke="#2196f3" stroke-width="0.8" opacity="0.35"/>
+    <line x1="260" y1="100" x2="320" y2="130" stroke="#2196f3" stroke-width="0.8" opacity="0.35"/>
+    <line x1="80" y1="130" x2="110" y2="160" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="110" y1="160" x2="140" y2="100" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="110" y1="160" x2="170" y2="140" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="170" y1="140" x2="200" y2="85" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="170" y1="140" x2="230" y2="140" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="230" y1="140" x2="260" y2="100" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="230" y1="140" x2="290" y2="160" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="290" y1="160" x2="320" y2="130" stroke="#2196f3" stroke-width="0.8" opacity="0.3"/>
+    <line x1="60" y1="180" x2="110" y2="160" stroke="#2196f3" stroke-width="0.8" opacity="0.25"/>
+    <line x1="60" y1="180" x2="80" y2="130" stroke="#2196f3" stroke-width="0.8" opacity="0.25"/>
+    <line x1="340" y1="180" x2="290" y2="160" stroke="#2196f3" stroke-width="0.8" opacity="0.25"/>
+    <line x1="340" y1="180" x2="320" y2="130" stroke="#2196f3" stroke-width="0.8" opacity="0.25"/>
+    <line x1="60" y1="180" x2="55" y2="240" stroke="#2196f3" stroke-width="0.8" opacity="0.2"/>
+    <line x1="55" y1="240" x2="100" y2="210" stroke="#2196f3" stroke-width="0.8" opacity="0.2"/>
+    <line x1="100" y1="210" x2="110" y2="160" stroke="#2196f3" stroke-width="0.8" opacity="0.25"/>
+    <line x1="300" y1="210" x2="290" y2="160" stroke="#2196f3" stroke-width="0.8" opacity="0.25"/>
+    <line x1="300" y1="210" x2="345" y2="240" stroke="#2196f3" stroke-width="0.8" opacity="0.2"/>
+    <line x1="340" y1="180" x2="345" y2="240" stroke="#2196f3" stroke-width="0.8" opacity="0.2"/>
+    <line x1="55" y1="240" x2="70" y2="300" stroke="#2196f3" stroke-width="0.8" opacity="0.15"/>
+    <line x1="70" y1="300" x2="120" y2="280" stroke="#2196f3" stroke-width="0.8" opacity="0.15"/>
+    <line x1="120" y1="280" x2="100" y2="210" stroke="#2196f3" stroke-width="0.8" opacity="0.2"/>
+    <line x1="280" y1="280" x2="300" y2="210" stroke="#2196f3" stroke-width="0.8" opacity="0.2"/>
+    <line x1="280" y1="280" x2="330" y2="300" stroke="#2196f3" stroke-width="0.8" opacity="0.15"/>
+    <line x1="330" y1="300" x2="345" y2="240" stroke="#2196f3" stroke-width="0.8" opacity="0.15"/>
+    <line x1="70" y1="300" x2="85" y2="350" stroke="#2196f3" stroke-width="0.8" opacity="0.1"/>
+    <line x1="330" y1="300" x2="315" y2="350" stroke="#2196f3" stroke-width="0.8" opacity="0.1"/>
+    <!-- Cross connections for density -->
+    <line x1="140" y1="100" x2="170" y2="140" stroke="#2196f3" stroke-width="0.6" opacity="0.2"/>
+    <line x1="260" y1="100" x2="230" y2="140" stroke="#2196f3" stroke-width="0.6" opacity="0.2"/>
+    <line x1="100" y1="210" x2="60" y2="180" stroke="#2196f3" stroke-width="0.6" opacity="0.2"/>
+    <line x1="300" y1="210" x2="340" y2="180" stroke="#2196f3" stroke-width="0.6" opacity="0.2"/>
+  </g>
+
+  <!-- Head circle (halo) -->
+  <circle cx="200" cy="175" r="42" fill="none" stroke="#0d2847" stroke-width="5"/>
+  <circle cx="200" cy="175" r="40" fill="#0b1d33"/>
+
+  <!-- Head silhouette -->
+  <ellipse cx="200" cy="172" rx="28" ry="32" fill="#0d2847"/>
+
+  <!-- Neck -->
+  <rect x="188" y="200" width="24" height="18" fill="#0d2847" rx="2"/>
+
+  <!-- Shoulders and torso (suit) -->
+  <path d="M200,215 L155,250 L140,360 L160,365 L175,290 L190,270 L200,265 L210,270 L225,290 L240,365 L260,360 L245,250 Z" fill="#0d2847"/>
+
+  <!-- Suit lapels -->
+  <path d="M200,215 L185,240 L192,270 L200,255 Z" fill="#0f2540" opacity="0.8"/>
+  <path d="M200,215 L215,240 L208,270 L200,255 Z" fill="#0f2540" opacity="0.8"/>
+
+  <!-- Tie -->
+  <path d="M197,230 L200,225 L203,230 L202,280 L200,285 L198,280 Z" fill="#0d2847"/>
+  <path d="M198,230 L200,226 L202,230 L201,275 L200,278 L199,275 Z" fill="#0a1a30"/>
+
+  <!-- "P" on chest -->
+  <text x="200" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#4fc3f7" opacity="0.8">P</text>
+
+  <!-- Ocean waves (inside circle, lower portion) -->
+  <g clip-path="url(#circleClip)">
+    <!-- Wave 3 (back, darkest) -->
+    <path d="M40,370 Q90,350 140,365 Q190,380 240,360 Q290,340 340,358 L360,410 L40,410 Z" fill="url(#waveGrad2)" opacity="0.4"/>
+    <!-- Wave 2 (middle) -->
+    <path d="M40,378 Q100,358 150,375 Q200,392 250,370 Q300,348 360,368 L360,410 L40,410 Z" fill="url(#waveGrad2)" opacity="0.6"/>
+    <!-- Wave 1 (front, brightest) -->
+    <path d="M40,390 Q90,372 140,388 Q190,404 240,385 Q290,366 340,382 L360,420 L40,420 Z" fill="url(#waveGrad1)" opacity="0.7"/>
+  </g>
+
+  <!-- Outer circle accent ring -->
+  <circle cx="200" cy="250" r="160" fill="none" stroke="#1a3a5c" stroke-width="1" opacity="0.3"/>
+
+  <!-- Bottom section - dark area for title -->
+  <rect x="0" y="420" width="400" height="160" fill="#0a1628" rx="0" clip-path="url(#cardClip)"/>
+
+  <!-- Subtle divider line -->
+  <line x1="40" y1="430" x2="360" y2="430" stroke="#1a3a5c" stroke-width="0.5" opacity="0.5"/>
+
+  <!-- Placeholder text area indicator -->
+  <rect x="40" y="445" width="220" height="14" rx="3" fill="#1a3a5c" opacity="0.3"/>
+  <rect x="40" y="470" width="160" height="10" rx="3" fill="#1a3a5c" opacity="0.2"/>
+</svg>

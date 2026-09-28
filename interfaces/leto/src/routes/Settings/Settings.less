@@ -1,0 +1,39 @@
+@import (reference) '~pollux/common/screen-sizes.less';
+
+// Section/Option/Menu/Toggle/MultiselectMenu (varios archivos, más abajo en
+// el árbol) se pintan con --primary-foreground-color/--overlay-color propias
+// del shell, pensadas para un fondo oscuro — casi invisibles en el área de
+// contenido clara de Settings. Redefinir las dos variables acá las corrige
+// en cascada para todos a la vez (las custom properties heredan por el DOM
+// sin importar el hash por archivo de CSS Modules), sin tocar cada uno.
+.settings-container {
+    width: 100%;
+    height: calc(100% - var(--safe-area-inset-bottom));
+    background-color: transparent;
+    --primary-foreground-color: var(--content-text-color, #061237);
+    --overlay-color: var(--content-border-color, #e3ebf6);
+}
+
+.settings-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.sections-container {
+    flex: 1;
+    align-self: stretch;
+    padding: 0 3rem;
+    overflow-y: auto;
+}
+
+@media only screen and (max-width: @minimum) {
+    .settings-content {
+        flex-direction: column-reverse;
+    }
+
+    .sections-container {
+        padding: 0 1.5rem;
+    }
+}

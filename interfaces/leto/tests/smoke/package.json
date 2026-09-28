@@ -1,0 +1,8 @@
+{
+    "name": "pollux-smoke-test",
+    "private": true,
+    "description": "Headless browser smoke test for Pollux (interfaces/leto) — see README.md",
+    "dependencies": {
+        "playwright": "1.47.2"
+    }
+}

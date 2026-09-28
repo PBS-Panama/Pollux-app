@@ -1,0 +1,22 @@
+.settings-section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    max-width: 35rem;
+    padding: 3rem 0;
+    overflow: visible;
+}
+
+.settings-section:not(:last-child) {
+    border-bottom: thin solid var(--overlay-color);
+}
+
+.section-heading {
+    flex: none;
+    align-self: stretch;
+    margin-bottom: 2rem;
+    color: var(--primary-foreground-color);
+    font-size: 1.8rem;
+    line-height: 3.4rem;
+}

@@ -1,0 +1,14 @@
+[
+    {
+        "name": "English",
+        "codes": ["en-US", "eng"]
+    },
+    {
+        "name": "español",
+        "codes": ["es-ES", "spa"]
+    },
+    {
+        "name": "português Brazil",
+        "codes": ["pt-BR", "por"]
+    }
+]

@@ -1,0 +1,43 @@
+// `.icon` (sin consumidor real — Option.tsx ya no tiene ese prop) y
+// `:global(.button)`/`:global(.color-input)` (sin ningún elemento real que
+// los use dentro del contenido de un Option, grep en toda Settings) se
+// sacaron. `:global(.multiselect)` sí queda — Interface.tsx se lo pasa de
+// verdad al MultiselectMenu del selector de idioma.
+.option {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: none;
+    width: 100%;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    overflow: visible;
+}
+
+.heading,
+.content {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1 1 50%;
+}
+
+.label {
+    line-height: 1.5rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--primary-foreground-color);
+}
+
+.content {
+    justify-content: center;
+    overflow: visible;
+}
+
+.content :global(.multiselect) {
+    width: 100%;
+    padding: 0;
+    background: var(--overlay-color);
+}

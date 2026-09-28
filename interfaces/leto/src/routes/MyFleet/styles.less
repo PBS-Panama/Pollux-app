@@ -1,0 +1,297 @@
+// PBS Crewing Module - Mi Flota styles
+// Theme-aware: uses the --content-* custom properties from App/styles.less's :root
+// (Mannat 4-theme system — Claro/Navy/Oscuro/Dusk) instead of hardcoded colors, same
+// convention Calendar.less already established after the same mistake (dark-literal
+// colors that were invisible/wrong outside the Default theme) was caught there.
+
+.fleet-container {
+    height: calc(100% - var(--safe-area-inset-bottom));
+    background-color: var(--content-bg, #f4f6f9);
+}
+
+.fleet-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem 2rem;
+}
+
+.fleet-header {
+    .fleet-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--content-text-color, #061237);
+        margin: 0;
+    }
+    .fleet-subtitle {
+        font-size: 0.88rem;
+        color: var(--content-muted-color, #96a0b5);
+        margin: 0.2rem 0 0;
+    }
+}
+
+.tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin: 1rem 0 1.25rem;
+    border-bottom: 1px solid var(--content-border-color, #e3ebf6);
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--content-muted-color, #96a0b5);
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+
+    &[data-active='true'] {
+        color: var(--content-accent-color, #3167f3);
+        border-bottom-color: var(--content-accent-color, #3167f3);
+    }
+}
+
+.tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.tab-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.section-label {
+    font-size: 0.78rem;
+    color: var(--content-muted-color, #96a0b5);
+    font-weight: 600;
+}
+
+.muted {
+    font-size: 0.84rem;
+    color: var(--content-muted-color, #96a0b5);
+    padding: 0.5rem 0;
+}
+
+.error-banner {
+    background: fade(#e74c3c, 12%);
+    border: 1px solid fade(#e74c3c, 30%);
+    color: #c0392b;
+    font-size: 0.82rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+}
+
+.empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+    background: var(--content-card-bg, #fff);
+    border: 1px dashed var(--content-border-color, #e3ebf6);
+    border-radius: 12px;
+
+    .empty-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--content-text-color, #061237);
+    }
+    .empty-desc {
+        font-size: 0.82rem;
+        color: var(--content-muted-color, #96a0b5);
+        margin-top: 0.3rem;
+    }
+}
+
+// ── Buttons ─────────────────────────────────────────────────────────
+.btn-primary {
+    background: fade(#3167f3, 12%);
+    border: 1px solid var(--content-accent-color, #3167f3);
+    color: var(--content-accent-color, #3167f3);
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover:not(:disabled) { opacity: 0.8; }
+    &:disabled { opacity: 0.5; cursor: default; }
+}
+
+.btn-small {
+    background: none;
+    border: 1px solid var(--content-accent-color, #3167f3);
+    color: var(--content-accent-color, #3167f3);
+    font-size: 0.74rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.5; cursor: default; }
+}
+
+.btn-ghost {
+    background: none;
+    border: none;
+    color: var(--content-muted-color, #96a0b5);
+    font-size: 0.78rem;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    padding: 0.2rem 0;
+
+    &:hover:not(:disabled) { color: #e74c3c; }
+    &:disabled { opacity: 0.5; cursor: default; }
+}
+
+// ── Forms ───────────────────────────────────────────────────────────
+.form-panel, .hire-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    background: var(--content-card-bg, #fff);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+
+    > * { flex: 1; min-width: 160px; }
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-label {
+    font-size: 0.72rem;
+    color: var(--content-muted-color, #96a0b5);
+}
+
+.text-input {
+    background: var(--content-bg, #f4f6f9);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 8px;
+    color: var(--content-text-color, #061237);
+    font-size: 0.85rem;
+    font-family: inherit;
+    padding: 0.5rem 0.7rem;
+    outline: none;
+
+    &:focus { border-color: var(--content-accent-color, #3167f3); }
+
+    option { background: var(--content-card-bg, #fff); color: var(--content-text-color, #061237); }
+}
+
+.photo-preview {
+    max-width: 200px;
+    max-height: 140px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+// ── Lists / cards ───────────────────────────────────────────────────
+.card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.staff-card, .assignment-card, .directory-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--content-card-bg, #fff);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+}
+
+.directory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.row-title { font-size: 0.88rem; font-weight: 600; color: var(--content-text-color, #061237); }
+.row-sub { font-size: 0.76rem; color: var(--content-muted-color, #96a0b5); margin-top: 0.15rem; }
+.row-right { display: flex; align-items: center; gap: 0.7rem; }
+
+.status-chip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    background: var(--content-border-color, #e3ebf6);
+    color: var(--content-muted-color, #96a0b5);
+
+    &[data-status='active'], &[data-status='aboard'] { background: fade(#2ecc71, 15%); color: #27ae60; }
+    &[data-status='scheduled'] { background: fade(#f1c40f, 18%); color: #b7950b; }
+    &[data-status='ended'], &[data-status='cancelled'] { background: fade(#e74c3c, 12%); color: #c0392b; }
+}
+
+// ── Vessel grid ─────────────────────────────────────────────────────
+.vessel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.9rem;
+}
+
+.vessel-card {
+    background: var(--content-card-bg, #fff);
+    border: 1px solid var(--content-border-color, #e3ebf6);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &:hover { border-color: var(--content-accent-color, #3167f3); }
+}
+
+.vessel-photo {
+    height: 110px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--content-bg, #f4f6f9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .vessel-photo-placeholder { font-size: 2rem; opacity: 0.3; }
+}
+
+.vessel-card-body { padding: 0.7rem 0.9rem; }
+
+.vessel-detail-header {
+    margin-top: 0.3rem;
+
+    .vessel-detail-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--content-text-color, #061237);
+        margin: 0;
+    }
+}

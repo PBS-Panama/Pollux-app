@@ -1,0 +1,326 @@
+{
+  "version": "1.0",
+  "source": "STCW 2010 Manila Amendments + AMP Panama fleet categories + Regulation.md",
+  "notes": [
+    "fleet_category matches app's CATEGORY_LABELS: merchant, offshore, fishing, yacht, national.",
+    "stcw_special lists required endorsements beyond BST/Medical. Used to compute required courses in Regulation.md.",
+    "CoP = Certificate of Proficiency. MODU = Mobile Offshore Drilling Unit. HUET = Helicopter Underwater Escape Training.",
+    "BOSIET = Basic Offshore Safety Induction and Emergency Training."
+  ],
+  "total": 43,
+  "vessel_types": {
+    "merchant": [
+      {
+        "id": "bulk_carrier",
+        "label": "Bulk Carrier",
+        "label_es": "Granelero",
+        "stcw_special": []
+      },
+      {
+        "id": "container",
+        "label": "Container Ship",
+        "label_es": "Portacontenedores",
+        "stcw_special": []
+      },
+      {
+        "id": "general_cargo",
+        "label": "General Cargo",
+        "label_es": "Carga General",
+        "stcw_special": []
+      },
+      {
+        "id": "oil_tanker_crude",
+        "label": "Oil Tanker — Crude",
+        "label_es": "Tanquero de Crudo",
+        "stcw_special": [
+          "CoP_Tanker_Oil_Basic",
+          "CoP_Tanker_Oil_Advanced"
+        ]
+      },
+      {
+        "id": "oil_tanker_product",
+        "label": "Oil Tanker — Product",
+        "label_es": "Tanquero de Productos",
+        "stcw_special": [
+          "CoP_Tanker_Oil_Basic",
+          "CoP_Tanker_Oil_Advanced"
+        ]
+      },
+      {
+        "id": "chemical_tanker",
+        "label": "Chemical Tanker",
+        "label_es": "Tanquero Químico",
+        "stcw_special": [
+          "CoP_Tanker_Chemical_Basic",
+          "CoP_Tanker_Chemical_Advanced"
+        ]
+      },
+      {
+        "id": "lng_carrier",
+        "label": "LNG Carrier",
+        "label_es": "Transportador de GNL",
+        "stcw_special": [
+          "CoP_Tanker_Gas_Basic",
+          "CoP_Tanker_Gas_Advanced"
+        ]
+      },
+      {
+        "id": "lpg_carrier",
+        "label": "LPG Carrier",
+        "label_es": "Transportador de GLP",
+        "stcw_special": [
+          "CoP_Tanker_Gas_Basic",
+          "CoP_Tanker_Gas_Advanced"
+        ]
+      },
+      {
+        "id": "ro_ro",
+        "label": "Ro-Ro",
+        "label_es": "Roll-on Roll-off",
+        "stcw_special": [
+          "CoP_RoRo_Passenger"
+        ]
+      },
+      {
+        "id": "car_carrier",
+        "label": "Car Carrier / PCTC",
+        "label_es": "Transportador de Vehículos",
+        "stcw_special": []
+      },
+      {
+        "id": "passenger_cruise",
+        "label": "Passenger / Cruise",
+        "label_es": "Crucero / Pasajeros",
+        "stcw_special": [
+          "CoP_Passenger_Safety",
+          "CoP_Crisis_Management"
+        ]
+      },
+      {
+        "id": "ferry",
+        "label": "Ferry",
+        "label_es": "Ferry",
+        "stcw_special": [
+          "CoP_Passenger_Safety"
+        ]
+      },
+      {
+        "id": "reefer",
+        "label": "Reefer",
+        "label_es": "Refrigerado",
+        "stcw_special": []
+      },
+      {
+        "id": "heavy_lift",
+        "label": "Heavy Lift",
+        "label_es": "Carga Pesada / Semisumergible",
+        "stcw_special": []
+      }
+    ],
+    "offshore": [
+      {
+        "id": "osv",
+        "label": "Offshore Supply Vessel (OSV)",
+        "label_es": "Buque de Suministro Offshore",
+        "stcw_special": [
+          "Offshore_HUET",
+          "Offshore_BOSIET"
+        ]
+      },
+      {
+        "id": "psv",
+        "label": "Platform Supply Vessel (PSV)",
+        "label_es": "Buque de Suministro de Plataforma",
+        "stcw_special": [
+          "Offshore_HUET",
+          "Offshore_BOSIET"
+        ]
+      },
+      {
+        "id": "ahts",
+        "label": "AHTS — Anchor Handling Tug Supply",
+        "label_es": "AHTS",
+        "stcw_special": [
+          "Offshore_HUET",
+          "Offshore_BOSIET"
+        ]
+      },
+      {
+        "id": "modu_jackup",
+        "label": "Jack-Up Rig",
+        "label_es": "Plataforma Jack-Up",
+        "stcw_special": [
+          "MODU_Basic",
+          "Offshore_HUET"
+        ]
+      },
+      {
+        "id": "modu_semisub",
+        "label": "Semi-Submersible",
+        "label_es": "Semi-sumergible",
+        "stcw_special": [
+          "MODU_Basic",
+          "Offshore_HUET"
+        ]
+      },
+      {
+        "id": "modu_drillship",
+        "label": "Drillship",
+        "label_es": "Barco Perforador",
+        "stcw_special": [
+          "MODU_Basic",
+          "Offshore_HUET"
+        ]
+      },
+      {
+        "id": "fpso",
+        "label": "FPSO",
+        "label_es": "FPSO",
+        "stcw_special": [
+          "CoP_Tanker_Oil_Basic",
+          "Offshore_HUET"
+        ]
+      },
+      {
+        "id": "crane_vessel",
+        "label": "Crane Vessel",
+        "label_es": "Grúa Flotante",
+        "stcw_special": []
+      },
+      {
+        "id": "pipe_lay",
+        "label": "Pipe-Laying Vessel",
+        "label_es": "Buque Tendedor de Tuberías",
+        "stcw_special": []
+      },
+      {
+        "id": "dsv",
+        "label": "Dive Support Vessel (DSV)",
+        "label_es": "Buque de Apoyo a Buceo",
+        "stcw_special": []
+      },
+      {
+        "id": "seismic",
+        "label": "Seismic Survey Vessel",
+        "label_es": "Buque Sísmico",
+        "stcw_special": []
+      },
+      {
+        "id": "well_intervention",
+        "label": "Well Intervention Vessel",
+        "label_es": "Buque de Intervención de Pozos",
+        "stcw_special": [
+          "Offshore_HUET"
+        ]
+      }
+    ],
+    "fishing": [
+      {
+        "id": "purse_seiner",
+        "label": "Purse Seiner",
+        "label_es": "Cerquero",
+        "stcw_special": []
+      },
+      {
+        "id": "trawler",
+        "label": "Trawler",
+        "label_es": "Arrastrero",
+        "stcw_special": []
+      },
+      {
+        "id": "long_liner",
+        "label": "Long Liner",
+        "label_es": "Palangrero",
+        "stcw_special": []
+      },
+      {
+        "id": "rsw_vessel",
+        "label": "RSW / Refrigerated Fish Carrier",
+        "label_es": "Buque RSW / Carga Pesquera",
+        "stcw_special": []
+      },
+      {
+        "id": "fishing_research",
+        "label": "Fishery Research Vessel",
+        "label_es": "Buque de Investigación Pesquera",
+        "stcw_special": []
+      }
+    ],
+    "yacht": [
+      {
+        "id": "motor_yacht",
+        "label": "Motor Yacht",
+        "label_es": "Yate a Motor",
+        "stcw_special": []
+      },
+      {
+        "id": "sailing_yacht",
+        "label": "Sailing Yacht",
+        "label_es": "Yate a Vela",
+        "stcw_special": []
+      },
+      {
+        "id": "mega_yacht",
+        "label": "Mega Yacht (>24m)",
+        "label_es": "Mega Yate (>24m)",
+        "stcw_special": []
+      },
+      {
+        "id": "charter_vessel",
+        "label": "Charter / Excursion Vessel",
+        "label_es": "Embarcación de Charter",
+        "stcw_special": []
+      }
+    ],
+    "national": [
+      {
+        "id": "tug",
+        "label": "Tug",
+        "label_es": "Remolcador",
+        "stcw_special": []
+      },
+      {
+        "id": "barge",
+        "label": "Barge",
+        "label_es": "Barcaza / Gabarra",
+        "stcw_special": []
+      },
+      {
+        "id": "passenger_ferry_national",
+        "label": "Passenger Ferry (National)",
+        "label_es": "Lancha de Pasajeros Nacional",
+        "stcw_special": []
+      },
+      {
+        "id": "river_vessel",
+        "label": "River Vessel",
+        "label_es": "Embarcación Fluvial",
+        "stcw_special": []
+      },
+      {
+        "id": "dredger",
+        "label": "Dredger",
+        "label_es": "Draga",
+        "stcw_special": []
+      },
+      {
+        "id": "patrol_vessel",
+        "label": "Patrol Vessel",
+        "label_es": "Patrullera / Guardacostas",
+        "stcw_special": []
+      },
+      {
+        "id": "survey_vessel",
+        "label": "Survey / Hydrographic Vessel",
+        "label_es": "Buque Hidrográfico",
+        "stcw_special": []
+      },
+      {
+        "id": "pilot_vessel",
+        "label": "Pilot Vessel",
+        "label_es": "Lancha de Prácticos",
+        "stcw_special": []
+      }
+    ]
+  }
+}

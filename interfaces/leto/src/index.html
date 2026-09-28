@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pollux">
+    <meta name="description" content="Pollux crewing platform for maritime companies — crew database, fleet and embarkations.">
+    <meta name="theme-color" content="#0B1E3B">
+    <link rel="icon" type="image/x-icon" href="<%= htmlWebpackPlugin.options.faviconsPath %>/favicon.ico">
+    <link rel="manifest" href="manifest.json" />
+    <title>Pollux — PBS Crewing</title>
+    <!--
+      Este es el template real que usa el build (webpack.config.js:257,
+      HtmlWebPackPlugin template: './src/index.html') — el index.html de la
+      raíz de interfaces/leto/ no lo lee nada, quedó huérfano. Este SPA se
+      sirve en /company/, detrás de auth, no una página pública (el landing
+      público de Pollux es landing/, con su propio SEO). No tenía ningún meta
+      robots (2026-09-14, tarea SEO nota (39) P-5): sin él, un crawler asume
+      index/follow por default. robots.txt ya tiene "Disallow: /company/",
+      pero eso solo evita que se rastree — no impide que la URL aparezca en
+      resultados si se enlaza desde otro lado. El noindex es el respaldo
+      real, mismo criterio que interfaces/admin/.
+    -->
+    <meta name="robots" content="noindex, nofollow">
+    <%= htmlWebpackPlugin.tags.headTags %>
+</head>
+
+<body>
+    <div id="app"></div>
+    <%= htmlWebpackPlugin.tags.bodyTags %>
+    <script async src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+</body>
+
+</html>

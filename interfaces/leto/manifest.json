@@ -1,0 +1,43 @@
+{
+    "name": "Pollux — PBS Crewing",
+    "short_name": "Pollux",
+    "description": "Pollux crewing platform for maritime companies — crew database, fleet and embarkations.",
+    "background_color": "#ffffff",
+    "theme_color": "#0B1E3B",
+    "orientation": "any",
+    "display": "standalone",
+    "display_override": ["standalone"],
+    "scope": "./",
+    "start_url": "./",
+    "icons": [
+        {
+            "src": "favicons/favicon.ico",
+            "sizes": "16x16 32x32 48x48 64x64 256x256",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "images/maskable_icon_512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "images/maskable_icon_196x196.png",
+            "sizes": "196x196",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "images/icon_512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "images/icon_196x196.png",
+            "sizes": "196x196",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}

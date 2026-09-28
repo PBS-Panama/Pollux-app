@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ── Panel interno ───────────────────────────────────────────── -->
+    <!--
+      Esto se sirve en /admin/ (ver infra/nginx/nginx.conf y el upstream `admin`
+      de docker-compose.yml): es el panel de administración, detrás de auth, no
+      una página pública. El landing público de Pollux es landing/site/, que se
+      sirve en / y tiene su propio SEO.
+
+      Rebranding 2026-09-14: este head arrastraba la marca "Leto" y un bloque
+      completo de SEO de marketing (keywords, Open Graph, Twitter Card, hreflang)
+      de cuando Leto era el producto entero, antes del split. Se eliminó todo eso
+      por tres razones:
+        1. La marca del producto B2B es **Pollux**. "Leto" queda reservado para el
+           producto de IA futuro — tres cosas distintas no pueden compartir nombre.
+        2. El `canonical` y los `og:url` apuntaban a https://leto.pbtradingsolutions.com/,
+           un dominio que nunca existió: le decía a Google que la versión canónica
+           de esta página vive en otro sitio.
+        3. `robots: index, follow` en un panel de administración es un error de
+           configuración, no una decisión de marca. Ahora es noindex.
+    -->
+    <title>Panel de Administración — Pollux</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="author" content="PB Trading Solutions" />
+
+    <!-- ── Google Fonts — preconnect primero, luego stylesheet ──────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- JSON-LD eliminado en el rebranding 2026-09-14. Declaraba un WebSite
+         llamado "Leto" en un dominio inexistente y una SoftwareApplication con
+         precio 0 — datos estructurados de marketing en un panel interno detrás
+         de auth: no aportan nada aquí y desinformaban. Si algún día hace falta
+         JSON-LD para Pollux, va en landing/site/index.html, que es la página
+         pública. -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

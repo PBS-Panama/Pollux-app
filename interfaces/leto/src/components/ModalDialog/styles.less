@@ -1,0 +1,97 @@
+// Copyright (C) 2017-2023 Smart code 203358507
+
+@import (reference) '~pollux/assets/pollux-colors.less';
+@import (reference) '~pollux/common/screen-sizes.less';
+
+// El único consumidor real hoy (CompanyDashboard's modal de perfil rápido)
+// solo usa className/title/onCloseRequest/children — por eso no hay reglas
+// para fondo de imagen ni fila de botones de acción: esas props se sacaron
+// del componente (ModalDialog.js, R11) por no tener uso real, y esta hoja
+// nunca les tuvo estilos propios que valga la pena conservar.
+.dialog-frame {
+    position: relative;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    max-height: 80%;
+    padding: 0 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--outer-glow);
+    // Sigue el tema del shell — ver la misma nota en Popup/styles.less.
+    background-color: var(--content-card-bg, var(--modal-background-color));
+    --primary-foreground-color: var(--content-text-color, rgba(255, 255, 255, 0.9));
+    --overlay-color: var(--content-border-color, rgba(255, 255, 255, 0.05));
+}
+
+.close-button-container {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+    width: 3rem;
+    height: 3rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+
+    .icon {
+        display: block;
+        width: 100%;
+        height: 100%;
+        color: var(--primary-foreground-color);
+        opacity: 0.4;
+    }
+
+    &:hover .icon,
+    &:focus .icon {
+        opacity: 1;
+    }
+
+    &:focus {
+        outline-color: var(--primary-foreground-color);
+    }
+}
+
+.dialog-content {
+    position: relative;
+    z-index: 1;
+    overflow-y: auto;
+}
+
+.title-container {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    height: 4.5rem;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--primary-foreground-color);
+}
+
+.body-container {
+    flex: 1;
+    align-self: stretch;
+    overflow: visible;
+    padding: 2rem 0;
+
+    &:last-child {
+        margin-bottom: 2rem;
+    }
+}
+
+.modal-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: @color-background-dark5-40;
+}
+
+@media only screen and (max-width: @minimum) {
+    .dialog-frame {
+        position: relative;
+        width: 90%;
+        max-width: initial;
+        z-index: 0;
+        padding: 0 1.5rem;
+    }
+}

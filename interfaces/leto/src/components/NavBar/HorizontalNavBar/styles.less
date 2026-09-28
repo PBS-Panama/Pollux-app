@@ -1,0 +1,83 @@
+@import (reference) '~pollux/assets/pollux-colors.less';
+@import (reference) '~pollux/common/screen-sizes.less';
+
+// Desktop topbar — replica of Mannat's `.topbar` (Reference/Frontend-UI).
+// Its width/left offset are set by the parent (`.horizontal-nav-bar` in
+// MainNavBars.less); this file only fills that box.
+.horizontal-nav-bar-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--topbar-height);
+    padding: 0 1rem;
+    background-color: var(--topbar-bg);
+    border-bottom: 1px solid var(--topbar-border-color);
+    overflow: visible;
+    padding-top: var(--safe-area-inset-top);
+    box-sizing: content-box;
+
+    .back-button-container, .sidebar-toggle-container {
+        margin-left: max(0rem, calc(1rem - var(--safe-area-inset-left)));
+    }
+
+    .buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        overflow: visible;
+    }
+
+    .button-container {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background-color: var(--topbar-icon-bg);
+
+        .icon {
+            flex: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            font-size: 1.35rem;
+            color: var(--topbar-icon-color);
+        }
+
+        .active() {
+            background-color: var(--content-bg);
+
+            .icon {
+                color: var(--menu-link-active-color);
+            }
+        }
+
+        &:global(.active) {
+            .active();
+        }
+
+        @media (pointer: fine) {
+            &:hover {
+                .active();
+            }
+        }
+    }
+}
+
+@media only screen and (max-width: @minimum) {
+    .horizontal-nav-bar-container {
+        justify-content: space-between;
+        padding-right: 0;
+        height: var(--horizontal-nav-bar-size);
+
+        .button-container {
+            margin: 0 0.5rem;
+
+            &:not(.back-button-container):not(.menu-button-container):not(.sidebar-toggle-container) {
+                display: none;
+            }
+        }
+    }
+}

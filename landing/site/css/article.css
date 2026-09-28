@@ -1,0 +1,164 @@
+/* article.css — 2026-09-04. Layout for recursos.html and recursos/*.html.
+   New file, additive only — does not touch main.css or its palette. */
+
+/* logo.png ships at 2x pixel density (retina asset) so the small
+   constellation dots on the badge stay visible on HiDPI screens instead of
+   flattening into single pixels — pin the on-page size back to the original
+   34px so the browser downscales rather than showing it oversized. */
+.brand.logo-dark img{ height:34px; width:auto; }
+
+.site-header{
+    position:fixed; left:0; top:0; width:100%; z-index:999;
+    background:#f98f1c;
+    background:linear-gradient(135deg,#f98f1c 0%,#f45442 100%);
+    height:60px;
+}
+.site-header .navbar{ min-height:60px; }
+.site-header .navbar-header{ padding:10px 0; }
+/* Only while #navbar is the collapsed dropdown (.in/.collapsing) — at ≥1300px
+   (no collapse) it's floated and auto-width, so a background there would sit
+   as a second block on top of .site-header's own already-continuous
+   full-width gradient, seaming right where #navbar's box starts. */
+#navbar.navbar-collapse.in,
+#navbar.navbar-collapse.collapsing{
+    background:#f98f1c;
+    background:linear-gradient(135deg,#f98f1c 0%,#f45442 100%);
+}
+
+/* ── One unified nav bar (2026-09-04) ──────────────────────────────────────
+   Same fix as landing/site/index.html: Login/Register share the section-link
+   <ul> instead of a separate list, and below 1300px (wider than Bootstrap's
+   stock 768px navbar breakpoint) the whole thing collapses behind the
+   existing hamburger button instead of wrapping into a second row that
+   would spill past .site-header's fixed 60px height. */
+.nav-menu .btn-register{
+    background:#fff!important;
+    color:#f45442!important;
+    /* Fixed height + matching line-height (not padding) sets the box size
+       directly, sized proportionate to the 60px bar. vertical-align:middle
+       centers it the same way the plain text links center themselves. */
+    height:44px;
+    line-height:44px!important;
+    padding:0 24px!important;
+    box-sizing:border-box;
+    display:inline-block;
+    vertical-align:middle;
+    margin-left:6px;
+    border-radius:3px;
+    font-weight:700;
+}
+.nav-menu .btn-register:hover{ background:#fff5ec!important; }
+@media (min-width:768px) and (max-width:1299px){
+    .navbar-toggle{ display:block!important; }
+    #navbar.navbar-collapse.collapse{
+        display:none!important; height:0!important; overflow:hidden!important;
+    }
+    #navbar.navbar-collapse.collapse.in{
+        display:block!important; height:auto!important; overflow:visible!important;
+    }
+}
+@media (max-width:767px){
+    .nav-menu .btn-register{ margin:6px 0 0; display:inline-block; }
+}
+
+.article-page{ padding-top:60px; background:#fff; }
+
+.article-hero{
+    padding:70px 0 40px;
+    background:#f98f1c;
+    background:linear-gradient(135deg,#f98f1c 0%,#f45442 100%);
+    color:#fff;
+    text-align:center;
+}
+.article-hero .tag{
+    display:inline-block; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+    background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3);
+    border-radius:20px; padding:5px 16px; margin-bottom:16px;
+}
+.article-hero h1{ color:#fff; font-size:36px; max-width:760px; margin:0 auto 12px; }
+.article-hero p{ color:rgba(255,255,255,.9); max-width:620px; margin:0 auto; }
+
+.article-back{
+    display:inline-block; margin:26px 0 0; font-size:13px; color:#f45442;
+    text-decoration:none; border-bottom:1px solid rgba(244,84,66,.4);
+}
+.article-back:hover{ color:#f98f1c; border-color:#f98f1c; text-decoration:none; }
+
+.article-body{ max-width:720px; margin:0 auto; padding:40px 20px 80px; color:#555; line-height:1.8; }
+.article-body h2{ font-size:24px; margin:36px 0 14px; color:#444; }
+.article-body h3{ font-size:18px; margin:26px 0 10px; color:#444; }
+.article-body p{ margin:0 0 16px; }
+.article-body ul, .article-body ol{ margin:0 0 16px 22px; padding:0; }
+.article-body li{ margin-bottom:8px; }
+.article-body table{ width:100%; border-collapse:collapse; margin:18px 0 26px; font-size:14px; }
+.article-body th, .article-body td{ text-align:left; padding:9px 12px; border:1px solid #eee; }
+.article-body th{ background:#f7f7f7; color:#444; font-weight:600; }
+.article-body strong{ color:#444; }
+
+.article-callout{
+    background:#fff5ec; border-left:3px solid #f98f1c; border-radius:4px;
+    padding:16px 20px; margin:0 0 22px; font-size:14px; color:#555;
+}
+.article-callout strong{ color:#c0631a; }
+
+.article-note{
+    background:#f7f7f7; border-radius:6px; padding:16px 20px; margin:26px 0;
+    font-size:13px; color:#777;
+}
+
+.article-cta{
+    text-align:center; padding:44px 20px; border-top:1px solid #eee;
+    max-width:720px; margin:0 auto;
+}
+.article-cta a{ margin-top:6px; }
+
+/* ── Subscribe section: logo added to the left (2026-09-04) ────────────────
+   main.css's own .subscribe_wrap/.subscribe_form/.social_link stay untouched
+   and self-centered exactly as before — this only wraps them, plus the new
+   brand mark, in a flex row so the logo sits to their left on wide screens
+   and stacks above them (still centered) on narrow ones. Reuses the same
+   retina logo.png as the header (68px real height) at a bigger on-page size
+   here since the section has more breathing room. */
+.subscribe_flex{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:24px;
+    flex-wrap:wrap;
+}
+/* 1/3 · 2/3 split — logo column gets a real third of the orange band
+   instead of hugging the left edge, centered within its own share.
+   flex-basis:0 (not 33%/67%) is deliberate: with the 24px gap on top of
+   basis totalling 100%, there was no slack left, so both items wrapped
+   onto their own full-width line instead of sharing one row — basis:0
+   lets flex-grow alone decide the 1:2 split after the gap is subtracted. */
+.subscribe_brand{
+    flex:1 1 0;
+    display:flex;
+    justify-content:center;
+}
+.subscribe_brand img{ height:60px; width:auto; display:block; }
+.subscribe_content{ flex:2 1 0; min-width:280px; }
+@media (max-width:767px){
+    .subscribe_flex{ flex-direction:column; }
+    .subscribe_brand{ flex-basis:auto; }
+}
+
+/* recursos.html — article index cards */
+.recursos-grid{ display:flex; flex-wrap:wrap; gap:28px; margin-top:36px; }
+.recursos-card{
+    flex:1 1 300px; background:#fff; border:1px solid #ddd; border-radius:4px;
+    padding:26px; transition:box-shadow .2s, transform .2s; text-decoration:none; display:block;
+}
+.recursos-card:hover{ box-shadow:0 16px 28px rgba(0,0,0,.08); transform:translateY(-3px); text-decoration:none; }
+.recursos-card .tag{
+    display:inline-block; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    background:#fff5ec; color:#f45442; border-radius:3px; padding:4px 10px; margin-bottom:12px;
+}
+.recursos-card h3{ font-size:18px; color:#444; margin:0 0 10px; }
+.recursos-card p{ font-size:14px; color:#777; margin:0 0 14px; line-height:1.6; }
+.recursos-card span.read-more{ font-size:13px; color:#f45442; font-weight:600; }
+
+@media (max-width: 767px){
+    .article-hero h1{ font-size:26px; }
+}

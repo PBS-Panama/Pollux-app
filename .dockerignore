@@ -1,0 +1,33 @@
+node_modules
+build
+.git
+.gitignore
+*.md
+LICENSE.md
+CODE_OF_CONDUCT.md
+CREWING-MODULE.md
+.eslintrc*
+eslint.config.mjs
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+tests
+
+# Secrets — never bake into an image (M5, 2026-08-28)
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+
+# Local dev user data — never bake into an image (C3, 2026-08-28)
+interfaces/castor/User database
+
+# Documentos personales — NUNCA en un build context (PM 2026-09-13).
+# Reference/AdminPanel/OCR References/ arrastra los mismos 25 documentos personales
+# (pasaporte, cedula, certificados medicos, CoC) mas sus transcripciones .ocr.md.
+Reference/AdminPanel/OCR References
+ocr-references

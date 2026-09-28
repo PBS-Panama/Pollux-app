@@ -1,0 +1,29 @@
+@import (reference) '~pollux/common/screen-sizes.less';
+
+:import('~pollux/routes/Settings/components/Option/Option.less') {
+    option-content: content;
+}
+
+// Esta sección solo se muestra en pantallas angostas — en desktop la versión
+// de la app ya se ve en el pie del menú lateral (Menu.tsx).
+.info {
+    display: none;
+}
+
+.info .option-content {
+    overflow: hidden;
+    color: var(--primary-foreground-color);
+}
+
+.label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// @minimum (640px) es subconjunto de @xsmall (1000px) — una sola regla basta.
+@media only screen and (max-width: @xsmall) {
+    .info {
+        display: flex;
+    }
+}

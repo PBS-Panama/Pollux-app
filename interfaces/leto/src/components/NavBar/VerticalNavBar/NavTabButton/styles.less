@@ -1,0 +1,79 @@
+@import (reference) '~pollux/common/screen-sizes.less';
+
+// All-global on purpose: VerticalNavBar/styles.less needs to reach into
+// `.nav-tab-button`/`.label` from its own collapsed-state rule, and CSS
+// Modules hashes local class names per-file, which would make that
+// impossible. NavTabButton.js writes these as plain string classNames
+// (not `styles[...]`) to match.
+:global {
+    .nav-tab-button {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        width: 100%;
+        padding: 0.65rem 0.9rem;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        margin-bottom: 3px;
+        color: var(--menu-link-color);
+        background-color: transparent;
+        transition: background-color 0.15s, color 0.15s, padding 0.2s;
+
+        @media (pointer: fine) {
+            &:hover {
+                color: var(--menu-link-hover-color);
+
+                .icon {
+                    color: var(--menu-link-hover-color);
+                }
+            }
+        }
+
+        &.selected {
+            color: var(--menu-link-active-color);
+            background-color: var(--menu-link-active-bg);
+
+            .icon {
+                color: var(--menu-link-active-color);
+            }
+        }
+
+        .icon, .logo {
+            flex: none;
+            width: 1.35rem;
+            height: 1.35rem;
+            font-size: 1.35rem;
+            color: var(--menu-icon-color);
+        }
+
+        .label {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 500;
+            line-height: 1.4;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+    }
+}
+
+@media only screen and (max-width: @minimum) {
+    :global {
+        .nav-tab-button {
+            flex-direction: column;
+            gap: 0.2rem;
+            width: auto;
+            padding: 0.4rem 0.6rem;
+            border-radius: 0.75rem;
+
+            .label {
+                text-align: center;
+                font-size: 0.7rem;
+                white-space: normal;
+            }
+        }
+    }
+}

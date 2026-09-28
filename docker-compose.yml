@@ -1,0 +1,116 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  pbsds-pollux-app — Docker Compose (POLLUX: company-facing B2B)     ║
+# ╠══════════════════════════════════════════════════════════════════════╣
+# ║  Single entry point: http://localhost:4001                          ║
+# ║                                                                      ║
+# ║  PHYSICAL SPLIT (2026-09-03): Castor (seafarer B2C) now lives in    ║
+# ║  its own folder (ex pbsds-leto-app, to be renamed castor).          ║
+# ║  This folder is POLLUX only (brand was "Leto" until 2026-09-03).    ║
+# ║                                                                      ║
+# ║  ROUTING (via infra/nginx):                                         ║
+# ║  /              → landing   (React/Vite landing + auth modals)      ║
+# ║  /company/      → leto      (Crewing module, role=company → Pollux) ║
+# ║  /admin/        → admin     (Admin interface, auto-auth)            ║
+# ║  /api/*         → backend   (FastAPI + PostgreSQL)                  ║
+# ║                                                                      ║
+# ║  NOTE: URL path /company/ and folder interfaces/leto keep their     ║
+# ║  historic names for backward compat (rebranding pass pending).      ║
+# ║  Local postgres volume is FRESH (pbsds-pollux_postgres_data);       ║
+# ║  historic local data stays in the castor folder's pbsds-leto        ║
+# ║  project volume.                                                     ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+
+name: pbsds-pollux
+
+services:
+
+  # ── Nginx reverse proxy — ONLY exposed port ─────────────────────────
+  nginx:
+    build: ./infra/nginx
+    restart: unless-stopped
+    ports:
+      - "4001:80"
+    depends_on:
+      - landing
+      - leto
+      - admin
+      - backend
+
+  # ── Landing page (React/Vite — marketing + auth entry point) ────────
+  landing:
+    build: ./landing
+    restart: unless-stopped
+
+  # ── Leto — Company interface (Crewing module, role locked to company) ─
+  leto:
+    build: ./interfaces/leto
+    restart: unless-stopped
+
+  # ── Admin interface (no auth guard, auto-login on mount) ─────────────
+  admin:
+    build: ./interfaces/admin
+    restart: unless-stopped
+
+  # ── PostgreSQL database ───────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: leto_db
+      POSTGRES_USER: leto_user
+      # From .env (gitignored) — compose auto-loads .env from this same
+      # directory for ${...} substitution. No default here on purpose: an
+      # empty value makes the postgres image itself refuse to start, same
+      # fail-fast behavior as the backend's own required env vars.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leto_user -d leto_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI backend ───────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Same ${POSTGRES_PASSWORD} as the postgres service above, both from
+      # .env — never a literal value here.
+      DATABASE_URL: postgresql://leto_user:${POSTGRES_PASSWORD}@postgres:5432/leto_db
+      # Dev only: apply Alembic migrations at startup. Production runs them as a deploy step.
+      AUTO_MIGRATE: "true"
+      # Reach Castor's Express server (seafarer file storage) across the two
+      # separate docker-compose stacks — see the `pbs-cross-app` network
+      # below and CASTOR_BASE_URL's comment in app/core/config.py. Only
+      # resolves if pbsds-castor-app's `castor` service is also up and
+      # joined to that same network.
+      CASTOR_BASE_URL: http://castor:8080
+      # Without this, Python buffers stdout when it isn't a TTY (always true
+      # under Docker), so `docker logs` shows almost nothing — including 500
+      # tracebacks — until the buffer flushes on its own schedule.
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./ocr-references:/app/ocr_references
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+      - pbs-cross-app
+
+volumes:
+  postgres_data:
+
+networks:
+  default: {}
+  # Shared with pbsds-castor-app's `castor` service so this backend can
+  # resolve/reach it by service name in local dev (production reaches
+  # Castor via its public URL instead — see CASTOR_BASE_URL). Not marked
+  # `external: true`: whichever of the two stacks starts first creates it
+  # under this literal name, the other just joins it.
+  pbs-cross-app:
+    name: pbs-cross-app

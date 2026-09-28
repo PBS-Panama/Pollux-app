@@ -1,0 +1,654 @@
+<!doctype html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang=""> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" lang=""> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9" lang=""> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="es"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="Pollux — plataforma de gestión de tripulación y cumplimiento STCW para navieras y agencias marítimas. Base de datos verificada, sincronizada con Cástor, la app del marino.">
+        <meta name="author" content="PB Trading Solutions">
+       
+        <title>Pollux — Gestión de Tripulación y Cumplimiento STCW</title>
+        
+		<link rel="shortcut icon" type="image/x-icon" href="img/favicon.png">
+		
+		<!-- Font Awesome CSS -->
+        <link rel="stylesheet" href="css/font-awesome.min.css">
+        <!-- Elegant Font Icons CSS -->
+        <link rel="stylesheet" href="css/elegant-font-icons.css">
+        <!-- Elegant Line Icons CSS -->
+        <link rel="stylesheet" href="css/elegant-line-icons.css">
+		<!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+        <!-- animate CSS -->
+        <link rel="stylesheet" href="css/animate.min.css">
+		<!-- Venobox CSS -->
+        <link rel="stylesheet" href="css/venobox.css">
+		<!-- OWL-Carousel CSS -->
+        <link rel="stylesheet" href="css/owl.carousel.css">
+		<!-- Main CSS -->
+        <link rel="stylesheet" href="css/main.css">
+		<!-- <link rel="stylesheet" href="css/color.css"> -->
+		<!-- Responsive CSS -->
+        <link rel="stylesheet" href="css/responsive.css">
+		<link rel="stylesheet" href="css/article.css">
+
+        <script src="js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
+        <style>
+            /* ── Header nav (2026-09-04) — one unified bar ─────────────────────
+               Rick: "y si ponemos todo en el mismo top bar? y para movil que el
+               topbar tenga 2 o hasta 3 filas... o lo pones dentro de un burguer
+               button que al tocar haga el display de las secciones."
+
+               Two earlier fixes (permanent .navbar-fixed, then a background on
+               #navbar) patched symptoms of the real issue: with 7 nav links + 2
+               auth links, there is no width — not even Bootstrap's own capped
+               1170px .container at ≥1200px — where all 9 fit on one line without
+               cramming. Login/Register and the section links are now ONE <ul>
+               (no more two-list seam), and below 1300px width — wider than
+               Bootstrap's stock 768px navbar breakpoint — the whole thing
+               collapses behind the existing hamburger button instead of
+               wrapping. That's the "burguer button" option Rick offered;
+               chosen over forcing 2–3 cramped rows because it's the same
+               mechanism already built into this template (data-toggle=
+               "collapse", bootstrap.min.js) — no new JS, just widening when it
+               kicks in. Below 768px it behaves exactly as before (untouched).
+
+               2026-09-04 (Rick, round 2): "make it match the width of [header]".
+               #navbar is floated (.navbar-right), so at desktop widths (≥1300px,
+               no collapse) it's only as WIDE as its own content — painting a
+               gradient there sat as a second, separate block on top of
+               .header_section's own already-continuous full-width gradient,
+               with a visible seam right where #navbar's box starts (behind the
+               logo there was no second gradient, so the colors didn't line up).
+               Fix: only give #navbar its own background while it's the
+               collapsed dropdown (.in / .collapsing) — at ≥1300px it never gets
+               that class, so nothing paints over the header's own gradient and
+               the whole bar reads as one continuous sweep, logo included. */
+            #navbar.navbar-collapse.in,
+            #navbar.navbar-collapse.collapsing{
+                background:#f98f1c;
+                background:linear-gradient(135deg,#f98f1c 0%,#f45442 100%);
+            }
+            .nav-menu .btn-register{
+                background:#fff!important;
+                color:#f45442!important;
+                /* Fixed height + matching line-height (not padding) sets the
+                   box size directly, so it can be tuned to sit proportionate
+                   to the 60px bar — big enough to read as a real button
+                   ("ajústalo al tamaño del header"), not so tall it repeats
+                   the earlier overflow bug. vertical-align:middle centers it
+                   the same way the plain text links center themselves. */
+                height:44px;
+                line-height:44px!important;
+                padding:0 24px!important;
+                box-sizing:border-box;
+                display:inline-block;
+                vertical-align:middle;
+                margin-left:6px;
+                border-radius:3px;
+                font-weight:700;
+            }
+            .nav-menu .btn-register:hover{ background:#fff5ec!important; }
+            @media (min-width:768px) and (max-width:1299px){
+                .navbar-toggle{ display:block!important; }
+                #navbar.navbar-collapse.collapse{
+                    display:none!important; height:0!important; overflow:hidden!important;
+                }
+                #navbar.navbar-collapse.collapse.in{
+                    display:block!important; height:auto!important; overflow:visible!important;
+                }
+            }
+            @media (max-width:767px){
+                .nav-menu .btn-register{ margin:6px 0 0; display:inline-block; }
+            }
+        </style>
+    </head>
+    <body data-spy="scroll" data-target="#navbar" data-offset="60">
+        <!--[if lt IE 8]>
+            <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+        
+        <div id='preloader' >
+            <div class='loader' >
+                <img src="img/preloader.svg" width="60" alt="">
+            </div>
+        </div><!-- Preloader -->
+        
+        <header id="header" class="header_section">
+			<nav class="navbar">
+				<div class="container">
+					<div class="navbar-header">
+						<button type="button" class="nav-btn navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+							<span class="sr-only">Toggle navigation</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+						<a href="#" class="brand logo-dark"><img src="img/logo.png" alt="Pollux"></a>
+					</div>
+					<div id="navbar" class="collapse navbar-collapse navbar-right">
+						<ul class="nav navbar-nav nav-menu">
+                            <li class="active"><a data-scroll href="#poly-container">Inicio <span class="sr-only">(actual)</span></a></li>
+							<li><a data-scroll href="#feature">Características</a></li>
+							<li><a data-scroll href="#screenshots">Plataforma</a></li>
+							<li><a data-scroll href="#pricing">Planes</a></li>
+							<li><a data-scroll href="#download">Cobertura</a></li>
+							<li><a data-scroll href="#testimonial">Enfoque</a></li>
+							<li><a href="recursos.html">Recursos</a></li>
+							<li><a href="/login">Iniciar sesión</a></li>
+							<li><a href="/register" class="app_btn btn-register">Registrarse</a></li>
+                        </ul>
+					</div><!--/.navbar-collapse -->
+				</div>
+			</nav><!-- Navigation Bar -->
+		</header> <!-- Header -->
+
+        <section id="poly-container" class="hero_section">
+            <div id="poly-output"></div>
+            <div class="poly_content">
+                <div class="hero_moc hidden-xs"></div><!-- /.phone-moc -->
+                <div class="display-table">
+                    <div class="table-cell">
+                        <div class="container">
+                            <div class="hero_content">
+                                <h1>Tu tripulación, <br>verificada y en regla</h1>
+                                <p>Pollux centraliza la documentación STCW de tu tripulación y calcula su cumplimiento por rango — sincronizado con Cástor, <br> la app del marino. Sin correos perdidos ni PDFs sueltos.</p>
+                                <a href="/register" class="hero_btn"><i class="fa fa-arrow-right"></i> Crear Cuenta Empresarial</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section><!-- hero-section -->
+
+		<section class="promo_section padding">
+			<div class="container">
+				<div class="promo_items">
+					<div class="col-sm-4 col-xs-6 xs-padding">
+						<div class="promo_item">
+							<i class="icon-mobile"></i>
+							<h3>Acceso Web, Sin Instalación</h3>
+							<p>Tu equipo entra desde cualquier computador con navegador. Nada que instalar, nada que actualizar.</p>
+						</div>
+					</div>
+					<div class="col-sm-4 col-xs-6 xs-padding">
+						<div class="promo_item">
+							<i class="icon-tools"></i>
+							<h3>Configurado por Flota</h3>
+							<p>Rangos y documentos requeridos según STCW, MLC 2006 y AMP Panamá — mercante, offshore, pesca, yates y aguas nacionales.</p>
+						</div>
+					</div>
+					<div class="col-sm-4 col-xs-6 xs-padding">
+						<div class="promo_item">
+							<i class="icon-linegraph"></i>
+							<h3>Cumplimiento en Tiempo Real</h3>
+							<p>Cada certificado calcula su estado — vigente, por vencer o vencido — apenas se actualiza en Cástor.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section><!-- /.promo_section -->
+		
+		<section class="doc_section padding">
+		    <div class="container">
+                <div class="col-md-5 col-sm-6 col-md-offset-1 xs-hidden">
+                    <div class="doc_mockup">
+                        <img src="img/phone-1.png" class="doc_mockup_1" alt="about-moc">
+                        <img src="img/phone-2.png" class="doc_mockup_2 wow fadeInLeft" data-wow-delay="500ms" data-wow-duration="800ms" alt="about-moc">
+                    </div>
+                </div>
+                <div class="col-md-5 col-sm-6 xs-padding">
+                    <div class="doc_content">
+                        <h2>Expediente Digital por Tripulante</h2>
+                        <p>Cada marino mantiene su documentación STCW al día en Cástor. Pollux te muestra el expediente completo, verificado y organizado — sin pedirlo por correo.</p>
+                        <ul class="list_check mt-30 mb-30">
+                            <li>Certificados verificados, con evidencia de registro.</li>
+                            <li>Organizado por rango y categoría de flota.</li>
+                            <li>Historial completo de vencimientos.</li>
+                            <li>Acceso instantáneo desde tu panel.</li>
+                        </ul>
+                        <a data-scroll href="#feature" class="app_btn">Ver Características</a>
+                    </div>
+                </div>
+            </div>
+		</section><!-- /.doc_section -->
+		
+		<section id="feature" class="feature_section padding">
+			<div class="container">
+				<div class="section_heading align-center mb-40">
+					<h2>Todo lo que tu Operación Necesita</h2>
+					<p>Diseñado para navieras y agencias que gestionan tripulación real, no demos.</p>
+				</div><!--/.section_heading -->
+				<div class="feature_lists">
+                    <div class="col-sm-4 col-xs-6">
+                        <div class="feature_list">
+                            <div class="feature_content">
+                                <i class="icon-laptop"></i>
+                                <h4>Panel Web Completo</h4>
+                                <p>Base de datos de tripulación, documentos y estado de cumplimiento en un solo panel.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4 col-xs-6">
+                        <div class="feature_list">
+                            <div class="feature_content">
+                                <i class="icon-linegraph"></i>
+                                <h4>Cumplimiento por Rango</h4>
+                                <p>Score de cumplimiento calculado según STCW y MLC 2006, por rango y categoría de flota.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4 col-xs-6">
+                        <div class="feature_list">
+                            <div class="feature_content">
+                                <i class="icon-grid"></i>
+                                <h4>Organizado, No Disperso</h4>
+                                <p>Nada de carpetas ni hojas de cálculo. Cada marino, con su expediente completo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4 col-xs-6">
+                        <div class="feature_list">
+                            <div class="feature_content">
+                                <i class="icon-tools"></i>
+                                <h4>Configuración por Flota</h4>
+                                <p>Mercante, offshore, pesca, yates o aguas nacionales — cada categoría con su propio catálogo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4 col-xs-6">
+                        <div class="feature_list">
+                            <div class="feature_content">
+                                <i class="icon-gears"></i>
+                                <h4>Alertas de Vencimiento</h4>
+                               <p>Antes de que un certificado venza, tu equipo ya lo sabe.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4 col-xs-6">
+                        <div class="feature_list">
+                            <div class="feature_content">
+                                <i class="icon-phone"></i>
+                                <h4>Soporte de PBS</h4>
+                                <p>Acompañamiento del equipo de PB Trading Solutions durante la implementación.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+			</div>
+		</section><!-- /.feature_section -->
+
+		<section id="screenshots" class="screenshot_section padding">
+           <div class="container">
+               <div class="section_heading mb-40 align-center">
+                   <h2>Así se ve Pollux</h2>
+                   <p>Vista previa de la plataforma — panel de empresa, expedientes de tripulación y reportes de cumplimiento.</p>
+               </div>
+               <ul id="app_carousel" class="app_carousel owl-carousel">
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-1.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-1.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-2.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-2.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-3.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-3.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-4.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-4.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-5.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-5.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-6.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-6.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-7.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-7.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+                   <li class="shot_item">
+                       <figure class="screen_thumb">
+                           <img src="img/screen-8.jpg" alt="Pollux — vista de la plataforma">
+                           <figcaption>
+                              <div class="display-table">
+                                  <div class="table-cell">
+                                      <a href="img/screen-8.jpg" class="img_popup"><i class="fa fa-plus"></i></a>
+                                  </div>
+                              </div>
+                           </figcaption>
+                       </figure>
+                   </li>
+               </ul>
+           </div>
+        </section><!-- Screenshot Section -->
+        
+        <!-- video_section disabled 2026-09-04: the template linked an unrelated third-party
+             YouTube demo, not Pollux content. Re-enable once there is a real product video
+             (swap the href, remove style="display:none", keep data-vbtype="video"). -->
+        <div class="video_section align-center" style="display:none">
+			<div class="container">
+				<div class="video_content">
+					<a href="#" class="img_popup"><i class="fa fa-play"></i></a>
+					<span>Cómo funciona Pollux (próximamente)</span>
+				</div>
+			</div>
+		</div><!-- /.video_section -->
+        
+        <section id="pricing" class="pricing_section padding bg-grey">
+            <div class="container">
+                <div class="heading align-center mb-40">
+                    <h2>Planes</h2>
+                    <p>Cotiza según el tamaño de tu tripulación. Sin compromiso de instalación.</p>
+                </div><!-- /.heading -->
+                <div class="pricing_items">
+                    <div class="col-md-3 col-xs-6 sm-padding">
+                        <div class="pricing_table wow flipInY" data-wow-delay="0ms" data-wow-duration="1000ms">
+                            <div class="pricing_head">
+                                <h5>INICIAL</h5>
+                                <h3>A cotizar</h3>
+                                <p class="no-margin">Para flotas pequeñas.</p>
+                            </div><!-- /.pricing_head -->
+                            <ul class="pricing_list">
+                                <li>Hasta 10 tripulantes</li>
+                                <li>1 panel de empresa</li>
+                                <li>Soporte por correo</li>
+                                <li class="red">Reportes avanzados</li>
+                            </ul>
+                            <div class="pricing_footer">
+                                <a href="/register" class="app_btn">Solicitar cotización</a>
+                            </div>
+                        </div>
+                    </div><!-- pricing 1 -->
+                    <div class="col-md-3 col-xs-6 sm-padding">
+                        <div class="pricing_table mid_table wow flipInY" data-wow-delay="200ms" data-wow-duration="1000ms">
+                            <div class="pricing_head">
+                                <h5>OPERATIVO</h5>
+                                <h3>A cotizar</h3>
+                                <p class="no-margin">Para operaciones en crecimiento.</p>
+                            </div><!-- /.pricing_head -->
+                            <ul class="pricing_list">
+                                <li>Hasta 50 tripulantes</li>
+                                <li>Paneles ilimitados</li>
+                                <li>Alertas automáticas</li>
+                                <li>Reportes avanzados</li>
+                            </ul>
+                            <div class="pricing_footer">
+                                <a href="/register" class="hero_btn">Solicitar cotización</a>
+                            </div>
+                        </div>
+                    </div><!-- pricing 2 -->
+                    <div class="col-md-3 col-xs-6 sm-padding">
+                        <div class="pricing_table wow flipInY" data-wow-delay="400ms" data-wow-duration="1000ms">
+                            <div class="pricing_head">
+                                <h5>FLOTA</h5>
+                                <h3>A cotizar</h3>
+                                <p class="no-margin">Para flotas medianas.</p>
+                            </div><!-- /.pricing_head -->
+                            <ul class="pricing_list">
+                                <li>Hasta 150 tripulantes</li>
+                                <li>Paneles ilimitados</li>
+                                <li>Alertas automáticas</li>
+                                <li>Soporte prioritario</li>
+                            </ul>
+                            <div class="pricing_footer">
+                                <a href="/register" class="app_btn">Solicitar cotización</a>
+                            </div>
+                        </div>
+                    </div><!-- pricing 3 -->
+                    <div class="col-md-3 col-xs-6 sm-padding">
+                        <div class="pricing_table wow flipInY" data-wow-delay="500ms" data-wow-duration="1000ms">
+                            <div class="pricing_head">
+                                <h5>NAVIERA</h5>
+                                <h3>A cotizar</h3>
+                                <p class="no-margin">Para navieras grandes.</p>
+                            </div><!-- /.pricing_head -->
+                            <ul class="pricing_list">
+                                <li>Tripulantes ilimitados</li>
+                                <li>Paneles ilimitados</li>
+                                <li>Alertas automáticas</li>
+                                <li>Gerente de cuenta dedicado</li>
+                            </ul>
+                            <div class="pricing_footer">
+                                <a href="/register" class="app_btn">Solicitar cotización</a>
+                            </div>
+                        </div>
+                    </div><!-- pricing 4 -->
+                </div>
+            </div>
+        </section><!-- /.pricing_section -->
+        
+        <section id="download" class="download_section padding">
+            <div class="container">
+                <div class="counter_content">
+                    <h3 class="counter">60</h3>
+                    <h4>Rangos STCW Cubiertos</h4>
+                    <h5>Plataforma 100% web. Ningún tripulante instala nada — solo tu equipo, desde el navegador.</h5>
+                </div>
+               <ul class="download_content">
+                   <li><a href="#" aria-label="Verificado"><i class="fa fa-check-circle"></i></a></li>
+                   <li><a href="#" aria-label="Seguro"><i class="fa fa-lock"></i></a></li>
+                   <li><a href="#" aria-label="100% web"><i class="fa fa-globe"></i></a></li>
+               </ul>
+            </div>
+        </section><!-- /.download_section -->
+        
+        <section id="testimonial" class="testimonial_section">
+			<div class="container">
+				<ul id="testimonial_carousel" class="testimonial_items owl-carousel">
+                    <li class="testimonial_item">
+                        <p>"Cada marino aparece con su expediente completo y verificado —<br> sin perseguir certificados por correo."</p>
+                        <h4>Para navieras mercantes</h4>
+                    </li>
+                    <li class="testimonial_item">
+                        <p>"Un solo panel para ver el cumplimiento STCW de toda<br> la tripulación, por rango y por flota."</p>
+                        <h4>Para agencias de tripulación</h4>
+                    </li>
+                    <li class="testimonial_item">
+                        <p>"Alertas antes de que un certificado venza —<br> tu equipo se entera primero, no después."</p>
+                        <h4>Para operadores offshore</h4>
+                    </li>
+                </ul>
+			</div>
+		</section><!-- /.testimonial_section -->
+        
+        <section id="blog" class="blog_area padding">
+		    <div class="container">
+		        <div class="row">
+		            <div class="section_heading align-center mb-40">
+		                <h2>Recursos</h2>
+		                <p>Referencia rápida sobre STCW, MLC 2006 y verificación de certificados. <a href="recursos.html">Ver todos →</a></p>
+		            </div>
+		        </div><!-- Section Heading -->
+		        <div class="row">
+		            <div class="blog_items">
+		                <div class="col-md-4 col-xs-6 sm-padding">
+		                    <div class="blog_item wow swing" data-wow-delay="0ms" data-wow-duration="1000ms">
+		                        <figure class="post_thumb">
+                                    <img src="img/blog-1.jpg" alt="Blog Post">
+		                            <div class="span">GUÍA</div>
+		                            <a href="recursos/stcw-2010.html" class="blog_title">
+		                                <h3>STCW 2010: qué cambió para tu tripulación</h3>
+		                            </a>
+		                        </figure>
+		                        <div class="post_content">
+		                            <p>Las enmiendas de Manila y lo que exige hoy cada rango, resumido.</p>
+		                            <a href="recursos/stcw-2010.html" class="read_more_btn">Leer más</a>
+		                        </div>
+		                    </div>
+		                </div>
+		                <div class="col-md-4 col-xs-6 sm-padding">
+		                    <div class="blog_item wow swing" data-wow-delay="200ms" data-wow-duration="1000ms">
+		                        <figure class="post_thumb">
+                                    <img src="img/blog-2.jpg" alt="Blog Post">
+		                            <div class="span">GUÍA</div>
+		                            <a href="recursos/mlc-2006.html" class="blog_title">
+		                                <h3>MLC 2006 en 5 minutos</h3>
+		                            </a>
+		                        </figure>
+		                        <div class="post_content">
+		                            <p>Descanso, vacaciones y límites de servicio continuo, explicados sin jerga legal.</p>
+		                            <a href="recursos/mlc-2006.html" class="read_more_btn">Leer más</a>
+		                        </div>
+		                    </div>
+		                </div>
+		                <div class="col-md-4 col-xs-6 sm-padding">
+		                    <div class="blog_item wow swing" data-wow-delay="400ms" data-wow-duration="1000ms">
+		                        <figure class="post_thumb">
+                                    <img src="img/blog-3.jpg" alt="Blog Post">
+		                            <div class="span">GUÍA</div>
+		                            <a href="recursos/verificacion-certificados.html" class="blog_title">
+		                                <h3>Verificación de certificados en línea: por qué importa</h3>
+		                            </a>
+		                        </figure>
+		                        <div class="post_content">
+		                            <p>Cómo Pollux verifica un certificado contra el registro oficial, paso a paso.</p>
+		                            <a href="recursos/verificacion-certificados.html" class="read_more_btn">Leer más</a>
+		                        </div>
+		                    </div>
+		                </div>
+		            </div>
+		        </div><!-- Blog Post Items -->
+		    </div>
+		</section><!--   Blog Section     -->
+
+        <div id="subscribe" class="subscribe_section">
+       		<div class="subscribe_wrapper">
+       			<div class="container subscribe_flex">
+	               <a href="index.html" class="subscribe_brand" aria-label="Pollux — inicio">
+	                   <img src="img/logo.png" alt="Pollux">
+	               </a>
+	               <div class="subscribe_content">
+	               <div class="subscribe_wrap">
+	                    <form action="#" class="subscribe_form">
+	                        <input type="email" name="email" id="subs-email" class="form_input" placeholder="Escríbenos tu correo y te contactamos...">
+	                        <button type="submit" class="submit">Solicitar acceso</button>
+	                        <div class="clearfix"></div>
+	                        <div id="subscribe-result">
+	                            <p class="subscription-success"></p>
+	                            <p class="subscription-error"></p>
+	                        </div>
+	                    </form>
+	                </div><!-- /.subscribe_wrap -->
+	                <ul class="social_link">
+	                     <li><a href="#"><i class="fa fa-facebook"></i></a></li>
+	                     <li><a href="#"><i class="fa fa-twitter"></i></a></li>
+	                     <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
+	                     <li><a href="#"><i class="fa fa-instagram"></i></a></li>
+	                     <li><a href="#"><i class="fa fa-skype"></i></a></li>
+	                     <li><a href="#"><i class="fa fa-pinterest"></i></a></li>
+	                </ul><!-- /.social_link -->
+	                </div><!-- /.subscribe_content -->
+				</div>
+       		</div><!-- /.subscribe_wrapper -->
+        </div><!-- /.footer_top_section -->
+       
+		<footer class="footer_section">
+			<div class="container">
+				<div class="col-sm-6 xs-padding">
+					<p class="copyright">&copy; 2026 PB Trading Solutions. Pollux.</p>
+				</div>
+				<nav class="col-sm-6 xs-padding">
+					<ul class="footer_menu">
+						<li><a data-scroll href="#poly-container">Inicio</a></li>
+						<li><a data-scroll href="#feature">Características</a></li>
+						<li><a data-scroll href="#pricing">Planes</a></li>
+						<li><a href="recursos.html">Recursos</a></li>
+						<li><a data-scroll href="#subscribe">Contacto</a></li>
+					</ul>
+				</nav>
+			</div>
+		</footer><!-- /.footer_section -->
+
+		<a data-scroll href="#header" id="scroll-to-top"><i class="arrow_carrot-up"></i></a>
+	
+		<!-- jQuery Lib -->
+		<script src="js/vendor/jquery-1.12.4.min.js"></script>
+		<!-- waypoints js -->
+		<script src="js/vendor/waypoints.min.js"></script>
+		<!-- Bootstrap JS -->
+		<script src="js/vendor/bootstrap.min.js"></script>
+		<!-- OWL-Carousel JS -->
+		<script src="js/vendor/owl.carousel.min.js"></script>
+		<!-- Smooth Scroll JS -->
+		<script src="js/vendor/smooth-scroll.min.js"></script>
+		<!-- venobox JS -->
+		<script src="js/vendor/venobox.min.js"></script>
+		<!-- Counterup JS -->
+		<script src="js/vendor/jquery.counterup.min.js"></script>
+		<!-- Ajaxchimp JS -->
+		<script src="js/vendor/jquery.ajaxchimp.min.js"></script>
+        <!-- Polygon JS -->
+	    <script src="js/vendor/fss.js"></script>
+	    <script src="js/vendor/polygon-app.js"></script>
+        <!-- wow JS -->
+        <script src="js/vendor/wow.min.js"></script>
+		<!-- Main JS -->
+		<script src="js/main.js"></script>
+
+    </body>
+</html>

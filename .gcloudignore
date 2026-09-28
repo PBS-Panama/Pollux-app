@@ -1,0 +1,64 @@
+# .gcloudignore — contexto de `gcloud builds submit` (Castor)
+#
+# ⚠️ ESTE ARCHIVO ES OBLIGATORIO, Y NO LO REEMPLAZA `.dockerignore`.
+#
+# `gcloud builds submit` NO lee `.dockerignore` — ese gobierna `docker build`.
+# Lee ESTE archivo, y si no existe cae al `.gitignore` de ESTA carpeta, que solo
+# tiene 6 reglas y ninguna cubre los documentos personales: las reglas reales
+# viven en el `.gitignore` de la RAIZ del repo con el prefijo
+# `products/portal/pbsds-castor-app/...`, y desde aqui esos patrones no coinciden
+# con nada.
+#
+# El 2026-09-14 eso hizo que el primer `builds submit` empaquetara 376 MB y
+# 38.448 archivos — 90 MB de Reference/ mas ~280 MB de node_modules anidados — y
+# subiera el tarball al bucket de staging antes de fallar por otra razon.
+#
+# Verificacion obligatoria en cada submit: gcloud reporta el tamano del contexto
+# en su primera linea. Deben ser POCOS MB. Si vuelve a decir cientos, este archivo
+# dejo de aplicar y hay que parar.
+
+# ── Documentos personales de identidad — NUNCA salen de la maquina ────────────
+Reference/
+ocr-references/
+interfaces/castor/User database/
+User database/
+
+# ── Dependencias: el Dockerfile.prod corre su propio install dentro de la
+#    imagen, asi que subirlas es desperdicio puro (y puede romper el build con
+#    binarios compilados para otra plataforma).
+**/node_modules/
+node_modules/
+
+# ── Salidas de build ─────────────────────────────────────────────────────────
+**/build/
+**/dist/
+**/.next/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+
+# ── Git y editor ─────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# ── Documentacion y bitacoras: no las necesita la imagen ─────────────────────
+docs/
+*.md
+
+# ── Entornos locales y respaldos ─────────────────────────────────────────────
+.env
+.env.*
+*.bak
+*.log
+docker-compose.yml
+docker-compose.*.yml
+
+# ── Rutas sensibles del OTRO producto ────────────────────────────────────────
+# Este archivo es IDENTICO en pbsds-castor-app/ y pbsds-pollux-app/ a proposito.
+# Una ruta que no existe en un producto no hace dano; mantenerlos identicos
+# impide que uno de los dos se quede sin una regla.
+Reference/AdminPanel/OCR References/
+interfaces/leto/User database/

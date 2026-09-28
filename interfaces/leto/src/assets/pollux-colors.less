@@ -1,0 +1,26 @@
+// PBS Crewing Module — replaces the old Stremio color package (Fase 3, limpieza Stremio/GPL).
+// Only the 15 variables this project actually uses (of the ~1300 in the
+// original palette) — same names, same values, copied verbatim so nothing
+// repaints. This is a straight "vendor the constant, drop the npm
+// dependency" move, not a re-theme: these style legacy dark chrome (toasts,
+// modals, context menus, form-control outlines) that the Mannat 4-theme
+// reskin (src/common/theme.ts, App/styles.less :root) hasn't touched yet.
+// Where a usage was already wired to a theme token — e.g.
+// `var(--content-text-color, @color-surface-light5-90)` in Search/styles.less
+// — that wiring is untouched; these are just the fallback values it falls
+// back to.
+@color-accent3: hsla(147.7, 68%, 41.7%, 1);
+@color-accent5-90: hsla(42, 100%, 54.9%, 0.9);
+@color-accent5-dark3: hsla(42, 100%, 39.9%, 1);
+@color-background: hsla(243, 24.4%, 21%, 1);
+@color-background-dark5: hsla(243, 24.4%, 0%, 1);
+@color-background-dark5-20: hsla(243, 24.4%, 0%, 0.2);
+@color-background-dark5-40: hsla(243, 24.4%, 0%, 0.4);
+@color-primary-light2: hsla(275.1, 33%, 48%, 1);
+@color-secondaryvariant2-light1-90: hsla(222.8, 100%, 78%, 0.9);
+@color-surface-50: hsla(0, 0%, 75%, 0.5);
+@color-surface-dark5-20: hsla(0, 0%, 50%, 0.2);
+@color-surface-light5: hsla(0, 0%, 100%, 1);
+@color-surface-light5-20: hsla(0, 0%, 100%, 0.2);
+@color-surface-light5-30: hsla(0, 0%, 100%, 0.3);
+@color-surface-light5-90: hsla(0, 0%, 100%, 0.9);

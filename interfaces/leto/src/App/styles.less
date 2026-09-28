@@ -1,0 +1,358 @@
+// Copyright (C) 2017-2024 Smart code 203358507
+
+@import (reference) '~pollux/common/screen-sizes.less';
+@import (reference) '~pollux/assets/pollux-colors.less';
+
+@font-face {
+    font-family: 'PlusJakartaSans';
+    src: url('/assets/fonts/PlusJakartaSans.ttf') format('truetype');
+}
+
+:global {
+    @import (once, less) '~pollux/common/animations.less';
+    @import (once, less) '~pollux/common/router/styles.css';
+    // Mannat admin-dashboard skin (Reference/Frontend-UI) — icon set for the
+    // company shell (sidebar/topbar). Pure CSS (SVG data-URI masks), no font
+    // file, so `color` on the element tints the icon for free.
+    @import (once, less) '../assets/iconoir.css';
+}
+
+// iOS pads the bottom inset more than needed, so we deduce the actual inset size when using the webapp
+@calculated-bottom-safe-inset: ~"min(env(safe-area-inset-bottom, 0rem), max(1rem, calc(var(--viewport-height-diff) - env(safe-area-inset-top, 0rem))))";
+
+// Viewport sizes
+@viewport-width: ~"100vw";
+@viewport-height: ~"100vh";
+
+// HTML sizes
+@html-width: ~"calc(max(var(--small-viewport-width), var(--dynamic-viewport-width)))";
+@html-height: ~"calc(max(var(--small-viewport-height), var(--dynamic-viewport-height)))";
+@html-standalone-width: ~"calc(max(100%, var(--large-viewport-width)))";
+@html-standalone-height: ~"calc(max(100%, var(--large-viewport-height)))";
+
+// Safe area insets
+@safe-area-inset-top: env(safe-area-inset-top, 0rem);
+@safe-area-inset-right: env(safe-area-inset-right, 0rem);
+@safe-area-inset-bottom: env(safe-area-inset-bottom, 0rem);
+@safe-area-inset-left: env(safe-area-inset-left, 0rem);
+
+@top-overlay-size: 5.25rem;
+@bottom-overlay-size: 0rem;
+@overlap-size: 3rem;
+@transparency-gradient-pad: 6rem;
+
+:root {
+    --landscape-shape-ratio: 0.5625;
+    --poster-shape-ratio: 1.464;
+    --scroll-bar-size: 6px;
+    --horizontal-nav-bar-size: 5.5rem;
+    --vertical-nav-bar-size: 6rem;
+
+    // Company shell (Mannat admin-dashboard skin, Reference/Frontend-UI) —
+    // desktop sidebar/topbar. Kept separate from the two vars above: those
+    // still size the mobile bottom tab-bar (unchanged), while these size the
+    // new desktop sidebar layout. Values match the reference exactly (its
+    // own :root in app.css) so Phase 3 only needs to repaint colors, not
+    // remeasure anything.
+    --sidebar-width: 270px;
+    --sidebar-width-collapsed: 70px;
+    --topbar-height: 75px;
+    --sidebar-bg: #fff;
+    --sidebar-border-color: #e3ebf6;
+    --topbar-bg: #f9fbfd;
+    --topbar-border-color: #e3ebf6;
+    --topbar-icon-bg: #fff;
+    --topbar-icon-color: #424d65;
+    --menu-icon-color: #96a0b5;
+    --menu-link-color: #061237;
+    --menu-link-hover-color: #061237;
+    --menu-link-active-bg: #f9fbfd;
+    --menu-link-active-color: #3167f3;
+    --menu-label-color: #a0a5b3;
+
+    // Content area (Board cards, Settings, MyProfile, modals) — independent
+    // of the sidebar/topbar vars above so a dark sidebar (the "Navy" theme)
+    // doesn't drag the readable content area dark with it.
+    --content-bg: #f4f6f9;
+    --content-card-bg: #fff;
+    --content-border-color: #e3ebf6;
+    --content-text-color: #061237;
+    --content-muted-color: #96a0b5;
+    --content-accent-color: #3167f3;
+    // Warm dark neutral (RGB triple, for rgba(var(--x), alpha)) used by the
+    // crew-card overlay/badge/button that sit directly on top of the
+    // brand-red placeholder photo — a plain black clashed with it, this
+    // reads as "dark", not "off-brand black".
+    --content-overlay-tint: 32, 17, 14;
+    // Recolors the brand-red default crew-photo placeholder — a no-op here,
+    // set per-theme below only where the brand red clashes with the chrome
+    // (Navy's own blue identity).
+    --placeholder-hue-filter: none;
+    // RGB triple (for rgba(var(--x), alpha)) for subtle background tints —
+    // hover states, thin borders, "has event"/"selected" markers — used at
+    // varying opacity across Calendar.less. Matches --content-text-color's
+    // own tone so the tint reads correctly against --content-bg regardless
+    // of whether that surface is light or dark.
+    --content-tint-rgb: 6, 18, 55;
+
+    --focus-outline-size: 2px;
+    --color-facebook: #1877F1;
+    --color-x: #000000;
+    --color-reddit: #FF4500;
+    --color-imdb: #f5c518;
+    --color-placeholder: #60606080;
+    --color-placeholder-text: @color-surface-50;
+    --color-placeholder-background: @color-surface-dark5-20;
+    --primary-background-color: rgba(12, 11, 17, 1);
+    --secondary-background-color: rgba(26, 23, 62, 1);
+    --primary-foreground-color: rgba(255, 255, 255, 0.9);
+    --secondary-foreground-color: rgb(12, 11, 17, 1);
+    --primary-accent-color: rgb(123, 91, 245);
+    --secondary-accent-color: rgba(34, 179, 101, 1);
+    --tertiary-accent-color: rgba(246, 199, 0, 1);
+    --quaternary-accent-color: rgba(18, 69, 166, 1);
+    --overlay-color: rgba(255, 255, 255, 0.05);
+    --modal-background-color: rgba(15, 13, 32, 1);
+    --outer-glow: 0px 0px 15px rgba(123, 91, 245, 0.37);
+    --warning-accent-color: rgba(255, 165, 0, 1);
+    --danger-accent-color: rgba(220, 38, 38, 1);  
+    --border-radius: 0.75rem;
+    --top-overlay-size: @top-overlay-size;
+    --bottom-overlay-size: @bottom-overlay-size;
+    --overlap-size: @overlap-size;
+    --transparency-gradient-pad: @transparency-gradient-pad;
+    --safe-area-inset-top: @safe-area-inset-top;
+    --safe-area-inset-right: @safe-area-inset-right;
+    --safe-area-inset-bottom: @safe-area-inset-bottom;
+    --safe-area-inset-left: @safe-area-inset-left;
+    --dynamic-viewport-width: @viewport-width;
+    --dynamic-viewport-height: @viewport-height;
+    --large-viewport-width: @viewport-width;
+    --large-viewport-height: @viewport-height;
+    --small-viewport-width: @viewport-width;
+    --small-viewport-height: @viewport-height;
+    --viewport-height-diff: calc(100vh - 100vh);
+
+    @supports (height: 100dvh) {
+        --dynamic-viewport-width: 100dvw;
+        --dynamic-viewport-height: 100dvh;
+    }
+
+    @supports (height: 100lvh) {
+        --large-viewport-width: 100lvw;
+        --large-viewport-height: 100lvh;
+    }
+
+    @supports (height: 100svh) {
+        --small-viewport-width: 100svw;
+        --small-viewport-height: 100svh;
+    }
+
+    @supports (height: 100lvh) and (height: 100svh) {
+        --viewport-height-diff: calc(100lvh - 100svh);
+    }
+
+    @media (display-mode: standalone) {
+        --safe-area-inset-bottom: @calculated-bottom-safe-inset;
+    }
+}
+
+// ── Company shell themes (Reference/Frontend-UI skin) ───────────────────────
+// Applied via `data-pbs-theme` on <html> (src/common/theme.ts) — each block
+// only overrides the 18 sidebar/topbar/content vars declared in :root above,
+// so switching is pure CSS. "Navy" is the one case where the two axes
+// diverge on purpose: dark chrome, but the content area stays light (its
+// --content-* vars are left at the :root/"default" values).
+:root[data-pbs-theme='navy'] {
+    --sidebar-bg: #0f1b33;
+    --sidebar-border-color: #1c2c4d;
+    --topbar-bg: #10203f;
+    --topbar-border-color: #1c2c4d;
+    --topbar-icon-bg: #17284a;
+    --topbar-icon-color: #c7d3ea;
+    --menu-icon-color: #7e93bd;
+    --menu-link-color: #c7d3ea;
+    --menu-link-hover-color: #ffffff;
+    --menu-link-active-bg: #17284a;
+    --menu-link-active-color: #5b9bff;
+    --menu-label-color: #5e6f94;
+    // Rotates the placeholder's brand red (~6°) to this theme's own blue
+    // (~220°, matching --menu-link-active-color) so the crew-card avatar
+    // reads as "part of Navy" instead of a red sticker on a blue shell.
+    --placeholder-hue-filter: hue-rotate(214deg) saturate(1.1);
+}
+
+// Values match Mannat's own real dark-mode CSS vars where it defines them
+// (app.css `html[data-bs-theme=dark]`) — not guessed.
+:root[data-pbs-theme='dark'] {
+    --sidebar-bg: #141824;
+    --sidebar-border-color: #333547;
+    --topbar-bg: #141824;
+    --topbar-border-color: #333547;
+    --topbar-icon-bg: #222735;
+    --topbar-icon-color: #a1a8bd;
+    --menu-icon-color: #5e748b;
+    --menu-link-color: #a1a8bd;
+    --menu-link-hover-color: #ffffff;
+    --menu-link-active-bg: rgba(249, 251, 253, 0.04);
+    --menu-link-active-color: #5b9bff;
+    --menu-label-color: #a0a5b3;
+    --content-bg: #0d0f14;
+    --content-card-bg: #151821;
+    --content-border-color: #262b38;
+    --content-text-color: #d9e1ec;
+    --content-muted-color: #aab0b9;
+    --content-accent-color: #5b9bff;
+    --content-overlay-tint: 10, 9, 12;
+    --content-tint-rgb: 217, 225, 236;
+}
+
+// Twilight — muted dark blue-gray, less contrast/brightness than "dark" but
+// still noticeably dimmer than "default"; warm accent so it doesn't just
+// read as "dark, but worse".
+:root[data-pbs-theme='dusk'] {
+    --sidebar-bg: #1f2733;
+    --sidebar-border-color: #303a48;
+    --topbar-bg: #212a37;
+    --topbar-border-color: #303a48;
+    --topbar-icon-bg: #2a3441;
+    --topbar-icon-color: #cbd5e1;
+    --menu-icon-color: #8592a3;
+    --menu-link-color: #cbd5e1;
+    --menu-link-hover-color: #ffffff;
+    --menu-link-active-bg: #2a3441;
+    --menu-link-active-color: #f2a65a;
+    --menu-label-color: #6b7688;
+    --content-bg: #262f3c;
+    --content-card-bg: #2d3746;
+    --content-border-color: #3a4557;
+    --content-text-color: #e2e8f0;
+    --content-muted-color: #8592a3;
+    --content-accent-color: #f2a65a;
+    --content-overlay-tint: 26, 17, 12;
+    --content-tint-rgb: 226, 232, 240;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-size: 1rem;
+    font-family: inherit;
+    border: none;
+    outline: none;
+    list-style: none;
+    user-select: none;
+    text-decoration: none;
+    appearance: none;
+    background: none;
+    box-shadow: none;
+    overflow: hidden;
+    word-break: break-word;
+    scrollbar-width: thin;
+    scrollbar-color: var(--overlay-color) transparent;
+}
+
+::-webkit-scrollbar {
+    width: var(--scroll-bar-size);
+    height: var(--scroll-bar-size);
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: var(--scroll-bar-size);
+    background-color: var(--overlay-color);
+
+    &:hover {
+        background-color: var(--primary-accent-color);
+    }
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+svg {
+    overflow: visible;
+}
+
+html {
+    width: @html-width;
+    height: @html-height;
+    font-family: 'PlusJakartaSans', 'Arial', 'Helvetica', 'sans-serif';
+    overflow: auto;
+    overscroll-behavior: none;
+    user-select: none;
+    touch-action: manipulation;
+    background-color: var(--primary-background-color);
+    -webkit-tap-highlight-color: transparent;
+
+    @media (display-mode: standalone) {
+        width: @html-standalone-width;
+        height: @html-standalone-height;
+    }
+
+    body {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(41deg, var(--primary-background-color) 0%, var(--secondary-background-color) 100%);
+        -webkit-font-smoothing: antialiased;
+
+        :global(#app) {
+            position: relative;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+
+            .router {
+                width: 100%;
+                height: 100%;
+            }
+        }
+    }
+}
+
+@media only screen and (min-width: @xxlarge) {
+    html {
+        font-size: 18px;
+    }
+}
+
+@media only screen and (max-width: @xxlarge) {
+    html {
+        font-size: 16px;
+    }
+}
+
+@media only screen and (max-width: @large) {
+    html {
+        font-size: 15px;
+    }
+}
+
+@media only screen and (max-width: @medium) {
+    html {
+        font-size: 14px;
+    }
+}
+
+@media only screen and (max-width: @xsmall) {
+    html {
+        body {
+            :global(#app) {
+                .toasts-container {
+                    padding: 0 1rem;
+                }
+
+                .tooltip-container {
+                    display: none;
+                }
+            }
+        }
+    }
+}
+
+@media only screen and (max-width: @minimum) {
+    :root {
+        --bottom-overlay-size: 6rem;
+    }
+}

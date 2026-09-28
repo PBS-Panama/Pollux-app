@@ -1,0 +1,178 @@
+@import (reference) '~pollux/common/screen-sizes.less';
+
+// Desktop sidebar — replica of Mannat's `.startbar` (Reference/Frontend-UI).
+// `.nav-tab-button`/`.icon`/`.label` below are declared :global in
+// NavTabButton/styles.less specifically so this file's hover-to-expand rule
+// can reach into them (CSS Modules hashes local classes per-file, which
+// would otherwise make that impossible from here).
+.vertical-nav-bar-container {
+    display: flex;
+    flex-direction: column;
+    width: var(--sidebar-width);
+    height: 100%;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border-color);
+    overflow: hidden;
+    transition: width 0.3s;
+
+    .brand {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        height: var(--topbar-height);
+        padding: 0 1.25rem;
+        border-bottom: 1px solid var(--sidebar-border-color);
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            overflow: hidden;
+        }
+
+        .logo-icon {
+            flex: none;
+            width: 32px;
+            height: 32px;
+        }
+
+        .logo-text {
+            flex: none;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--menu-link-color);
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+    }
+
+    .startbar-menu {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .navbar-nav {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        padding: 0.5rem 1rem 1rem;
+    }
+
+    .menu-label {
+        text-transform: uppercase;
+        white-space: nowrap;
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.05rem;
+        color: var(--menu-label-color);
+        padding: 0.9rem 0.5rem 0.9rem 0.75rem;
+        transition: opacity 0.2s;
+    }
+
+    .nav-item {
+        width: 100%;
+    }
+
+    // Collapsed: icon rail (Mannat's `--bs-startbar-collapsed-width`), same
+    // 0.3s transition as the width above. Hovering re-expands — identical
+    // to the reference's `.startbar:not(:hover)` pattern — so a quick mouse
+    // pass still shows labels without a permanent click to re-open.
+    &.collapsed:not(:hover) {
+        width: var(--sidebar-width-collapsed);
+
+        .logo-text {
+            opacity: 0;
+            width: 0;
+        }
+
+        .menu-label {
+            opacity: 0;
+            height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            overflow: hidden;
+        }
+
+        :global(.nav-tab-button) {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        :global(.nav-tab-button .label) {
+            display: none;
+        }
+    }
+}
+
+@media only screen and (max-width: @minimum) {
+    .vertical-nav-bar-container {
+        flex-direction: row;
+        width: 100%;
+        height: var(--vertical-nav-bar-size);
+        border-right: none;
+        border-top: 1px solid var(--sidebar-border-color);
+
+        &.collapsed:not(:hover) {
+            width: 100%;
+        }
+
+        .brand {
+            display: none;
+        }
+
+        .startbar-menu {
+            width: 100%;
+            overflow: visible;
+        }
+
+        .navbar-nav {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            padding: 0 1rem;
+        }
+
+        .menu-label {
+            display: none;
+        }
+
+        .nav-item {
+            width: auto;
+            flex: none;
+
+            &:last-child {
+                display: none;
+            }
+        }
+
+        :global(.nav-tab-button) {
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        :global(.nav-tab-button .label) {
+            display: block;
+            font-size: 0.7rem;
+        }
+    }
+}
+
+@media only screen and (max-height: @minimum) {
+    .vertical-nav-bar-container {
+        .nav-item {
+            &:last-child {
+                display: none;
+            }
+        }
+    }
+}

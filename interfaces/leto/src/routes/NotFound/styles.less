@@ -1,0 +1,40 @@
+// PBS Crewing Module — página no encontrada (R11)
+// Tokens Mannat, mismo patrón que CompanyDashboard/SeafarerSearch — nada de
+// la paleta vendorizada de Stremio (assets/pollux-colors.less).
+
+.page {
+    height: 100%;
+}
+
+.content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background-color: var(--content-bg, #f4f6f9);
+}
+
+.code {
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--content-accent-color, #3167f3);
+}
+
+.message {
+    font-size: 1.1rem;
+    color: var(--content-text-color, #061237);
+}
+
+.link {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--content-accent-color, #3167f3);
+    text-decoration: none;
+
+    &:hover {
+        opacity: 0.8;
+    }
+}

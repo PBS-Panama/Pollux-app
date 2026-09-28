@@ -1,0 +1,19 @@
+// Copyright (C) 2017-2024 Smart code 203358507
+
+@import (reference) '~pollux/assets/pollux-colors.less';
+
+.button-container {
+    cursor: pointer;
+    outline-width: var(--focus-outline-size);
+    outline-offset: calc(-1 * var(--focus-outline-size));
+    outline-color: @color-surface-light5;
+}
+
+.button-container:focus {
+    outline-style: solid;
+}
+
+.button-container:global(.disabled) {
+    pointer-events: none;
+    opacity: 0.5;
+}

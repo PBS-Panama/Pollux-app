@@ -1,0 +1,78 @@
+// Copyright (C) 2017-2024 Smart code 203358507
+
+@import (reference) '~pollux/common/screen-sizes.less';
+
+// Desktop: Mannat's own arrangement (Reference/Frontend-UI) — sidebar spans
+// full height on la izquierda (no "debajo del topbar" como el original de
+// Stremio), el topbar va a la derecha del sidebar, y el contenido debajo del
+// topbar. Colapsar el sidebar (`.collapsed`) corre el borde izquierdo del
+// topbar/contenido para que coincida — misma transición de 0.3s que el
+// sidebar, para que nada salte.
+.main-nav-bars-container {
+    position: relative;
+    z-index: 0;
+    overflow: clip;
+    width: calc(100% - var(--safe-area-inset-left) - var(--safe-area-inset-right));
+    height: 100%;
+    margin-left: var(--safe-area-inset-left);
+    margin-right: var(--safe-area-inset-right);
+}
+
+.vertical-nav-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+}
+
+.horizontal-nav-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--sidebar-width);
+    z-index: 1;
+    transition: left 0.3s;
+}
+
+.nav-content-container {
+    position: absolute;
+    top: calc(var(--topbar-height) + var(--safe-area-inset-top));
+    right: 0;
+    bottom: 0;
+    left: var(--sidebar-width);
+    z-index: 0;
+    overflow: auto;
+    background-color: var(--content-bg);
+    transition: left 0.3s;
+}
+
+.main-nav-bars-container.collapsed .horizontal-nav-bar,
+.main-nav-bars-container.collapsed .nav-content-container {
+    left: var(--sidebar-width-collapsed);
+}
+
+// Mobile/pantallas bajas: igual que antes de este skin — barra inferior de
+// íconos, medida con --horizontal-nav-bar-size/--vertical-nav-bar-size (las
+// variables de sidebar/topbar de Mannat de arriba son solo de escritorio).
+@media only screen and (max-width: @minimum) {
+    .horizontal-nav-bar {
+        top: 0;
+        left: 0;
+    }
+
+    .nav-content-container {
+        top: calc(var(--horizontal-nav-bar-size) + var(--safe-area-inset-top));
+        bottom: var(--vertical-nav-bar-size);
+        left: 0;
+    }
+
+    .vertical-nav-bar {
+        top: initial;
+    }
+
+    .main-nav-bars-container.collapsed .horizontal-nav-bar,
+    .main-nav-bars-container.collapsed .nav-content-container {
+        left: 0;
+    }
+}

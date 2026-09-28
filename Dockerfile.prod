@@ -1,0 +1,106 @@
+# ============================================================================
+# pbsds-pollux-app — Production Dockerfile (single-container monolith, Cloud Run)
+# ============================================================================
+# POLLUX ONLY (physical split 2026-09-03 — Castor lives in its own folder).
+# Processes (supervisord):
+#   nginx   :80   — entry point (Cloud Run exposes this)
+#   backend :8000 — FastAPI / uvicorn
+#   leto    :8081 — Company crewing SPA + Express (brand: Pollux)
+# Static files via nginx:
+#   /var/www/landing/ — Vite React landing + auth
+#   /var/www/admin/   — React admin panel
+# ============================================================================
+
+# ── Stage 1: Build leto webpack bundle (brand: Pollux) ──────────────────────
+# No PNPM_HOME/corepack: that pattern tries to symlink pnpm's downloaded binary
+# into a dir that's never mkdir'd, across a Docker layer boundary — triggers
+# ERR_PNPM_PACKAGE_MANAGER_SYMLINK_FAILED / "Cross-device link (os error 18)"
+# on Docker Desktop over WSL2 (hit this exact bug in Castor's build 2026-09-13;
+# same pattern here, latent until the same conditions line up). Installing
+# pnpm as a plain global npm package sidesteps the symlink entirely.
+FROM node:22-alpine AS leto-build
+RUN apk add --no-cache git && npm i -g pnpm@9
+WORKDIR /build
+COPY interfaces/leto/package.json interfaces/leto/pnpm-lock.yaml ./
+RUN pnpm i --frozen-lockfile
+COPY interfaces/leto/ .
+RUN pnpm build
+
+# ── Stage 2: Build admin (Vite, base=/admin/) ───────────────────────────────
+FROM node:20-alpine AS admin-build
+WORKDIR /build
+COPY interfaces/admin/package.json ./
+RUN npm install
+COPY interfaces/admin/ .
+RUN npm run build
+
+# ── Stage 3: Build landing (Vite) ───────────────────────────────────────────
+FROM node:20-alpine AS landing-build
+WORKDIR /build
+COPY landing/package.json ./
+RUN npm install
+COPY landing/ .
+RUN npm run build
+
+# ── Stage 4: Final monolith ──────────────────────────────────────────────────
+FROM python:3.11-slim
+
+# Node 22 + nginx + supervisord
+RUN apt-get update && apt-get install -y curl nginx supervisor \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g pnpm \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/nginx/sites-enabled/default
+
+# ── FastAPI backend ────────────────────────────────────────────────────────
+WORKDIR /app/backend
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ .
+
+# ── Leto Express server (:8081, PORT env var) ─────────────────────────────
+WORKDIR /app/leto
+COPY interfaces/leto/http_server.js ./
+RUN npm install express@4
+# ⚠️ ENVIRONMENT=production activa _fail_fast_in_production de backend/app/core/config.py.
+#    Sin esta linea TODAS las defensas quedan inertes: se acepta el SECRET_KEY de dev del
+#    repo (JWT forjables), CORS queda en localhost y se siembra data demo. Hoy el servicio
+#    vivo (pb-pollux) solo esta protegido porque ENVIRONMENT esta puesta como variable del
+#    servicio en Cloud Run, no en la imagen — el dia que alguien cree un servicio nuevo
+#    (staging, por ejemplo) y se olvide esa variable, arranca sin ninguna de estas
+#    defensas. Ver Handover.md, nota (33) ("CRITICO 3").
+#    ORDEN DE DEPLOY: SECRET_KEY, CORS_ORIGINS y DATABASE_URL tienen que estar puestas en
+#    el servicio de Cloud Run ANTES de desplegar con esto, o el contenedor se niega a
+#    arrancar (comportamiento correcto, pero el deploy falla en duro).
+#    DATA_BACKEND no aplica aqui: verificado (git grep, backend/ e interfaces/leto/) que
+#    Pollux no lo lee en ningun lado — es exclusivo del Express de Castor (dataManager.js).
+ENV ENVIRONMENT=production
+COPY --from=leto-build /build/build ./build/
+
+# ── Static files ───────────────────────────────────────────────────────────
+# Landing is TWO builds sharing one root, same pattern as landing/Dockerfile
+# (the standalone local one) — see landing/nginx.conf's header comment for the
+# original design this ports. `site/` (the approved static marketing site,
+# never built by Vite) owns "/" and everything else; the Vite SPA is renamed
+# to app-shell.html and mounted only at /login, /register, /dashboard by
+# nginx-cloudrun.conf. Without this, "/" served the Vite index.html directly —
+# whose App.tsx declares no "/" route and no catch-all — a blank page at
+# pollux-app.com/ (2026-09-14, Handover.md nota (48), A-2).
+COPY --from=landing-build /build/dist /var/www/landing/
+RUN mv /var/www/landing/index.html /var/www/landing/app-shell.html
+COPY landing/site/ /var/www/landing/
+COPY --from=admin-build /build/dist /var/www/admin/
+
+# ── nginx (Cloud Run config) ──────────────────────────────────────────────
+COPY infra/nginx/nginx-cloudrun.conf /etc/nginx/conf.d/default.conf
+
+# ── supervisord ───────────────────────────────────────────────────────────
+COPY supervisord.prod.conf /etc/supervisor/conf.d/leto.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/leto.conf"]

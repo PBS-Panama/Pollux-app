@@ -1,0 +1,292 @@
+{
+  "version": "1.0",
+  "source": "Autoridad Marítima de Panamá (AMP) — Training Centers in Panama (amp.gob.pa/training-centers-in-panama/), mayo 2026",
+  "amp_url": "https://www.amp.gob.pa/training-centers-in-panama/",
+  "notes": [
+    "Lista de Centros Nacionales de Formación Marítima reconocidos por la AMP.",
+    "Las resoluciones se renuevan periódicamente. Para verificar vigencia actual consultar: amp.gob.pa/training-centers-in-panama/",
+    "La AMP también mantiene una lista de Centros Extranjeros reconocidos en: panamashipregistry.com/seafarers/maritime-training/",
+    "Para emitir certificados AMP, el curso debe haberse tomado en un centro reconocido por la AMP.",
+    "STCW Reg. I/6: los instructores deben tener cualificación para el tipo/nivel de formación.",
+    "Resolución ADM No.096-2019 rige el proceso de reconocimiento de centros."
+  ],
+  "total": 12,
+  "by_type": {
+    "Universidad Pública": 1,
+    "Centro Privado": 7,
+    "Universidad Privada": 3,
+    "Instituto Estatal": 1
+  },
+  "centers": [
+    {
+      "id": "umip",
+      "name": "Universidad Marítima Internacional de Panamá",
+      "abbreviation": "UMIP",
+      "city": "Panama City",
+      "district": "Balboa / Ancón",
+      "type": "Universidad Pública",
+      "resolution": "DGGM-CFM-051-2021",
+      "website": "https://www.umip.ac.pa",
+      "courses_count": 53,
+      "specialties": [
+        "BST (Formación Básica Completa)",
+        "Cursos de Puente — ARPA, ECDIS, BRM, Simulador",
+        "Cursos de Máquinas — ERM, Simulador, Alta Tensión",
+        "Tanquero (Petróleo, Químico, Gas LNL/LPG) — Básico y Avanzado",
+        "GMDSS — Operador General y Restringido",
+        "Protección Marítima (SSO, CSO, PFSO)",
+        "Pasajeros — Control de Multitudes, Crisis Management",
+        "Títulos Nacionales — Maquinista 750kW, Capitán Yate, Marinero Ordinario",
+        "Ascenso Capitán/Jefe de Máquinas",
+        "Formación de Instructores y Evaluadores de Simuladores",
+        "Código IGF (buques gas)",
+        "Cocinero del Buque (MLC 2006)"
+      ],
+      "notes": "Centro más completo de Panamá. Universidad pública, dependiente del Estado. Ubicado en Balboa, Ancón."
+    },
+    {
+      "id": "pmts",
+      "name": "Panama Maritime Training Services, Inc.",
+      "abbreviation": "PMTS",
+      "city": "Panama City",
+      "district": "Marbella",
+      "type": "Centro Privado",
+      "resolution": "DGGM-CFM-041-2021",
+      "website": "https://panamamaritimetraining.com",
+      "courses_count": 62,
+      "specialties": [
+        "BST (Formación Básica Completa)",
+        "Tanquero (Petróleo, Químico, Gas) — Básico y Avanzado",
+        "GMDSS — Operador General y Restringido",
+        "Radar/ARPA Nivel Operacional y Gestión",
+        "ECDIS",
+        "Simuladores de Puente y Máquinas",
+        "Protección Marítima (SSO, CSO, PFSO, Port Facility)",
+        "Pasajeros — Crowd Management, Crisis Management, Passenger Safety",
+        "Ascenso Capitán / Jefe de Máquinas",
+        "Formación de Instructores",
+        "Títulos Nacionales — Yate, Pesca, Cabotaje, Aguas Nacionales",
+        "Able Seafarer Deck & Engine",
+        "Alta Tensión Operacional y Gestión",
+        "Cocinero del Buque (MLC 2006)",
+        "Código IGF"
+      ],
+      "notes": "En operación desde 1998. Uno de los más antiguos y completos. Reconocido también por MEDUCA, INADEH e IMO."
+    },
+    {
+      "id": "iti",
+      "name": "Isthmus Training Institute, Inc.",
+      "abbreviation": "ITI",
+      "city": "Panama City",
+      "district": "Albrook",
+      "type": "Centro Privado",
+      "resolution": "DGGM-CFM-043-2021",
+      "website": null,
+      "courses_count": 48,
+      "specialties": [
+        "BST (Formación Básica Completa)",
+        "Tanquero (Petróleo, Químico, Gas) — Básico y Avanzado",
+        "GMDSS",
+        "Radar/ARPA Nivel Operacional y Gestión",
+        "ECDIS",
+        "Simuladores de Puente y Máquinas",
+        "Protección Marítima (SSO, CSO, PFSO)",
+        "Ascenso Capitán / Jefe de Máquinas",
+        "Formación de Instructores / Evaluadores de Simuladores",
+        "Capitán de Cabotaje (<500 GT, viajes costeros)",
+        "Capitán de Yate",
+        "Código IGF",
+        "Able Seafarer Deck & Engine"
+      ],
+      "notes": "Centro privado con simuladores de puente y máquinas. Fuerte en cursos de ascenso y tanquero."
+    },
+    {
+      "id": "seafarers_tc",
+      "name": "Seafarers Training Center, Inc.",
+      "abbreviation": "STC",
+      "city": "Panama City",
+      "district": "Balboa",
+      "type": "Centro Privado",
+      "resolution": "DGGM-CFM-060-2021",
+      "website": null,
+      "courses_count": 38,
+      "specialties": [
+        "BST (Formación Básica Completa)",
+        "Tanquero — Petróleo Básico/Avanzado, Químico Avanzado",
+        "Radar/ARPA Nivel Operacional y Gestión",
+        "ECDIS",
+        "GMDSS",
+        "Simulador de Puente",
+        "Protección Marítima (SSO, CSO, PFSO)",
+        "Pasajeros — Crowd Management, Crisis Management",
+        "Ascenso Capitán / Jefe de Máquinas",
+        "Able Seafarer Deck & Engine",
+        "Capitán de Yate",
+        "Cocinero del Buque"
+      ],
+      "notes": "Centro privado con oferta amplia. Incluye cursos de ascenso y especialidades de tanquero."
+    },
+    {
+      "id": "mtcc",
+      "name": "Marine Training and Certification Centre, Inc.",
+      "abbreviation": "MTCC",
+      "city": "Panama City",
+      "district": "Albrook / Clayton",
+      "type": "Centro Privado",
+      "resolution": "DGGM-CFM-035-2021 / DGGM-CFM-052-2021",
+      "website": "https://panamamaritime.com/mtcc/",
+      "courses_count": 39,
+      "specialties": [
+        "BST (Formación Básica Completa)",
+        "GMDSS",
+        "Radar/ARPA Nivel Operacional y Gestión",
+        "ECDIS",
+        "Simuladores de Puente y Máquinas",
+        "Protección Marítima (SSO, CSO, PFSO)",
+        "Pasajeros — Crowd Management, Crisis Management, Passenger Safety",
+        "Ascenso Capitán / Jefe de Máquinas",
+        "Alta Tensión Operacional y Gestión",
+        "Able Seafarer Deck & Engine",
+        "Capitán de Yate",
+        "Cocinero del Buque"
+      ],
+      "notes": "Parte del Panama Maritime Group. Fundado en 2005. Más de 35 programas de entrenamiento."
+    },
+    {
+      "id": "columbus",
+      "name": "Columbus University — Facultad de Ciencias Marinas y Tecnológicas",
+      "abbreviation": "Columbus University",
+      "city": "Panama City",
+      "district": "Obarrio",
+      "type": "Universidad Privada",
+      "resolution": "DGGM-CFM-050-2021",
+      "website": "https://columbus.edu.pa",
+      "courses_count": 20,
+      "specialties": [
+        "Oficial de Guardia de Navegación (OOW — Nivel Operacional)",
+        "Oficial de Guardia de Máquinas (OOW Engine — Nivel Operacional)",
+        "BST",
+        "Radar/ARPA Nivel Operacional",
+        "ECDIS",
+        "GMDSS",
+        "Simulador de Puente",
+        "Protección Marítima (SSO)",
+        "Pasajeros — Crowd Management",
+        "BRM / ERM",
+        "Alta Tensión Operacional"
+      ],
+      "notes": "Universidad privada con programa de licenciatura en ciencias marinas. Fuerte en formación de oficiales de guardia."
+    },
+    {
+      "id": "umecit",
+      "name": "Universidad Metropolitana de Educación, Ciencias y Tecnología de Panamá (UMECIT)",
+      "abbreviation": "UMECIT",
+      "city": "Panama City",
+      "district": "Pueblo Nuevo",
+      "type": "Universidad Privada",
+      "resolution": "DGGM-CFM-047-2021",
+      "website": "https://umecit.edu.pa/centro-de-formacion-maritima/",
+      "courses_count": 12,
+      "specialties": [
+        "BST (Formación Básica Completa)",
+        "Protección Marítima (SSO, PFSO)",
+        "Cargas Peligrosas",
+        "Formación de Instructores",
+        "Marinero Ordinario"
+      ],
+      "notes": "Universidad privada con centro de formación marítima. Oferta más limitada, orientada a BST y seguridad."
+    },
+    {
+      "id": "usma_ccctp",
+      "name": "CCCTP — Universidad Santa María La Antigua (USMA)",
+      "abbreviation": "USMA / CCCTP",
+      "city": "Panama City",
+      "district": "El Dorado",
+      "type": "Universidad Privada",
+      "resolution": "DGGM-CFM-027-2019",
+      "website": "https://www.usma.ac.pa",
+      "courses_count": 4,
+      "specialties": [
+        "Seguridad Personal y Responsabilidades Sociales",
+        "Conciencia Medioambiental Marina",
+        "Liderazgo y Trabajo en Equipo",
+        "Concienciación sobre Protección Marítima"
+      ],
+      "notes": "Oferta muy limitada — solo 4 cursos de sensibilización. No es especialista en formación marítima técnica."
+    },
+    {
+      "id": "macosnar",
+      "name": "Macosnar Training Institute Corp.",
+      "abbreviation": "Macosnar",
+      "city": "Panama City",
+      "district": "Balboa",
+      "type": "Centro Privado",
+      "resolution": "DGGM-CFM-040-2021",
+      "website": null,
+      "courses_count": 12,
+      "specialties": [
+        "BST",
+        "Protección Marítima (SSO, CSO, PFSO)",
+        "Formación de Instructores",
+        "Seguridad Portuaria"
+      ],
+      "notes": "Centro especializado principalmente en protección marítima y seguridad portuaria."
+    },
+    {
+      "id": "inadeh",
+      "name": "INADEH — Instituto Nacional de Formación Profesional y Capacitación",
+      "abbreviation": "INADEH",
+      "city": "Panama City",
+      "district": "Tocumen / Chorrillo",
+      "cities": ["Panama City", "Colón", "La Chorrera", "Santiago de Veraguas"],
+      "type": "Instituto Estatal",
+      "resolution": "DGGM-CFM-010-2018",
+      "website": "https://www.inadeh.edu.pa",
+      "courses_count": 10,
+      "specialties": [
+        "BST (Formación Básica)",
+        "Marinero Ordinario",
+        "Guardia de Navegación",
+        "Pasajeros — Control de Multitudes",
+        "Operador de Lancha"
+      ],
+      "notes": "Instituto estatal con sedes en Tocumen, Chorrillo, Colón, Chorrera y Veraguas. Acceso a costo bajo o gratuito para ciudadanos. Oferta más básica."
+    },
+    {
+      "id": "marine_advisor",
+      "name": "Marine Advisor Corporation Center Inc.",
+      "abbreviation": "Marine Advisor",
+      "city": "Panama City",
+      "district": "Balboa",
+      "type": "Centro Privado",
+      "resolution": "DGGM-CFM-049-2021",
+      "website": null,
+      "courses_count": 16,
+      "specialties": [
+        "BST",
+        "Tanquero — Petróleo Básico/Avanzado, Químico Avanzado",
+        "Protección Marítima (SSO, CSO)",
+        "Capitán de Yate",
+        "Formación de Instructores",
+        "Marinero Ordinario"
+      ],
+      "notes": "Centro privado con enfoque en tanqueros y seguridad marítima."
+    },
+    {
+      "id": "mp_ip",
+      "name": "Maritime Professional Institute of Panama",
+      "abbreviation": "MP-IP",
+      "city": "Panama City",
+      "district": "San Francisco",
+      "type": "Centro Privado",
+      "resolution": "Aprobado AMP (verificar resolución vigente)",
+      "website": "https://mp-ip.edu.pa",
+      "courses_count": null,
+      "specialties": [
+        "BST (Formación Básica)",
+        "Cursos STCW aprobados AMP"
+      ],
+      "notes": "Aparece en fuentes externas como centro aprobado por AMP. Verificar resolución vigente directamente con AMP."
+    }
+  ]
+}

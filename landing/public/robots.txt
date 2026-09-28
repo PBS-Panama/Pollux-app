@@ -1,0 +1,14 @@
+# Pollux — pollux-app.com
+User-agent: *
+Allow: /
+# Rutas de aplicación y API: no indexar
+Disallow: /api/
+Disallow: /crewing-api/
+Disallow: /app/
+Disallow: /company/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://pollux-app.com/sitemap.xml

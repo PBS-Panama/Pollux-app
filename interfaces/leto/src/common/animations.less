@@ -1,0 +1,59 @@
+// `.animation-slide-up`/`.slide-left-*`/`.slide-up-*`/`.fade-*` (clases al
+// estilo react-transition-group) no tienen NINGÚN consumidor real — grep en
+// todo el proyecto, y el paquete `react-transition-group` que esas clases
+// asumen ni siquiera está en package.json. Solo `.animation-fade-in` se usa
+// de verdad (2 consumidores) — el resto se sacó.
+:global(.animation-fade-in) {
+    animation-timing-function: ease-in-out;
+    animation-duration: 350ms;
+
+    :local {
+        animation-name: fade-in;
+    }
+
+    @media (prefers-reduced-motion) {
+        :local {
+            animation-name: fade-in-no-motion;
+        }
+    }
+}
+
+@keyframes fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    40% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    70% {
+        opacity: 0.6;
+        transform: translateY(2px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-in-no-motion {
+    0% {
+        opacity: 0;
+    }
+
+    40% {
+        opacity: 0;
+    }
+
+    70% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
