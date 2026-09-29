@@ -455,7 +455,7 @@ def seed_demo_seafarers(engine: Engine) -> None:
             now = datetime.now(timezone.utc)
             _conn.execute(text("""
                 INSERT INTO users (id, email, hashed_password, role, is_active, email_verified, created_at, updated_at)
-                VALUES (:id, :email, :pw, 'seafarer', true, false, :now, :now)
+                VALUES (:id, :email, :pw, 'seafarer', true, true, :now, :now)
             """), {
                 "id": user_id, "email": email,
                 "pw": hash_password("seedaccount123"), "now": now,

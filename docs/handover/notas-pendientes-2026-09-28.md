@@ -2287,3 +2287,144 @@ Ejecutadas las 4 decisiones del PM:
    método reproducible, y la sección de qué falta decidir para poder quitar `LICENSE.md`.
 
 Sin commit, como se indicó.
+
+---
+
+## T3 — Push a PBS-Panama/Pollux-app main (2026-09-28)
+
+Autorizado por Rick (relayado por el PM). Sin tocar git de `pb-website`.
+
+- Clon de `PBS-Panama/Pollux-app` en carpeta temporal fuera del repo (`/tmp/pollux-t3-clone`,
+  borrada al final). `main` local seteado sobre `origin/main`, confirmado en `8e97c548` antes
+  de tocar nada.
+- Lista filtrada con la misma regla de T1: `git ls-files -co --exclude-standard` sobre
+  `products/portal/pbsds-pollux-app` (1605 listados), mismas exclusiones (`CLAUDE.md`,
+  `.grvx-harness/` —0 archivos—, `PM_REPORT.md`, `docs/legal/*` —2 archivos, no confundir con
+  `docs/legal-review/` que SÍ entra—, `.env*` salvo `.env.example`, `node_modules`,
+  `build/dist`, screenshots de smoke) → 1601 filtrados, de los cuales 1161 existen hoy en disco
+  (440 no existen — verificado que son las eliminaciones de T2/index.html/R14, ej.
+  `routes/Library/*`, `components/{LibItem,MetaItem,Multiselect}/*`, `common/CONSTANTS.js`,
+  `types/{LibraryItem,MetaItem}.d.ts`, `types/models/Library.d.ts`, `index.html` raíz).
+- Sync: se vació el working tree del clon (conservando `.git`) y se copiaron los 1161 archivos
+  filtrados — mismo efecto que `rsync --delete` sin arriesgar la semántica rara de
+  `--delete`+`--files-from`.
+- Diff resultante contra `8e97c548`: **5 agregados, 17 borrados, 18 modificados** (40 archivos)
+  — coincide exactamente con todo lo hecho en esta sesión después de T1: T2 completo (Library +
+  cascada de huérfanos), `index.html` raíz fuera, el lote MEDIA/BAJA (`Info.tsx`/`Section.tsx`),
+  el fix de `modules.d.ts`, el ajuste de `smoke.js`/README, y los docs nuevos
+  (`clasificacion-media-baja`, `fase-por-fase-resumen`, `docs/legal-review/stremio-2026-09-28.md`,
+  `license-audit/*`, `notas-pendientes` y `Handover.md` actualizados). Nada inesperado.
+- Commit: `7ea454e312130ff29619e92d6f0edcc11e9cca17`, mensaje exacto pedido por Rick, sobre
+  `8e97c548`.
+- **Escaneo de secretos antes de pushear**: `gitleaks detect` en contenedor → "no leaks found".
+  Grep de patrones adicional (`SECRET_KEY=`, `PASSWORD=`, `token=` con valor real,
+  `postgres://` con usuario:clave, `-----BEGIN`) → 0 hallazgos reales (solo `***REMOVED***`,
+  placeholders entre `<>`, código no relacionado, y menciones del propio patrón dentro de la
+  documentación).
+- Push: `git push origin main` (sin `--force`) → **fast-forward limpio**,
+  `8e97c548..7ea454e3  main -> main`.
+- `ls-remote` post-push: `development`, `IDM`, `IDM-vessel-icons` y los 5 `dependabot/*`
+  **intactos**, mismos SHA que antes del push.
+- Carpeta temporal borrada.
+
+**Estado:** T3 completo. `Handover.md` va tal como está (ya revisado, sin tocar más).
+
+---
+
+## T5 — Pollux corriendo en Argus para pruebas (2026-09-28/29)
+
+Bloqueo del primer intento (SSH directa a Argus, Docker Desktop credential helper roto en
+sesión no interactiva) resuelto vía `docker context` remoto (`ssh://argus`) desde Patch —
+el credential helper corre del lado cliente (Patch), sin ese problema.
+
+**Vía usada:** `docker --context argus compose -p pollux-app up -d --build`, ejecutado desde un
+clon de `PBS-Panama/Pollux-app@7ea454e3` en `/tmp` de Patch (build context se transfiere desde
+ahí; los contenedores corren en el daemon de Argus). Verifiqué antes que el único bind mount del
+compose (`./ocr-references`) no dependa de una ruta que exista solo del lado cliente — quedó
+como carpeta vacía en el daemon de Argus, sin bloquear nada (feature de OCR references, no usada
+en el smoke).
+
+- **Carpeta en Argus** (para que Rick tenga una copia navegable, no es de donde corre el build):
+  `C:\Users\richy\Desktop\Programas en PYTON\00 Dominius\Pollux-app`, clon de `main@7ea454e3`.
+  `core.autocrlf` local del repo puesto en `false` (el `-c` del clone inicial no se aplicó,
+  heredó `true` del global de Argus — corregido con `git reset --hard` después). 11 archivos
+  (Dockerfiles, nginx confs, `supervisord.prod.conf`) tenían CRLF **ya en el repo fuente** (no
+  introducido por Argus, confirmado que viene de Patch) — normalizados a LF solo en esta copia.
+  `.gitattributes` queda pendiente para después (palabra de Rick).
+- **`.env`**: copiado por scp desde el `.env` LOCAL de Patch (nunca prod, nunca escrito en texto
+  en ningún reporte). Verificado por nombre: las 9 variables que hacen falta para dev local están.
+- **Proyecto Docker**: `-p pollux-app` (compose declara `name: pbsds-pollux`, igual que el stack
+  viejo) → contenedores/volumen nuevos con prefijo `pollux-app-*`/`pollux-app_postgres_data`,
+  sin chocar con `pbsds-pollux-*`/`pbsds-pollux_postgres_data` (viejo, intacto, sigue exited hace
+  11 días, tal como pidió Rick que quedara). Red `pbs-cross-app` compartida por diseño (no
+  `external: true` en el compose) — el backend nuevo quedó conectado a ella igual que a su propia
+  red, sin problema, pese a un warning cosmético de compose.
+- **Build**: 5 imágenes (`admin`, `backend`, `nginx`, `leto`, `landing`) — OK, sin errores.
+- **Contenedores**: 6/6 arriba, `postgres`/`leto` healthy (los demás no declaran healthcheck).
+- **Alembic**: `AUTO_MIGRATE=true` (dev, como en el compose) corrió `0001` → `0012` limpio contra
+  la DB fresca del volumen nuevo. Log final: `schema OK — revision 0012_embarkations_foundation`.
+- **Seeds**: admin `pollux@pollux-app.com` creado, 32 marinos demo sembrados.
+- **HTTP 200** contra `http://100.112.13.82:4001`: `/`, `/company/`, `/admin/`, `/api/docs` — los
+  4 en 200.
+- **Smoke test**: no pude usar el runner estándar contra la IP de Argus (el script se niega a
+  correr si `PBS_SMOKE_BASE_URL` no es localhost/127.0.0.1 — protección real porque el flujo de
+  Add to Roster escribe datos). Lo resolví armando una imagen chica (Dockerfile propio COPYando
+  `smoke.js`/`package.json`, mismo mecanismo de build-context ya probado) y corriéndola con
+  `docker --context argus run --network host` apuntando a `localhost:4001` **desde el propio host
+  de Argus** — ahí sí es localhost de verdad. Evité bind mounts para esto a propósito (un primer
+  intento con `-v` de rutas de Patch montó archivos vacíos, porque esas rutas no existen del lado
+  del daemon de Argus — exactamente el riesgo que advertiste).
+  **Resultado: 8/11.** Fallan `add-to-roster`, `seafarer-profile-new-url`,
+  `seafarer-profile-old-url` — las 3 por la misma causa, no por Argus: confirmé con un query
+  directo a `/api/company/seafarers` (login real, token real) que devuelve `0` marinos. Causa
+  raíz encontrada en `backend/app/db/seeds.py::seed_demo_seafarers` — inserta a los 32 marinos
+  demo con `email_verified=false`, pero `list_seafarers()` (`backend/app/routers/company.py:120`)
+  filtra por `email_verified == True` — con eso, Discover nunca los muestra en una base recién
+  sembrada. **Es un bug preexistente del seed, no algo de esta tarea ni de Argus** — no lo toqué
+  (está fuera del alcance de T5, y es código de backend compartido con Castor). Nota: en
+  producción esto no aplica — `SEED_DEMO_DATA`/`seed_demo_data()` están deshabilitados ahí por
+  diseño (`config.py`), así que el bug solo se ve en un ambiente local recién sembrado como este
+  (el de Patch no lo mostraba porque su volumen viene de sesiones viejas con datos de antes de
+  este bug, no de un seed fresco).
+- **Cuenta demo para Rick:** usuario `demo.company@pollux.com` (empresa "Demo Shipping Co.") —
+  la clave es la misma que ya usa en su `.env` local (no la escribo acá).
+- **Limpieza:** imagen `pollux-smoke-test` borrada del daemon de Argus, clones temporales en
+  `/tmp` de Patch borrados (`.env` sobrescrito antes de borrar).
+
+**Sin commits ni push. Docker Desktop de Argus no se reinició. Castor (`pbsds-leto-*`, :4000)
+y el stack viejo `pbsds-pollux-*` sin tocar en ningún momento — verificado antes y después.**
+
+---
+
+## T5 — fix del seed + smoke 11/11 (2026-09-29)
+
+Rick autorizó el fix. Ejecutado:
+
+1. **`backend/app/db/seeds.py`** (`seed_demo_seafarers`): `email_verified` de `false` a `true` en
+   el INSERT de `users` para los 32 marinos demo. Aplicado en el working tree de Patch (queda
+   para el próximo commit, no comprometido) y en la copia de Argus
+   (`C:\Users\richy\Desktop\Programas en PYTON\00 Dominius\Pollux-app\backend\app\db\seeds.py`),
+   mismo cambio, verificado en ambos lados con grep/findstr. La línea de `admin` (línea 89, misma
+   forma) quedó intacta — el reemplazo se hizo con un patrón que solo matcheaba la línea de
+   `seafarer` (confirmado 1 sola ocurrencia antes de escribir).
+2. **Base LOCAL de Argus** (`pollux-app_postgres_data`, el volumen NUEVO de T5, no el viejo):
+   `UPDATE users SET email_verified=true WHERE email LIKE '%@demo.pollux.local' AND
+   role='seafarer' AND email_verified=false` — acotado por el patrón de email demo, no un UPDATE
+   global. Confirmé antes que el `SELECT` con el mismo WHERE daba exactamente 32 filas (ni una
+   más), corrí el UPDATE (32 filas afectadas), y confirmé después 0 filas restantes con
+   `email_verified=false` bajo ese patrón. No toqué `pbsds-pollux_postgres_data` (volumen viejo)
+   ni nada de Castor (`pbsds-castor-app`/`pbsds-leto-*`) — Rick avisa a su PM por separado.
+3. **Verificación vía API real** (login + token real, no supuesto): `/api/company/seafarers`
+   pasó de `0` a `32` marinos listados.
+4. **Smoke re-corrido** contra Argus (misma imagen propia con `smoke.js`/`package.json`
+   COPYados, `--network host` desde el daemon de Argus): **11/11 pantallas OK**, incluyendo
+   `add-to-roster`, `seafarer-profile-new-url` y `seafarer-profile-old-url` (antes fallaban).
+5. Limpieza: imagen `pollux-smoke-test` borrada del daemon de Argus.
+
+**Verificado antes y después:** Castor (`pbsds-leto-*`) sigue arriba y sano, el stack viejo
+`pbsds-pollux-*` sigue exited (11 días) sin tocar, volumen viejo `pbsds-pollux_postgres_data`
+intacto. Sin commits.
+
+**T5 completo:** Pollux corriendo en Argus, `http://100.112.13.82:4001` (o `localhost:4001`
+desde Argus), listo para que Rick pruebe. Cuenta demo: `demo.company@pollux.com` / "Demo Shipping
+Co." (clave = la de su `.env` local).

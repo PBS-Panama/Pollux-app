@@ -1,0 +1,9 @@
+# Container/build config files must stay LF regardless of the OS or
+# core.autocrlf setting of whoever checks them out (2026-09-29 — Argus/
+# Windows checkout silently produced CRLF in these, which Docker/nginx/
+# supervisord don't reliably tolerate).
+Dockerfile* text eol=lf
+*.sh text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
