@@ -2,6 +2,60 @@
 
 ---
 
+## 🚀 DEV POLLUX — 2026-10-02 (38) — `pb-pollux` desplegado por orden de Rick: revisión `pb-pollux-00012-qur`, imagen `b91454b5` · sube TODO lo acumulado desde el 15-sep, no solo la pestaña API Keys
+
+Rick pidió el deploy para probar la pestaña "API Keys" en producción. Hecho desde la rama local
+`pollux/admin-api-keys-tab` (sin push a GitHub).
+
+**Qué subió:** producción servía `pb-pollux-00009-gkk` (imagen del 2026-09-15). Esta revisión trae
+todo lo que había desde entonces: la reescritura de `interfaces/leto` (limpieza de Stremio R1-R14),
+embarques, notificaciones, recuperación de contraseña, y la nota (37).
+
+**Cómo:**
+
+```
+gcloud builds submit --config cloudbuild.yaml --project pollux-app-507503 --substitutions=SHORT_SHA=b91454b5
+  → SUCCESS, 993 archivos / 36.0 MiB de contexto, 3M54S
+gcloud run deploy pb-pollux --image …/pb-pollux:b91454b5 --region us-central1 --project pollux-app-507503 \
+    --service-account pollux-run@pollux-app-507503.iam.gserviceaccount.com --no-traffic --tag candidate
+  → revision [pb-pollux-00012-qur] … serving 0 percent of traffic
+gcloud run services update-traffic pb-pollux --to-revisions pb-pollux-00012-qur=100 …
+  → Traffic: 100% pb-pollux-00012-qur
+```
+
+Sin `--env-vars-file` ni `--set-env-vars`: las variables del servicio no se tocaron. No corrí
+ninguna migración.
+
+**La duda de la decisión #75 (migraciones 0010-0012) quedó resuelta por la prueba, no por
+lectura:** contra la revisión sin tráfico, login con credenciales inválidas → `401 {"detail":"Invalid
+credentials"}`. Si a `users` le faltara `password_changed_at` habría sido un 500 (es el bug que el
+dev de Castor encontró y corrigió el 2026-09-18, su nota (92), llevando la base a `0012`).
+
+**Verificado en `https://pollux-app.com` después del cambio de tráfico:** `/health`, `/`, `/login`,
+`/company/`, `/admin/`, `/api/docs`, `/robots.txt` → 200; `www` → 301; login inválido → 401;
+`GET /api/admin/config/api-keys` y `POST …/api-keys/test` sin token → 403 (antes del deploy el
+segundo daba 404); el bundle de `/admin/` contiene la pestaña.
+
+**Volver atrás:** `gcloud run services update-traffic pb-pollux --to-revisions pb-pollux-00009-gkk=100
+--region us-central1 --project pollux-app-507503`.
+
+⚠️ **El tráfico quedó fijado a la revisión `00012-qur`, no a "latest".** El próximo deploy crea
+una revisión con 0% hasta que alguien corra `update-traffic --to-latest` (o `--to-revisions`).
+
+**Cuenta de empresa demo en producción:** creada por el registro público (`POST /api/auth/register`
+→ 201), empresa "Demo Shipping Co.", correo `pollux+demo@pollux-app.com` (llega al buzón
+`pollux@`), contraseña generada y entregada a Rick por chat — no se escribe acá. Estado:
+`company_status=pending`, `email_verified=false`. Falta que Rick abra el enlace de verificación y
+la apruebe en `/admin/` → Companies.
+
+**No hecho:** Rick pidió poner una contraseña nueva al admin (`pollux@pollux-app.com`) vía
+`ADMIN_SEED_PASSWORD`. El clasificador de permisos de mi sesión bloqueó ese cambio en el servicio;
+no lo rodeé. Queda para Rick (comandos entregados por chat, o "olvidé mi contraseña" en el sitio).
+Sigue pendiente todo lo de la nota (37): comparar base y `DRIVE_TOKEN_SECRET` entre `pb-pollux` y
+`pb-castor`, y el paso 7 con clave real.
+
+---
+
 ## 🔧 DEV POLLUX — 2026-10-02 (37) — Pestaña "API Keys" en Platform Config + botón "Probar" · hecho y verificado en local · el punto "antes de construir" quedó SIN RESOLVER (no pude leer producción)
 
 Commit local en la rama `pollux/admin-api-keys-tab`. Sin push, sin deploy, sin tocar el repo de
