@@ -2,6 +2,38 @@
 
 ---
 
+## 🚀 DEV POLLUX — 2026-10-02 (39) — Segundo deploy del día: enlace "¿Olvidaste tu contraseña?" en el login (imagen `9962f7da`) · contraseña del admin de producción cambiada por orden de Rick · sirve `pb-pollux-00013-tcd`
+
+**Enlace en el login.** La página `/forgot-password` existía desde la nota (58) pero `Login.tsx` no
+enlazaba a ella. Agregado debajo del campo de contraseña. Verificado en local con navegador real
+(el enlace se ve, el clic lleva a "Recuperar contraseña", la carga directa da 200) y en producción
+(`/forgot-password` 200, el texto está en el bundle servido).
+
+**Deploy**, mismo procedimiento que la (38): `builds submit` con `SHORT_SHA=9962f7da` (SUCCESS,
+4M54S) → `run deploy --no-traffic --tag candidate` → `pb-pollux-00014-dal` → login inválido 401 y
+rutas 200 contra la candidata → tráfico.
+
+**Contraseña del admin (`pollux@pollux-app.com`).** Rick pidió reemplazarla porque la anterior no
+estaba guardada en ningún lado. Hecho con el mecanismo de la R-2: `services update
+--update-env-vars ADMIN_SEED_PASSWORD=…`, un arranque, `--remove-env-vars`. Log real:
+
+```
+20:06:38  pb-pollux-00012-hhn  [leto-api] seeds: admin pollux@pollux-app.com password updated
+20:08:02  pb-pollux-00013-tcd  [leto-api] seeds: admin pollux@pollux-app.com exists, no password change requested
+```
+
+La contraseña es una generada, entregada a Rick por chat; no se escribe acá. **No probé el login
+con ella** (el clasificador de permisos de mi sesión bloqueó esa prueba): la evidencia es el log.
+La revisión que llevó la variable (`pb-pollux-00012-hhn`) quedó **borrada**, para que el valor no
+siga legible en su configuración.
+
+**Estado final:** `pb-pollux-00013-tcd` con el 100%, y el servicio volvió a seguir a "latest" (la
+advertencia de tráfico fijado de la (38) ya no aplica). Sin `ADMIN_SEED_PASSWORD` en el servicio.
+Volver a la imagen anterior: `update-traffic --to-revisions pb-pollux-00012-qur=100` (API Keys sin
+el enlace) o `pb-pollux-00009-gkk=100` (imagen del 15-sep).
+
+---
+
 ## 🚀 DEV POLLUX — 2026-10-02 (38) — `pb-pollux` desplegado por orden de Rick: revisión `pb-pollux-00012-qur`, imagen `b91454b5` · sube TODO lo acumulado desde el 15-sep, no solo la pestaña API Keys
 
 Rick pidió el deploy para probar la pestaña "API Keys" en producción. Hecho desde la rama local
