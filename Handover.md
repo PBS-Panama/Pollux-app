@@ -2,6 +2,75 @@
 
 ---
 
+## 📋 DEV POLLUX — 2026-10-02 (40) — `/admin` sin barra arreglado en producción · revisión de qué tan listo está Pollux para un piloto con una naviera real (solo local, sin cambios de código)
+
+### 1) `/admin` daba 404 en producción — arreglado y desplegado
+
+El login manda al admin a `/admin`. `nginx-cloudrun.conf` solo tenía `location /admin/` (con
+`alias`, que no agrega la barra solo), así que caía en el sitio estático → 404. En local no se veía
+porque ahí `/admin/` es un proxy. Arreglo: `location = /admin { return 301 /admin/; }` +
+`absolute_redirect off`. Reproducido y verificado en contenedores nginx con las dos configuraciones
+(vieja: 404; nueva: 301 → 200). Desplegado con el procedimiento de la (38): imagen `68836b55`,
+revisión `pb-pollux-00019-siw`, 100% del tráfico, siguiendo "latest". En `https://pollux-app.com`:
+`/admin` → `301 location: /admin/` → 200.
+
+### 2) Revisión de flujos de naviera — pedida por Rick, fase local
+
+Método: lectura del backend y de `interfaces/leto` (dos agentes de solo lectura; sus hallazgos que
+NO comprobé yo mismo están marcados), más pruebas en vivo contra `localhost:4001`: smoke 11/11 y un
+recorrido por API de búsqueda → contratar → buque → asignar → lo que ve el marino → dar de baja.
+Los datos de prueba quedaron borrados.
+
+| Flujo | Estado | Evidencia |
+|---|---|---|
+| Scouting (buscar, perfil, cumplimiento, CV) | **Funciona**, básico | En vivo: lista 200 (32), perfil 200, CV 200 |
+| Entrevista | **Solo en el navegador** | `crewStore.js` guarda en `localStorage`; `Calendar.tsx` no hace ninguna llamada al backend; no hay tabla ni endpoint |
+| Contratación | **Parcial** | En vivo: `POST /company/staff` 201. Es un alta unilateral: sin oferta, sin contrato, sin aceptación del marino |
+| Asignación a buque | **Funciona**, básico | En vivo: exige estar contratado (400 si no), rechaza solape del mismo rango (409) |
+| Rotación | **Parcial** | Hay fechas y estado por asignación; no hay planificación de relevos ni calendario de la empresa |
+| Evaluaciones | **No existe** | Sin tabla, endpoint ni pantalla, en Pollux ni en Castor (lo de Castor: reporte del agente) |
+| Notificaciones | Solo verificación de embarques | En vivo: contratar y asignar no generan ninguna |
+
+**Conexión con el schedule del marino — funciona a nivel de datos.** En vivo: tras contratar y
+asignar, `GET /api/seafarers/me/company-schedule` (con token del marino) devuelve `linked: true`,
+la empresa y la asignación con buque, rango y fechas; al dar de baja pasa a `linked: false`.
+
+**Defectos concretos encontrados en vivo:**
+
+- Se acepta una asignación con desembarque ANTERIOR al embarque (201).
+- El estado de una asignación se puede mover en cualquier dirección (`completed` → `cancelled`).
+- Dar de baja a un tripulante deja sus asignaciones futuras en `scheduled`.
+- `GET /api/seafarer/me/documents/export-manifest` devuelve 404 "Document not found": la ruta
+  `{doc_id}` (documents.py:121) está registrada antes y se la traga (:330). Según el agente, la
+  copia de Castor lo tiene corregido.
+- Los marinos demo (`@demo.pollux.local`) no pueden iniciar sesión: el validador de correo rechaza
+  el dominio `.local` (422). Solo afecta a pruebas.
+
+**🔴 El punto que condiciona la fase local: los datos de Castor no llegan a Pollux en local.**
+Pollux no "le pide" datos a Castor: lee las mismas tablas (`seafarers`, `documents`,
+`embarkations`, `users`) suponiendo una sola base, y solo los archivos viajan por HTTP. En local
+cada producto tiene su propia base, así que Pollux ve únicamente sus 32 marinos sembrados, sin
+documentos (comprobado: cumplimiento 0, ZIP de 22 bytes), y Castor no ve las contrataciones ni
+asignaciones de Pollux. Reporte del agente, sin comprobar: además los `SECRET_KEY` locales de los
+dos productos difieren, así que la descarga de archivos desde Castor daría 401.
+
+**Datos del marino que existen en Castor y Pollux no consume** (reporte del agente): los periodos
+de disponibilidad y las confirmaciones de entrevista viven en el almacén por usuario del servidor
+Express de Castor, no en Postgres; la pantalla "Schedule" del marino en Castor usa datos de
+ejemplo y no está enrutada.
+
+**Otros huecos que vería un cliente** (reporte del agente de pantallas): una empresa sin aprobar
+solo ve "No se pudo cargar…", sin explicación; el Dashboard dice "tu tripulación" pero muestra toda
+la base de la plataforma; no se puede abrir ni descargar un documento desde el perfil (el ZIP
+existe en el backend pero no hay botón); no se puede editar ni cancelar una asignación ni un buque
+desde la pantalla (los endpoints existen); el rango de la asignación es texto libre; Calendar está
+en inglés; Settings no tiene datos de empresa ni usuarios.
+
+**Pendiente de decisión de Rick:** cómo trabajar la fase local (ver chat), y el orden de los
+huecos. No se tocó código de producto en esta revisión.
+
+---
+
 ## 🚀 DEV POLLUX — 2026-10-02 (39) — Segundo deploy del día: enlace "¿Olvidaste tu contraseña?" en el login (imagen `9962f7da`) · contraseña del admin de producción cambiada por orden de Rick · sirve `pb-pollux-00013-tcd`
 
 **Enlace en el login.** La página `/forgot-password` existía desde la nota (58) pero `Login.tsx` no
