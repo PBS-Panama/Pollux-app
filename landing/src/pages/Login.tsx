@@ -185,6 +185,12 @@ export default function Login() {
                     {showPw ? 'Ocultar' : 'Mostrar'}
                   </button>
                 </div>
+                {/* The /forgot-password page shipped 2026-09-15 (nota 58) with no way to reach it from here. */}
+                <p className="text-right text-sm mt-1.5">
+                  <Link to="/forgot-password" className="text-[#f45442] underline underline-offset-2 decoration-[#f45442]/50 hover:decoration-[#f45442]">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </p>
               </div>
 
               {error && (
