@@ -1126,7 +1126,8 @@ def _key_hint(value: str) -> str:
 @router.get("/config/api-keys")
 def list_api_keys(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     rows = db.execute(text("""
-        SELECT key_name, hint, updated_at, updated_by FROM api_key_config
+        SELECT k.key_name, k.hint, k.updated_at, k.updated_by, u.email AS updated_by_email
+        FROM api_key_config k LEFT JOIN users u ON u.id = k.updated_by
     """)).fetchall()
     by_name = {r.key_name: r for r in rows}
     return [
@@ -1136,6 +1137,8 @@ def list_api_keys(admin: User = Depends(require_admin), db: Session = Depends(ge
             "hint": by_name[name].hint if name in by_name else None,
             "updated_at": by_name[name].updated_at.isoformat() if name in by_name else None,
             "updated_by": by_name[name].updated_by if name in by_name else None,
+            # The panel shows "actualizada por <quién>" — updated_by is a user id.
+            "updated_by_email": by_name[name].updated_by_email if name in by_name else None,
         }
         for name in _API_KEY_NAMES
     ]
@@ -1173,6 +1176,31 @@ def update_api_key(
     db.commit()
     # Never echo the value back — the whole point of write-only.
     return {"key_name": payload.key_name, "configured": True, "hint": hint, "updated_at": now.isoformat()}
+
+
+class ApiKeyTest(BaseModel):
+    key_name: str
+
+
+@router.post("/config/api-keys/test")
+@limiter.limit("20/hour")
+def test_api_key(
+    request: Request,
+    payload: ApiKeyTest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """One minimal real call to the provider with the key the OCR would use
+    (see ocr_provider.check_api_key). Takes no value — it tests what's stored,
+    and answers ok/detail only. Rate-limited because each call is billable."""
+    from app.services.ocr_provider import check_api_key
+
+    if payload.key_name not in _API_KEY_NAMES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"key_name must be one of {_API_KEY_NAMES}",
+        )
+    return {"key_name": payload.key_name, **check_api_key(db, payload.key_name)}
 
 
 class CatalogEntryCreate(BaseModel):

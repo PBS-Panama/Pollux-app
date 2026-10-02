@@ -2,6 +2,153 @@
 
 ---
 
+## 🔧 DEV POLLUX — 2026-10-02 (37) — Pestaña "API Keys" en Platform Config + botón "Probar" · hecho y verificado en local · el punto "antes de construir" quedó SIN RESOLVER (no pude leer producción)
+
+Commit local en la rama `pollux/admin-api-keys-tab`. Sin push, sin deploy, sin tocar el repo de
+Castor ni producción.
+
+### 🔴 "Antes de construir" — no resuelto, y por qué
+
+El encargo pedía mirar la configuración real de `pb-castor` y `pb-pollux` para saber si leen la
+misma base y si tienen el mismo `DRIVE_TOKEN_SECRET`. **No pude:** el clasificador de permisos de
+mi sesión bloqueó las lecturas de producción con `gcloud` (dos intentos, el segundo pidiendo solo
+metadatos sin valores). No lo rodeé. Lo que sé y lo que no:
+
+| Pregunta | Estado | Fuente |
+|---|---|---|
+| ¿Misma base? | **Documentado que sí, no verificado hoy.** Cloud SQL `leto-postgres` / `leto_db`, compartida | `infra/cloudrun/pb-pollux.env.example.yaml`, notas (48) y L-7 de este archivo |
+| ¿Mismo `DRIVE_TOKEN_SECRET`? | **No lo sé.** Los dos servicios tienen la variable; nadie comparó nunca los valores | — |
+
+Para cerrarlo, Rick puede correr esto en PowerShell. Imprime solo verdadero/falso, ningún valor
+(probé el parseo con JSON falso; contra los servicios reales no pude correrlo):
+
+```powershell
+function Get-RunEnv($svc, $proj) { $h = @{}; foreach ($x in (gcloud run services describe $svc --project $proj --region us-central1 --format=json | Out-String | ConvertFrom-Json).spec.template.spec.containers[0].env) { $h[$x.name] = $x }; $h }
+$p = Get-RunEnv pb-pollux pollux-app-507503; $c = Get-RunEnv pb-castor castor-app-506901
+foreach ($n in 'DRIVE_TOKEN_SECRET','DATABASE_URL') {
+  $a = $p[$n]; $b = $c[$n]
+  if (-not $a -or -not $b) { "$n : falta (pollux=$([bool]$a) castor=$([bool]$b))" }
+  elseif ($a.valueFrom -or $b.valueFrom) { "$n : viene de Secret Manager (pollux='$($a.valueFrom.secretKeyRef.name)' castor='$($b.valueFrom.secretKeyRef.name)') - comparar esos secretos" }
+  elseif ($n -eq 'DATABASE_URL') { "$n : misma base = $(($a.value -replace '^.*@','') -ceq ($b.value -replace '^.*@',''))" }
+  else { "$n : iguales = $($a.value -ceq $b.value)" }
+}
+```
+
+Qué significa cada resultado:
+
+- **Misma base y mismo secreto (caso a):** lo construido alcanza. Una clave guardada desde el panel
+  de Pollux la lee el backend de Castor sin más cambios.
+- **Misma base, secreto distinto (caso b):** la clave se guarda, el panel dice "Configurada", y el
+  backend de Castor **no la puede descifrar y cae en silencio a su variable de entorno**
+  (`_read_key_from_db` traga el error a propósito). Es el peor caso porque parece que funcionó.
+  **No implementé nada para este caso — es decisión de Rick** (igualar el secreto en los dos
+  servicios invalida los tokens de Drive del que cambie; la alternativa es que el panel guarde
+  contra el backend de Castor, que requiere cambios allá).
+
+Construí igual la pantalla contra el backend de Pollux porque es la parte común a los dos casos.
+
+### Qué se construyó
+
+- **Pestaña "API Keys"** en Platform Config, una fila por clave (Anthropic / Google Vision): para
+  qué sirve, estado ("Configurada · termina en ••••XXXX · actualizada <fecha> por <correo>" o "No
+  configurada"), campo para pegar, botón "Guardar"/"Reemplazar" y botón "Probar". Aviso fijo sobre
+  `DRIVE_TOKEN_SECRET` arriba.
+- **`POST /api/admin/config/api-keys/test`** (solo admin, 20 por hora), body `{key_name}`. Resuelve
+  la clave igual que el OCR (fila del panel primero, variable de entorno después), hace una llamada
+  mínima real al proveedor y responde `{ok, source: "panel"|"env"|null, undecryptable, detail}`.
+  Nunca devuelve la clave. Anthropic: `messages.create` de 1 token con el mismo modelo que usa el
+  análisis. Vision: una imagen de 1×1 con `DOCUMENT_TEXT_DETECTION`. **Cada "Probar" es una llamada
+  facturable** (centavos), por eso el límite.
+- `undecryptable: true` es el caso del 2026-10-01: hay fila pero este servidor no la puede leer. La
+  pantalla lo dice en claro y pide cargarla de nuevo.
+- `GET /api/admin/config/api-keys` ahora trae además `updated_by_email` (un `LEFT JOIN users`),
+  porque `updated_by` es un id y la pantalla tiene que decir quién. Aditivo; el valor sigue sin
+  salir de la base.
+
+Archivos: `backend/app/routers/admin.py`, `backend/app/services/ocr_provider.py`,
+`interfaces/admin/src/pages/admin/AdminConfig.tsx`, `interfaces/admin/src/pages/admin/ApiKeysTab.tsx`
+(nuevo). **Drift con Castor:** `admin.py` y `ocr_provider.py` ahora difieren de sus copias de
+Castor en exactamente esto.
+
+Seguridad, como pedía el encargo: campo `type="password"` + `autoComplete="new-password"`, sin
+botón de mostrar; la clave vive solo en el estado local de la fila y se borra en el momento del
+envío (salga bien o mal); nada en `localStorage`/`sessionStorage`/URL/consola; ninguna variable
+`VITE_*`. El archivo nuevo deja escrito por qué no se debe hacer `console.log` de un error de axios
+ahí (`error.config.data` es el body, o sea la clave).
+
+### Evidencia — stack local (`localhost:4001`), navegador real (Playwright/Chromium), claves FALSAS
+
+`docker compose -p pollux-app up -d --build --no-deps backend admin` + `restart nginx`; `tsc && vite
+build` limpio. Salida real del script de verificación (23/23):
+
+```
+PASS  0. estado inicial: Anthropic "No configurada"
+PASS  campo type=password, autocomplete=new-password      {"type":"password","autocomplete":"new-password"}
+PASS  sin botón de "mostrar" la clave                     botones mostrar/show: 0
+PASS  aviso de DRIVE_TOKEN_SECRET visible
+PASS  1. tras guardar: "Configurada" con hint ••••Qa7X
+      Configurada · termina en ••••Qa7X · actualizada 10/2/2026, 3:16:14 PM por pollux@pollux-app.com
+PASS  1b. el campo queda vacío tras guardar               value=""
+PASS  2. respuesta del PATCH sin el valor
+      PATCH 200 {"key_name":"ANTHROPIC_API_KEY","configured":true,"hint":"...Qa7X","updated_at":"2026-10-02T15:16:14.746457+00:00"}
+PASS  2b. respuesta del GET sin el valor
+      GET 200 [{"key_name":"ANTHROPIC_API_KEY","configured":true,"hint":"...Qa7X","updated_at":"2026-10-02T15:16:14.746457+00:00","updated_by":"7ef66453-1a5c-4066-9516-2b7932f808b8","updated_by_email":"pollux@pollux-app.com"},{"key_name":"GOOGLE_VISION_API_KEY","configured":false,"hint":null,"updated_at":null,"updated_by":null,"updated_by_email":null}]
+PASS  2c. la clave no viaja en ninguna URL
+PASS  2d. el PATCH sí llevó la clave en el body (control: el filtro detectaría una fuga)
+PASS  4a. localStorage + sessionStorage sin la clave      claves en localStorage: pollux-auth; sessionStorage: 0 entradas
+PASS  3. tras recargar: campo vacío y estado se mantiene
+      value="" · Configurada · termina en ••••Qa7X · actualizada 10/2/2026, 3:16:14 PM por pollux@pollux-app.com
+PASS  4b. bundle servido sin la clave ni variables VITE_*KEY   4 archivos, 3078797 bytes, coincidencias: 0, VITE_*KEY: 0
+PASS  6. tras reemplazar: el hint cambia a ••••Zm4K
+PASS  Probar (Anthropic, clave falsa): muestra el rechazo del proveedor      Anthropic 401: API key is invalid.
+PASS  Probar: la respuesta no contiene la clave
+      POST /test 200 {"key_name":"ANTHROPIC_API_KEY","ok":false,"source":"panel","undecryptable":false,"detail":"Anthropic 401: API key is invalid."}
+PASS  Probar (Google Vision, clave falsa): muestra el rechazo del proveedor  Google Vision 400: API key not valid. Please pass a valid API key.
+PASS  botón Guardar/Reemplazar deshabilitado con el campo vacío
+PASS  consola del navegador sin la clave                  0 líneas de consola
+PASS  ninguna respuesta de /api-keys contiene una clave   10 intercambios
+PASS  5. no-admin: no ve la pestaña "API Keys"            pestañas visibles: Platform Settings | Rank Catalog (0)
+PASS  5b. no-admin: GET / PATCH / POST test → 403         GET 403 {"detail":"Admin access required"} · PATCH 403 · POST test 403
+```
+
+**Paso 7 (el backend que corre el OCR usa la clave cargada) — verificado solo a medias, lo digo
+explícito.** Mismo PNG, mismo endpoint (`POST /api/admin/ocr-references/...`), backend de Pollux:
+
+```
+ANTES (sin clave):            ocrText "CERTIFICATE. Maritime training certificate…"  ocrConfidence 0.82   ← proveedor simulado
+DESPUÉS (clave falsa cargada): ocrText ""  ocrConfidence 0.0
+get_ocr_provider('Passport', db=db) → ClaudeVisionProvider
+verdict: {'status': 'error', 'flags': ["claude_error:Error code: 401 - … 'authentication_error', 'message': 'API key is invalid.' …"]}
+```
+
+Eso prueba que el OCR **de Pollux** tomó la clave del panel (dejó el simulado y Anthropic la
+rechazó por falsa). **No prueba** lo que el paso pedía de verdad:
+
+- no subí un documento real con una clave real (no tengo una, y no correspondía usar la de Rick);
+- no probé el backend **de Castor**, que es el que analiza los documentos del marino: en local
+  tiene otra base, así que la clave del panel de Pollux no le llega, y en producción depende del
+  punto "antes de construir".
+
+Caso `undecryptable`, simulado corrompiendo el cifrado de la fila falsa en la base local:
+`{"ok":false,"source":null,"undecryptable":true,…}`. Pruebas existentes del backend
+(`test_ocr_mock_guard.py`, `test_compliance_engine.py`): verdes. Las filas falsas y el archivo de
+prueba quedaron borrados; la base local volvió a "No configurada" en las dos.
+
+### Pendiente
+
+1. **Rick:** correr el comando de arriba y decidir el caso (a)/(b). Hasta entonces, no cargar la
+   clave real en producción desde esta pantalla dando por hecho que Castor la va a leer.
+2. **Dev Castor (pedido, no lo toqué):** portar `check_api_key()` + el endpoint `/test` a su
+   backend. El "Probar" de este panel prueba que **Pollux** descifra la clave y que el proveedor la
+   acepta; no dice nada de si **Castor** la descifra.
+3. Paso 7 con clave real y documento real, después del deploy.
+4. Deploy: no hecho. El backend y el panel van juntos (el botón "Probar" da 404 contra un backend
+   viejo; guardar y ver el estado sí funcionan igual).
+5. Para probar en local hizo falta un `.env` en esta carpeta: copié el de la copia de
+   `00 Dominius\Pollux-app` (gitignored, no entra al commit).
+
+---
+
 ## 🔧 DEV POLLUX — 2026-09-16 (36) — Panel de admin: la tabla se corta arreglado en las 7 pantallas que comparten el patrón (no solo Embarques) · sidebar colapsa en ancho angosto · logo dice "Pollux"
 
 No corrí `git add` ni `git commit`. No toqué producción.
