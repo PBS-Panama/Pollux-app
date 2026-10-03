@@ -15,7 +15,6 @@ Endpoints:
 import hashlib
 import hmac
 import json
-import os
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -38,37 +37,47 @@ from app.services.google_drive import (
     is_configured, revoke_token,
 )
 from app.services.token_crypto import decrypt_token, encrypt_token
+from app.services.secret_loader import get_secret, get_secret_previous
 
 router = APIRouter()
 
-_STATE_SECRET_ENV_VAR = "DRIVE_STATE_SECRET"
-_STATE_SECRET = os.environ.get(_STATE_SECRET_ENV_VAR)
-if not _STATE_SECRET:
-    raise RuntimeError(
-        f"{_STATE_SECRET_ENV_VAR} is not set. Refusing to start — set it as a real "
-        "environment variable (Cloud Run env var / Secret Manager in production, "
-        "your local .env in development). There is no dev fallback."
-    )
+# Fail fast at import time, same as before T9 — just sourced from
+# secret_loader (dev file store seeded from the env var) instead of reading
+# os.environ directly. The value itself isn't kept in a module global
+# anymore so a rotation takes effect without a restart (T9 §3, lower risk
+# than SECRET_KEY/DRIVE_TOKEN_SECRET since nothing persistent is signed with
+# it — see docs/specs/secrets-panel.md §1.1).
+get_secret("DRIVE_STATE_SECRET")
 _CASTOR_BASE  = settings.CASTOR_BASE_URL
 
 
 # ─── State HMAC helpers (CSRF protection in OAuth callback) ──────────────────
 
+def _sign(user_id: str, secret: str) -> str:
+    return hmac.new(secret.encode(), user_id.encode(), hashlib.sha256).hexdigest()[:16]
+
+
 def _make_state(user_id: str) -> str:
-    sig = hmac.new(_STATE_SECRET.encode(), user_id.encode(), hashlib.sha256).hexdigest()[:16]
+    sig = _sign(user_id, get_secret("DRIVE_STATE_SECRET"))
     return f"{user_id}:{sig}"
 
 
 def _verify_state(state: str) -> str:
-    """Return user_id if state is valid, raise HTTPException otherwise."""
+    """Return user_id if state is valid, raise HTTPException otherwise.
+    Tries the current DRIVE_STATE_SECRET, then the previous one — an OAuth
+    flow started just before a rotation can still complete instead of
+    forcing the user to restart it (T9 §3.1 pattern, reused here even though
+    this secret doesn't strictly need the dual-key window)."""
     try:
         user_id, sig = state.split(":", 1)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid state")
-    expected = hmac.new(_STATE_SECRET.encode(), user_id.encode(), hashlib.sha256).hexdigest()[:16]
-    if not hmac.compare_digest(sig, expected):
-        raise HTTPException(status_code=400, detail="State mismatch — possible CSRF")
-    return user_id
+    if hmac.compare_digest(sig, _sign(user_id, get_secret("DRIVE_STATE_SECRET"))):
+        return user_id
+    previous = get_secret_previous("DRIVE_STATE_SECRET")
+    if previous and hmac.compare_digest(sig, _sign(user_id, previous)):
+        return user_id
+    raise HTTPException(status_code=400, detail="State mismatch — possible CSRF")
 
 
 # ─── Token helpers ────────────────────────────────────────────────────────────

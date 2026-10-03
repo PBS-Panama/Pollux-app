@@ -7,3 +7,8 @@
 .env
 .env.*
 !.env.example
+# Dev-only fake secret store (T9, secret_loader.py) — never real secrets,
+# never read in production, but still plaintext on disk, so it stays local.
+/backend/.devsecrets
+__pycache__/
+*.pyc

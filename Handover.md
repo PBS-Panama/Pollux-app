@@ -76,7 +76,7 @@ un comentario en `0002`).
 
 1. Empresa demo creada POR POLLUX en la base compartida (`POST /auth/register` 201), verificada y
    aprobada con el admin desde la API de Pollux. Queda: `demo.company@pollux.com` / "Demo Shipping
-   Co." / `demo1234`, aprobada.
+   Co." / `<DEMO_COMPANY_PASSWORD>`, aprobada.
 2. Scouting ve a los marinos reales de Castor (2 descubribles y verificados, entre ellos Ricardo).
 3. Contratar + buque + asignación (como `master`, 2026-11-15 → 2027-03-15): 201/201/201.
 4. **Dirección inversa:** `GET /api/seafarers/me/company-schedule` **servido por el backend de

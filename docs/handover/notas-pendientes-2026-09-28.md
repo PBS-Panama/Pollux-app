@@ -2428,3 +2428,183 @@ intacto. Sin commits.
 **T5 completo:** Pollux corriendo en Argus, `http://100.112.13.82:4001` (o `localhost:4001`
 desde Argus), listo para que Rick pruebe. Cuenta demo: `demo.company@pollux.com` / "Demo Shipping
 Co." (clave = la de su `.env` local).
+
+---
+
+## T6 — .gitattributes + push (2026-09-29)
+
+1. **`.gitattributes`** creado en el working tree de Patch: `Dockerfile*`, `*.sh`, `*.conf`,
+   `*.yml`, `*.yaml` con `text eol=lf`. Los 11 archivos con CRLF (los mismos de T5) normalizados
+   a LF en el working tree de Patch — verificado `diff` de contenido idéntico, solo cambian los
+   finales de línea (insertions=deletions en el diff). El fix del seed (T5, `email_verified`) ya
+   estaba aplicado.
+2. **T3 otra vez, mismo método:** clon temporal fuera del repo, `main` confirmado en `7ea454e3`
+   antes de tocar nada. Lista filtrada (1606 → 1602 tras exclusiones, +1 vs T3 por
+   `.gitattributes` nuevo) → 1162 existen en disco. Sync (vaciar + copiar, mismo método que T3).
+   Diff resultante: exactamente los 14 archivos esperados (`.gitattributes` nuevo, 11 CRLF→LF,
+   `seeds.py`, `notas-pendientes-2026-09-28.md`) — nada inesperado.
+   Commit `4ee54d663886c75cb605bbc3a7c599245bbeba32` sobre `7ea454e3`, mensaje exacto pedido.
+   `gitleaks`: "no leaks found". Grep de patrones: 0 hallazgos reales.
+   Push `git push origin main` (sin `--force`) → fast-forward limpio, `7ea454e3..4ee54d66`.
+   `ls-remote`: `development`/`IDM`/`IDM-vessel-icons`/5 `dependabot/*` intactos. Carpeta temporal
+   borrada.
+3. **Argus:** `git fetch origin main` + `git reset --hard origin/main` en el clon de Argus →
+   `4ee54d66`, `git status` limpio, `.env` intacto (885 bytes, sigue fuera de git). CRLF
+   re-verificado: 0 archivos con `\r` en los 17 candidatos. El diff no tocó nada del contenido de
+   los archivos de contenedor más allá de finales de línea (mismo build que ya corría en T5 sigue
+   siendo válido) — **no hizo falta rebuild**.
+4. **Verificación de identidad (3 vías):**
+   - `ls-remote` de GitHub: `main = 4ee54d66...`.
+   - Tree hash (`git rev-parse HEAD^{tree}`) de un clon fresco de GitHub vs. el de Argus:
+     **idénticos** (`3e5fd54790e0ede7f7e9276bd751553236e6ecc7`).
+   - Comparación byte a byte (`cmp`) de los 1162 archivos filtrados del working tree de Patch
+     contra un clon fresco del commit nuevo: **0 diferencias**.
+   Patch (filtrado) = commit pusheado = Argus. Confirmado, no supuesto.
+
+**Sin deploy.** Pollux sigue corriendo en Argus con la imagen de T5 (contenido idéntico salvo
+finales de línea, que no afectan runtime) — no se reconstruyó nada.
+
+---
+
+## T9 — Panel de secretos, implementación LOCAL (2026-10-03)
+
+Diseño aceptado (T8 + 2 agregados: TTL de caché por instancia y migración 0013 compartida con
+Castor). Implementado completo, **sin tocar GCP, sin commit**, verificado end-to-end contra el
+stack local real (no solo lectura de código).
+
+**Archivos nuevos:**
+- `backend/alembic/versions/0013_secret_rotation_log.py` — tabla de auditoría (quién, qué,
+  cuándo, qué versión de Secret Manager — nunca el valor). Mismo `down_revision` que usaría
+  Castor si copia este archivo tal cual (pendiente, está en la lista del PM de Castor del doc T8).
+- `backend/app/services/secret_loader.py` — caché en memoria (TTL 5 min) + backend de archivo de
+  desarrollo (`backend/.devsecrets/`, gitignored, nunca corre si `ENVIRONMENT=production`) que
+  imita la forma mínima de Secret Manager (versiones numeradas, "latest" = la última). Semilla
+  automática desde la env var la primera vez que se lee un nombre, así nada se rompe para
+  secretos que todavía nadie rotó desde el panel.
+- `backend/test_secret_rotation.py` — regresión end-to-end contra el backend y la DB reales
+  (mismo patrón que `test_compliance_engine.py`, sin pytest). Corre con
+  `docker compose exec backend python test_secret_rotation.py`.
+- `interfaces/admin/src/pages/admin/AdminSecretsManager.tsx` — el panel. Pestaña nueva "Secrets"
+  en `AdminConfig.tsx` (junto a Platform Settings/Rank Catalog, era lo que pediste en Settings).
+- `docs/specs/ocr-references-gcs.md`, `docs/specs/secrets-panel.md` — de T7/T8, ya reportados.
+
+**Archivos modificados (solo los de esta tarea — el resto de `git status` es de OTRO frente,
+embarques/notificaciones, ya estaba sin commitear antes de que yo empezara, no lo toqué):**
+- `backend/app/core/security.py` — `decode_token` prueba SECRET_KEY actual y, si falla, el
+  anterior (ventana de doble clave). `create_access_token`/`create_refresh_token` siempre firman
+  con el actual.
+- `backend/app/services/token_crypto.py` — `encrypt_token`/`decrypt_token` ahora aceptan un
+  `secret` explícito (además del actual vía `secret_loader`) — lo necesita el re-cifrado.
+- `backend/app/routers/drive.py` — `DRIVE_STATE_SECRET` pasa por `secret_loader` con el mismo
+  patrón de doble clave (menor riesgo, pero gratis agregarlo).
+- `backend/app/routers/admin.py` — endpoints nuevos: `GET /admin/secrets` (lista),
+  `GET /admin/secrets/{name}/audit`, `POST /admin/secrets/{name}/test` (no destructivo, sin
+  reautenticación), `POST /admin/secrets/{name}/rotate` y `.../rollback` (con reautenticación,
+  re-cifrado real para `DRIVE_TOKEN_SECRET` antes de promover la versión nueva — nunca al revés,
+  para que un fallo a mitad de camino no deje la clave activa sin coincidir con lo que hay en la
+  DB).
+- `.gitignore` — `/backend/.devsecrets`.
+
+**Verificación (no solo "debería andar" — corrido de verdad):**
+- `docker compose up -d --build` completo (backend + admin + leto + nginx + landing) — OK, sin
+  errores. Migración 0013 corrió limpia (`schema OK — revision 0013_secret_rotation_log`).
+- `tsc --noEmit` en `interfaces/admin`: **0 errores** (no había baseline tampoco — 0 antes, 0
+  después).
+- `test_secret_rotation.py`: **24/24 checks OK**, dos corridas (antes y después del rebuild
+  completo), incluyendo:
+  - Un token emitido ANTES de rotar `SECRET_KEY` sigue autenticando DESPUÉS (ventana de doble
+    clave real, no solo en el código).
+  - Una fila `drive_tokens` de prueba, cifrada con la clave vieja, se re-cifra sola al rotar
+    `DRIVE_TOKEN_SECRET` y se descifra exacta con la clave nueva.
+  - Rollback de `DRIVE_TOKEN_SECRET` restaura la clave anterior y la fila vuelve a descifrar
+    correctamente.
+  - Ninguna respuesta de `/admin/secrets*` contiene los valores reales (verificado buscando los
+    valores reales, que el script sí conoce porque corre dentro del contenedor, en el texto crudo
+    de cada respuesta — no es una suposición).
+  - Grep de los 4 valores reales usados en la corrida contra los logs completos del contenedor:
+    **0 apariciones**.
+- Smoke test completo: **11/11** (corrido después del rebuild completo, con el panel ya integrado
+  — nada de lo nuevo rompió el flujo normal de login/Discover/Settings/admin).
+- Verificación visual en navegador real (Playwright, capturas en
+  `interfaces/leto/tests/smoke/output/secrets-panel3.png` y `secrets-probar.png`/
+  `secrets-rotar-modal.png`): la pestaña Secrets lista los 4 secretos con hint de 4 caracteres,
+  badges de riesgo, botón Probar funcionando con resultado inline, botón Rotar abre el modal de
+  reautenticación (pide contraseña, explica el riesgo), Rollback deshabilitado cuando no hay
+  versión anterior.
+
+**No hecho a propósito (fuera de alcance de T9):**
+- Nada de Secret Manager real — `secret_loader._store()` tira `RuntimeError` explícito si
+  `ENVIRONMENT=production` y no hay backend real todavía (eso es la siguiente tarea, cuando se
+  autorice tocar GCP).
+- `DATABASE_URL` no tiene rotación (decisión de diseño de T8, confirmada).
+- `ANTHROPIC_API_KEY`/`GOOGLE_VISION_API_KEY` siguen en `api_key_config` (mecanismo existente,
+  no se tocó — es un panel separado en concepto, aunque comparte la cifra de `token_crypto.py`).
+- Nada en el repo de Castor — la migración 0013 y el cambio de `authMiddleware.js` (doble clave)
+  siguen pendientes ahí, ya están en la lista del PM de Castor del documento T8.
+
+**Efecto colateral menor:** correr `npm install` en `interfaces/admin` para poder correr `tsc`
+generó `package-lock.json` (no existía). Queda como archivo nuevo sin trackear, no lo agregué a
+git ni lo borré; lo dejo para que decidan si conviene commitearlo
+junto con el resto cuando llegue el momento, no es parte funcional de esta tarea.
+
+**Sin commits en ningún momento de T9.**
+
+---
+
+## T10 — backend real de Secret Manager, probado contra GCP real (2026-10-03)
+
+**`package-lock.json`:** verificado — `interfaces/admin` usa npm puro (`Dockerfile`: `npm
+install`, sin `pnpm-lock.yaml` en ningún lado de esa carpeta; solo `interfaces/leto` usa pnpm en
+este repo). No es un lockfile duplicado, lo dejé tal cual.
+
+**Implementado en `backend/app/services/secret_loader.py`:** reescribí la interfaz del store
+(antes devolvía todas las versiones con su valor, ineficiente contra una API real) a
+`get_latest`/`get_previous`/`seed_if_missing`/`add_version`/`rollback_latest` — mapea limpio a
+los dos backends:
+- `GcpSecretManagerStore` (nuevo, T10): usa el alias nativo `latest` de Secret Manager y
+  habilitar/deshabilitar versiones en vez de reimplementar numeración — `rollback` es
+  simplemente deshabilitar la versión más nueva habilitada, Secret Manager resuelve `latest` a la
+  anterior solo. ADC (`google.auth` + `google-cloud-secret-manager`, agregado a
+  `requirements.txt`), sin key file, mismo patrón que `embarkation_storage.py`. Un secreto que no
+  existe todavía se puede autocrear (`secrets.create`) — pero el plan de producción (abajo)
+  evita darle ese permiso a `pollux-run@`, prefiriendo crear los secretos a mano de antemano.
+- `DevFileSecretStore` (T9, sin cambios de comportamiento) — adaptada a la interfaz nueva,
+  re-verificada: **24/24 checks de `test_secret_rotation.py` siguen pasando** después del
+  refactor.
+
+**Probado contra Secret Manager REAL** (`backend/test_secret_manager_live.py`, nuevo): secreto
+desechable `pollux-secrets-panel-test` en `pollux-app-507503`, creado por mi cuenta
+(`admin@pbtradingsolutions.com`, `roles/owner` en el proyecto, confirmado antes de empezar),
+credenciales puenteadas desde el token ya autenticado del `gcloud` CLI del host hacia el
+contenedor (sin pedir un login interactivo nuevo — `gcloud auth application-default login`
+necesita browser, no corre desde acá). **15/15 checks OK:**
+- `add_version`/`get_secret` reales, ida y vuelta contra la API.
+- Caché TTL: confirmado con un contador de llamadas reales que la segunda lectura dentro de la
+  ventana NO pega a la API (0 llamadas extra).
+- Rotar (segunda versión) + `get_secret_previous` devuelve la v1 correcta.
+- Rollback (deshabilita v2) + `get_secret` vuelve a dar v1, `get_secret_previous` queda vacío.
+- IAM: confirmado por lectura (`get_iam_policy`, sin conceder nada) que `pollux-run@` **no**
+  tiene acceso a este secreto de prueba — ni el script agregó ningún binding.
+- Grep del propio output del script: 0 valores reales impresos.
+- Al final, el secreto de prueba se destruyó (`delete_secret`) — confirmado después con
+  `gcloud secrets list` que solo quedan `leto-database-url`/`leto-secret-key`, sin cambios en su
+  IAM.
+
+**No se tocó:** `leto-secret-key`, `leto-database-url`, ningún IAM real, `pb-pollux`. Verificado
+antes y después.
+
+**Plan de producción exacto:** `docs/specs/secrets-panel.md` §8 (nuevo). Resumen: crear 3
+secretos nuevos (`leto-drive-token-secret`, `leto-drive-state-secret`,
+`leto-google-drive-client-secret`) sembrados con el valor actual, comandos IAM exactos por
+secreto para `pollux-run@`/`castor-run@`, orden de deploy (Castor primero con soporte de doble
+clave, migración 0013, crear secretos, conceder IAM, deployar Pollux, probar empezando por
+`DRIVE_STATE_SECRET`), y cómo volver atrás en cada paso.
+
+**Un punto que dejé para que decidas, no lo resolví solo:** el rol `secretVersionAdder` que
+pediste alcanza para rotar (agregar versión) pero NO para el rollback — necesita
+`versions.disable`, que ningún rol de solo-agregar tiene. Propuse dos caminos (agregar también
+`secretVersionManager`, que incluye `disable` pero también `destroy`/`enable` sin usar; o un rol
+custom acotado a exactamente lo necesario) y recomendé el primero por el mismo argumento que ya
+usaste para no sumar una SA aparte — queda en §8.2 del doc para que lo confirmes.
+
+**Sin commit en ningún momento de T10.**

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import ApiKeysTab from './ApiKeysTab'
+import AdminSecretsManager from './AdminSecretsManager'
 
 interface Setting { key: string; value: string; description: string | null; updated_at: string | null }
 interface CatalogDoc { id: number; name: string; cert: string; level: string; cert_type: string; validity_years: number | null; is_required: boolean }
@@ -40,7 +41,7 @@ const FLEET_LABELS: Record<string, string> = {
 }
 
 export default function AdminConfig() {
-  const [tab, setTab] = useState<'settings' | 'catalog' | 'api-keys'>('settings')
+  const [tab, setTab] = useState<'settings' | 'catalog' | 'api-keys' | 'secrets'>('settings')
   // The API Keys tab is admin-only on the backend (403); don't offer it to a
   // session that isn't one.
   const isAdmin = useAuthStore((s) => s.user?.role) === 'admin'
@@ -183,10 +184,10 @@ export default function AdminConfig() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-1 w-fit">
-        {(['settings', 'catalog', 'api-keys'] as const).filter(t => t !== 'api-keys' || isAdmin).map(t => (
+        {(['settings', 'catalog', 'api-keys', 'secrets'] as const).filter(t => (t !== 'api-keys' && t !== 'secrets') || isAdmin).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${tab === t ? 'bg-cyan-400/15 text-cyan-400 border border-cyan-400/20' : 'text-white/35 hover:text-white/60'}`}>
-            {t === 'settings' ? 'Platform Settings' : t === 'catalog' ? `Rank Catalog (${Object.keys(catalog).length})` : 'API Keys'}
+            {t === 'settings' ? 'Platform Settings' : t === 'catalog' ? `Rank Catalog (${Object.keys(catalog).length})` : t === 'api-keys' ? 'API Keys' : 'Secrets'}
           </button>
         ))}
       </div>
@@ -245,6 +246,9 @@ export default function AdminConfig() {
 
       {/* ── API KEYS TAB ───────────────────────────────────────── */}
       {tab === 'api-keys' && isAdmin && <ApiKeysTab />}
+
+      {/* ── SECRETS TAB (T8/T9/T10) ───────────────────────────── */}
+      {tab === 'secrets' && isAdmin && <AdminSecretsManager />}
 
       {/* ── CATALOG TAB ────────────────────────────────────────── */}
       {tab === 'catalog' && (

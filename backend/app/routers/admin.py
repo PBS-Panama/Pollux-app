@@ -1203,6 +1203,271 @@ def test_api_key(
     return {"key_name": payload.key_name, **check_api_key(db, payload.key_name)}
 
 
+# ─── Infra secrets panel (T8/T9, docs/specs/secrets-panel.md) ───────────────
+# SECRET_KEY / DRIVE_TOKEN_SECRET / DRIVE_STATE_SECRET / GOOGLE_DRIVE_CLIENT_SECRET
+# — the infra-level secrets that live in env vars / Secret Manager today, not
+# in api_key_config (that table is for admin-configurable OCR provider keys,
+# a different concern). T9 is LOCAL ONLY: secret_loader's dev file store
+# stands in for Secret Manager (see that module's docstring) — nothing here
+# talks to GCP. Every action logs to secret_rotation_log (0013): who, what,
+# which stored version, never the value.
+
+from app.services.secret_loader import (
+    MANAGED_SECRETS, AUTO_GENERATABLE, get_secret, get_secret_previous,
+    list_metadata, stage_new_value, rollback as _rollback_secret,
+    generate_random_value, SecretNotConfigured,
+)
+from app.core.security import verify_password
+
+
+def _log_secret_action(db: Session, name: str, action: str, version, result: str, detail: str, admin_id: str) -> None:
+    import uuid as _uuid
+    db.execute(text("""
+        INSERT INTO secret_rotation_log
+            (id, secret_name, action, secret_version, result, detail, performed_by, performed_at)
+        VALUES (:id, :name, :action, :version, :result, :detail, :by, :now)
+    """), {
+        "id": str(_uuid.uuid4()), "name": name, "action": action,
+        "version": str(version) if version is not None else "-",
+        "result": result, "detail": detail[:500], "by": admin_id,
+        "now": datetime.now(timezone.utc),
+    })
+
+
+class SecretReauthRequest(BaseModel):
+    current_password: str
+
+
+class SecretRotateRequest(SecretReauthRequest):
+    value: Optional[str] = None  # required for GOOGLE_DRIVE_CLIENT_SECRET, optional (auto-gen) for the rest
+
+
+class SecretTestRequest(BaseModel):
+    value: Optional[str] = None  # candidate to test; auto-generated if omitted (non-destructive either way)
+
+
+def _require_reauth(admin: User, current_password: str) -> None:
+    if not verify_password(current_password, admin.hashed_password):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+
+def _check_secret_name(name: str) -> None:
+    if name not in MANAGED_SECRETS:
+        raise HTTPException(status_code=404, detail=f"Unknown secret '{name}' — must be one of {MANAGED_SECRETS}")
+
+
+@router.get("/secrets")
+def list_secrets(admin: User = Depends(require_admin)):
+    return [list_metadata(name) for name in MANAGED_SECRETS]
+
+
+@router.get("/secrets/{name}/audit")
+def secret_audit_log(
+    name: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+):
+    _check_secret_name(name)
+    rows = db.execute(text("""
+        SELECT action, secret_version, result, detail, performed_by, performed_at
+        FROM secret_rotation_log
+        WHERE secret_name = :name
+        ORDER BY performed_at DESC
+        LIMIT :limit
+    """), {"name": name, "limit": limit}).fetchall()
+    return [
+        {
+            "action": r.action, "version": r.secret_version, "result": r.result,
+            "detail": r.detail, "performed_by": r.performed_by,
+            "performed_at": r.performed_at.isoformat(),
+        }
+        for r in rows
+    ]
+
+
+def _test_secret_key(candidate: str) -> str:
+    test_payload = {"_secrets_panel_test": True}
+    token = jwt_encode_for_test(test_payload, candidate)
+    decoded = jwt_decode_for_test(token, candidate)
+    if decoded.get("_secrets_panel_test") is not True:
+        raise ValueError("round trip did not return the expected payload")
+    return "sign+verify round trip OK (throwaway token, no real session touched)"
+
+
+def jwt_encode_for_test(payload: dict, secret: str) -> str:
+    from jose import jwt as _jwt
+    from app.core.config import settings as _settings
+    return _jwt.encode(payload, secret, algorithm=_settings.ALGORITHM)
+
+
+def jwt_decode_for_test(token: str, secret: str) -> dict:
+    from jose import jwt as _jwt
+    from app.core.config import settings as _settings
+    return _jwt.decode(token, secret, algorithms=[_settings.ALGORITHM])
+
+
+def _test_drive_token_secret(candidate: str) -> str:
+    from app.services.token_crypto import encrypt_token as _enc, decrypt_token as _dec
+    probe = "secrets-panel-test-value"
+    ciphertext = _enc(probe, secret=candidate)
+    plain = _dec(ciphertext, secret=candidate)
+    if plain != probe:
+        raise ValueError("encrypt/decrypt round trip did not return the original value")
+    return "encrypt+decrypt round trip OK (throwaway value, no stored row touched)"
+
+
+def _test_drive_state_secret(candidate: str) -> str:
+    import hashlib as _hashlib
+    import hmac as _hmac
+    digest = _hmac.new(candidate.encode(), b"probe-user-id", _hashlib.sha256).hexdigest()[:16]
+    if len(digest) != 16:
+        raise ValueError("HMAC did not produce the expected length")
+    return "HMAC sign round trip OK (throwaway state, no real OAuth flow touched)"
+
+
+@router.post("/secrets/{name}/test")
+@limiter.limit("20/hour")
+def test_secret(request: Request, name: str, payload: SecretTestRequest, admin: User = Depends(require_admin)):
+    """Non-destructive — never writes to Secret Manager/the dev store, never
+    touches drive_tokens/api_key_config. Safe to call as many times as
+    needed before an actual rotation."""
+    _check_secret_name(name)
+    candidate = payload.value or (generate_random_value() if name in AUTO_GENERATABLE else None)
+    if not candidate:
+        raise HTTPException(status_code=400, detail="value is required for this secret (cannot auto-generate)")
+
+    testers = {
+        "SECRET_KEY": _test_secret_key,
+        "DRIVE_TOKEN_SECRET": _test_drive_token_secret,
+        "DRIVE_STATE_SECRET": _test_drive_state_secret,
+    }
+    tester = testers.get(name)
+    if tester is None:
+        return {
+            "ok": None,
+            "message": (
+                "No automated test for this secret — GOOGLE_DRIVE_CLIENT_SECRET's real value "
+                "lives in Google's own OAuth client config. Verify by actually connecting a "
+                "Drive account after rotating."
+            ),
+        }
+    try:
+        message = tester(candidate)
+        return {"ok": True, "message": message}
+    except Exception as exc:
+        return {"ok": False, "message": f"Test failed: {exc}"}
+
+
+def _reencrypt_drive_secret_rows(db: Session, old_secret: str, new_secret: str) -> str:
+    """Decrypts every drive_tokens.encrypted_rt and api_key_config.encrypted_value
+    row with `old_secret` and re-encrypts with `new_secret`, in the caller's
+    transaction (not committed here — the caller commits only after this AND
+    the new secret version are both ready, so a failure here never leaves a
+    rotation half-applied). Returns a short human summary for the audit log."""
+    from app.services.token_crypto import encrypt_token as _enc, decrypt_token as _dec
+
+    drive_rows = db.execute(text("SELECT user_id, encrypted_rt FROM drive_tokens")).fetchall()
+    for row in drive_rows:
+        plain = _dec(row.encrypted_rt, secret=old_secret)
+        new_cipher = _enc(plain, secret=new_secret)
+        db.execute(
+            text("UPDATE drive_tokens SET encrypted_rt = :c WHERE user_id = :uid"),
+            {"c": new_cipher, "uid": row.user_id},
+        )
+
+    key_rows = db.execute(text("SELECT key_name, encrypted_value FROM api_key_config")).fetchall()
+    for row in key_rows:
+        plain = _dec(row.encrypted_value, secret=old_secret)
+        new_cipher = _enc(plain, secret=new_secret)
+        db.execute(
+            text("UPDATE api_key_config SET encrypted_value = :c WHERE key_name = :k"),
+            {"c": new_cipher, "k": row.key_name},
+        )
+
+    return f"re-encrypted {len(drive_rows)} drive_tokens row(s), {len(key_rows)} api_key_config row(s)"
+
+
+@router.post("/secrets/{name}/rotate")
+@limiter.limit("10/hour")
+def rotate_secret(
+    request: Request, name: str, payload: SecretRotateRequest,
+    admin: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    _check_secret_name(name)
+    _require_reauth(admin, payload.current_password)
+
+    new_value = payload.value
+    if not new_value:
+        if name not in AUTO_GENERATABLE:
+            raise HTTPException(status_code=400, detail="value is required for this secret (cannot auto-generate)")
+        new_value = generate_random_value()
+
+    detail = "rotated"
+    try:
+        if name == "DRIVE_TOKEN_SECRET":
+            # Order matters, strictly: (1) re-encrypt everything with the new
+            # value inside this request's DB transaction, (2) COMMIT that —
+            # the DB now genuinely holds data encrypted with the new value,
+            # while get_secret() still returns the OLD one — (3) only now
+            # flip the secret store to the new value. If we flipped the
+            # store before committing the DB and the commit then failed,
+            # get_secret() would start returning a key that doesn't match
+            # what's actually stored in the rows — exactly the inconsistency
+            # this ordering exists to rule out.
+            try:
+                old_value = get_secret(name)
+            except SecretNotConfigured:
+                old_value = None
+            if old_value:
+                detail = _reencrypt_drive_secret_rows(db, old_value, new_value)
+                db.commit()
+        version = stage_new_value(name, new_value)
+        _log_secret_action(db, name, "rotate", version.version, "ok", detail, admin.id)
+        db.commit()
+        return {"name": name, "hint": list_metadata(name)["hint"], "version": version.version, "detail": detail}
+    except Exception as exc:
+        db.rollback()
+        _log_secret_action(db, name, "rotate", None, "error", str(exc)[:200], admin.id)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Rotation failed, nothing was changed: {exc}")
+
+
+@router.post("/secrets/{name}/rollback")
+@limiter.limit("10/hour")
+def rollback_secret(
+    request: Request, name: str, payload: SecretReauthRequest,
+    admin: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    _check_secret_name(name)
+    _require_reauth(admin, payload.current_password)
+
+    meta = list_metadata(name)
+    if not meta["has_previous"]:
+        raise HTTPException(status_code=400, detail="No previous version to roll back to")
+
+    detail = "rolled back"
+    try:
+        if name == "DRIVE_TOKEN_SECRET":
+            # Same ordering rule as rotate: re-encrypt + commit BEFORE
+            # flipping the secret store back.
+            current_value = get_secret(name)
+            previous_value = get_secret_previous(name)
+            detail = _reencrypt_drive_secret_rows(db, current_value, previous_value)
+            db.commit()
+        new_latest = _rollback_secret(name)
+        _log_secret_action(db, name, "rollback", new_latest.version if new_latest else None, "ok", detail, admin.id)
+        db.commit()
+        return {
+            "name": name, "hint": list_metadata(name)["hint"],
+            "version": new_latest.version if new_latest else None, "detail": detail,
+        }
+    except Exception as exc:
+        db.rollback()
+        _log_secret_action(db, name, "rollback", None, "error", str(exc)[:200], admin.id)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Rollback failed, nothing was changed: {exc}")
+
 class CatalogEntryCreate(BaseModel):
     rank: str
     fleet_cat: Optional[str] = None
