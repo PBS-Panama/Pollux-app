@@ -5,3 +5,5 @@
 .DS_Store
 .prettierignore
 .env
+.env.*
+!.env.example

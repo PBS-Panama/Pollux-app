@@ -1,0 +1,37 @@
+# Local dev with the SAME database as Castor — mirrors production, where
+# pb-pollux and pb-castor share one Cloud SQL instance (leto-postgres/leto_db)
+# and Pollux reads/writes the seafarer rows Castor owns (Rick, 2026-10-02).
+#
+# Without this file each product has its own local Postgres, so Pollux only
+# ever sees its 32 seeded demo seafarers and Castor never sees Pollux's hires
+# or assignments — none of the cross-product workflows can be exercised.
+#
+# Usage (Castor's stack must be up first — it owns the DB container):
+#   docker compose -p pollux-app -f docker-compose.yml -f docker-compose.shared-db.yml up -d --build
+#
+# What it changes:
+#   - backend joins Castor's compose network and points DATABASE_URL at
+#     Castor's postgres CONTAINER NAME (not the `postgres` alias — both stacks
+#     have a service called `postgres`, and the alias would resolve to ours).
+#     The credentials are the literal dev ones from Castor's docker-compose.yml.
+#   - Pollux's own `postgres` service still starts (depends_on), it is just unused.
+#
+# Things to know:
+#   - Pollux's startup seeds run against Castor's DB: seed_admin updates the
+#     password of ADMIN_SEED_EMAIL (from .env) if ADMIN_SEED_PASSWORD is set,
+#     and the demo company/seafarers are skipped as soon as real seafarers exist.
+#   - SECRET_KEY and DRIVE_TOKEN_SECRET in .env must equal Castor's local values:
+#     file downloads from Castor's Express server carry a token signed with
+#     SECRET_KEY, and api_key_config rows are only readable with the same
+#     DRIVE_TOKEN_SECRET. Same requirement as production.
+services:
+  backend:
+    environment:
+      DATABASE_URL: postgresql://leto_user:leto_pass@pbsds-leto-postgres-1:5432/leto_db
+    networks:
+      - castor-db
+
+networks:
+  castor-db:
+    name: pbsds-leto_default
+    external: true
