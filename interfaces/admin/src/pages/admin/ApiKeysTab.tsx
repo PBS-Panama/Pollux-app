@@ -22,13 +22,12 @@ interface ApiKeyStatus {
 }
 
 interface TestResult {
-  ok: boolean
-  source: 'panel' | 'env' | null
-  undecryptable: boolean
+  key_name: string
+  ok: boolean | null
   detail: string
 }
 
-type Notice = { kind: 'ok' | 'error'; text: string }
+type Notice = { kind: 'ok' | 'error' | 'info'; text: string }
 
 const KEY_META: Record<string, { label: string; purpose: string }> = {
   ANTHROPIC_API_KEY: {
@@ -38,6 +37,10 @@ const KEY_META: Record<string, { label: string; purpose: string }> = {
   GOOGLE_VISION_API_KEY: {
     label: 'Google Vision',
     purpose: 'Lectura de texto (OCR) de los documentos — se usa solo cuando no hay clave de Anthropic.',
+  },
+  GOOGLE_DRIVE_CLIENT_SECRET: {
+    label: 'Google Drive (OAuth)',
+    purpose: 'Client secret de la app de OAuth para que Compañías y Castor conecten su Google Drive.',
   },
 }
 
@@ -52,12 +55,9 @@ const errorMessage = (e: any, fallback: string): string => {
 }
 
 const testNotice = (r: TestResult): Notice => {
-  const viaEnv = r.source === 'env' ? ' Se probó la variable de entorno del servidor, no una clave cargada desde aquí.' : ''
-  const unreadable = r.undecryptable
-    ? 'La clave guardada no se puede leer en este servidor (cambió DRIVE_TOKEN_SECRET): cárgala de nuevo. '
-    : ''
-  if (r.ok) return { kind: r.undecryptable ? 'error' : 'ok', text: `${unreadable}Funciona: el proveedor aceptó la clave.${viaEnv}` }
-  return { kind: 'error', text: `${unreadable}${r.detail}${viaEnv}` }
+  if (r.ok === null) return { kind: 'info', text: r.detail }
+  if (r.ok) return { kind: 'ok', text: `Funciona: el proveedor aceptó la clave.` }
+  return { kind: 'error', text: r.detail }
 }
 
 const inp = 'bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-cyan-400/40'
@@ -92,7 +92,7 @@ function ApiKeyRow({ status, onSaved }: { status: ApiKeyStatus; onSaved: () => P
     setTesting(true)
     setNotice(null)
     try {
-      const r = await api.post('/admin/config/api-keys/test', { key_name: status.key_name })
+      const r = await api.post(`/admin/config/api-keys/${status.key_name}/test`)
       setNotice(testNotice(r.data))
     } catch (e: any) {
       setNotice({ kind: 'error', text: errorMessage(e, 'No se pudo probar la clave.') })
@@ -150,7 +150,9 @@ function ApiKeyRow({ status, onSaved }: { status: ApiKeyStatus; onSaved: () => P
         <p role={notice.kind === 'error' ? 'alert' : 'status'}
           className={`text-xs rounded-lg p-3 border ${notice.kind === 'ok'
             ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
-            : 'text-red-400 bg-red-500/10 border-red-500/25'}`}>
+            : notice.kind === 'info'
+              ? 'text-cyan-400/90 bg-cyan-500/10 border-cyan-500/25'
+              : 'text-red-400 bg-red-500/10 border-red-500/25'}`}>
           {notice.text}
         </p>
       )}

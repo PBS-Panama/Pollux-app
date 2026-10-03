@@ -16,6 +16,14 @@ from app.models.seafarer import Seafarer
 from app.models.document import Document
 from app.services.compliance_engine import build_compliance_report
 from app.services.token_crypto import encrypt_token
+# Aliased: app.services.secret_loader (T9/T10, infra secrets panel — SECRET_KEY/
+# DRIVE_TOKEN_SECRET/etc.) also exports a `get_secret`/`invalidate` with a
+# DIFFERENT signature. Both modules are used in this file; importing either
+# unaliased would silently shadow the other at module-load time regardless
+# of which function in the file calls it.
+from app.services.secret_store import (
+    SECRET_NAMES, get_secret as get_api_key_secret, invalidate as invalidate_secret_cache,
+)
 
 router = APIRouter()
 
@@ -1100,18 +1108,20 @@ def update_setting(
     return {"key": key, "value": payload.value}
 
 
-# ─── OCR API keys — write-only, encrypted (Handover.md nota 48) ─────────────
+# ─── Third-party secrets — write-only, encrypted (Handover.md nota 48/136) ──
 # NOT stored in platform_settings on purpose: that table's GET returns raw
 # values to the browser, and a billable API key has no business making that
 # round trip. Reuses token_crypto.py (Fernet, same helper Drive refresh
 # tokens already use) instead of inventing a second encryption mechanism.
-# get_ocr_provider() (ocr_provider.py) reads this table first and falls back
-# to the env var — the L-4 fail-fast (RuntimeError when neither is set in
+# SECRET_NAMES (app/services/secret_store.py) is the single source of truth
+# for which keys live here — see that module's docstring for the full list
+# of what's deliberately NOT here (SECRET_KEY, DATABASE_URL, DRIVE_TOKEN_
+# SECRET, DRIVE_STATE_SECRET, GOOGLE_OAUTH_CLIENT_ID) and why.
+# get_secret() (secret_store.py) reads this table first and falls back to
+# the env var, everywhere a consumer needs one of these — the L-4 fail-fast
+# in ocr_provider.get_ocr_provider() (RuntimeError when neither is set in
 # production) is untouched: it's what keeps a deleted key loud instead of
 # letting documents silently sit in 'pending' forever.
-
-_API_KEY_NAMES = ("ANTHROPIC_API_KEY", "GOOGLE_VISION_API_KEY")
-
 
 class ApiKeyPatch(BaseModel):
     key_name: str
@@ -1140,7 +1150,7 @@ def list_api_keys(admin: User = Depends(require_admin), db: Session = Depends(ge
             # The panel shows "actualizada por <quién>" — updated_by is a user id.
             "updated_by_email": by_name[name].updated_by_email if name in by_name else None,
         }
-        for name in _API_KEY_NAMES
+        for name in SECRET_NAMES
     ]
 
 
@@ -1152,10 +1162,10 @@ def update_api_key(
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    if payload.key_name not in _API_KEY_NAMES:
+    if payload.key_name not in SECRET_NAMES:
         raise HTTPException(
             status_code=400,
-            detail=f"key_name must be one of {_API_KEY_NAMES}",
+            detail=f"key_name must be one of {SECRET_NAMES}",
         )
     value = payload.value.strip()
     if not value:
@@ -1174,46 +1184,120 @@ def update_api_key(
             updated_by = EXCLUDED.updated_by
     """), {"name": payload.key_name, "enc": encrypted, "hint": hint, "now": now, "by": admin.id})
     db.commit()
+    # So the next get_secret() call (any consumer, same process) sees the new
+    # value immediately instead of serving the old one for up to CACHE_TTL_SECONDS.
+    invalidate_secret_cache(payload.key_name)
     # Never echo the value back — the whole point of write-only.
     return {"key_name": payload.key_name, "configured": True, "hint": hint, "updated_at": now.isoformat()}
 
 
-class ApiKeyTest(BaseModel):
-    key_name: str
+# ─── Test a configured secret against its provider (Handover.md nota 136) ───
+# Exercises the value get_secret() would actually return right now (DB first,
+# env fallback) with the cheapest real call each provider offers — never a
+# document/user-facing operation. Never echoes the value or any fragment of
+# it beyond what list_api_keys() already exposes (the 4-char hint).
+#
+# The provider-specific logic lives in _run_key_test(), a plain function with
+# no FastAPI/slowapi decorators, so test_secret_store.py can call it directly
+# with a fake value and a monkeypatched provider SDK/urlopen — no HTTP layer,
+# no real network call, no real key needed to exercise the branching.
+# Identical contract to Castor's (same function name, same response shape) —
+# this is the endpoint Rick asked to mirror exactly (T13), replacing the
+# 2026-10-02 body-based POST /config/api-keys/test + ocr_provider.check_api_key().
+
+_TINY_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)  # 1x1 transparent PNG — cheapest possible images:annotate call
 
 
-@router.post("/config/api-keys/test")
-@limiter.limit("20/hour")
+def _run_key_test(key_name: str, value: str) -> dict:
+    """key_name is assumed already validated against SECRET_NAMES, value
+    already resolved (truthy) by the caller. Returns the full response dict
+    — never raises on a provider-side rejection, only on a programming error
+    (unknown key_name)."""
+    if key_name == "ANTHROPIC_API_KEY":
+        try:
+            import anthropic
+        except ImportError:
+            return {"key_name": key_name, "ok": False, "detail": "anthropic SDK not installed"}
+        try:
+            # models.list() costs no tokens — just lists what the key can see.
+            anthropic.Anthropic(api_key=value).models.list(limit=1)
+            return {"key_name": key_name, "ok": True, "detail": "models.list() succeeded"}
+        except anthropic.AuthenticationError:
+            return {"key_name": key_name, "ok": False, "detail": "authentication failed — key rejected by Anthropic"}
+        except Exception as exc:
+            return {"key_name": key_name, "ok": False, "detail": f"{type(exc).__name__} (see server logs for detail)"}
+
+    if key_name == "GOOGLE_VISION_API_KEY":
+        import urllib.request
+        import urllib.parse
+        import urllib.error
+        try:
+            req = urllib.request.Request(
+                f"https://vision.googleapis.com/v1/images:annotate?key={urllib.parse.quote(value, safe='')}",
+                data=json.dumps({
+                    "requests": [{
+                        "image": {"content": _TINY_PNG_B64},
+                        "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
+                    }]
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read())
+            outer = (data.get("responses") or [{}])[0]
+            if outer.get("error"):
+                return {"key_name": key_name, "ok": False, "detail": outer["error"].get("message", "")[:160]}
+            return {"key_name": key_name, "ok": True, "detail": "images:annotate succeeded"}
+        except urllib.error.HTTPError as exc:
+            return {"key_name": key_name, "ok": False, "detail": f"HTTP {exc.code} — key rejected or not enabled for Vision API"}
+        except Exception as exc:
+            return {"key_name": key_name, "ok": False, "detail": f"{type(exc).__name__} (see server logs for detail)"}
+
+    if key_name == "GOOGLE_DRIVE_CLIENT_SECRET":
+        return {
+            "key_name": key_name,
+            "ok": None,
+            "detail": "no verificable sin consentimiento del usuario — el client secret solo se valida "
+                      "en un intercambio de token OAuth real (authorization code de un usuario), no hay "
+                      "forma de probarlo de forma aislada contra Google",
+        }
+
+    raise ValueError(f"no test defined for {key_name}")
+
+
+@router.post("/config/api-keys/{key_name}/test")
+@limiter.limit("10/hour")
 def test_api_key(
     request: Request,
-    payload: ApiKeyTest,
+    key_name: str,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """One minimal real call to the provider with the key the OCR would use
-    (see ocr_provider.check_api_key). Takes no value — it tests what's stored,
-    and answers ok/detail only. Rate-limited because each call is billable."""
-    from app.services.ocr_provider import check_api_key
+    if key_name not in SECRET_NAMES:
+        raise HTTPException(status_code=400, detail=f"key_name must be one of {SECRET_NAMES}")
 
-    if payload.key_name not in _API_KEY_NAMES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"key_name must be one of {_API_KEY_NAMES}",
-        )
-    return {"key_name": payload.key_name, **check_api_key(db, payload.key_name)}
+    value = get_api_key_secret(key_name, db)
+    if not value:
+        return {"key_name": key_name, "ok": False, "detail": "not configured (no value in DB or env)"}
+
+    return _run_key_test(key_name, value)
 
 
-# ─── Infra secrets panel (T8/T9, docs/specs/secrets-panel.md) ───────────────
-# SECRET_KEY / DRIVE_TOKEN_SECRET / DRIVE_STATE_SECRET / GOOGLE_DRIVE_CLIENT_SECRET
-# — the infra-level secrets that live in env vars / Secret Manager today, not
-# in api_key_config (that table is for admin-configurable OCR provider keys,
-# a different concern). T9 is LOCAL ONLY: secret_loader's dev file store
-# stands in for Secret Manager (see that module's docstring) — nothing here
-# talks to GCP. Every action logs to secret_rotation_log (0013): who, what,
+# ─── Infra secrets panel (T8/T9/T10, docs/specs/secrets-panel.md) ───────────
+# SECRET_KEY / DRIVE_TOKEN_SECRET / DRIVE_STATE_SECRET — the infra-level
+# secrets that live in Secret Manager, not in api_key_config (that table is
+# for the third-party API keys above — ANTHROPIC_API_KEY/GOOGLE_VISION_
+# API_KEY/GOOGLE_DRIVE_CLIENT_SECRET — a different storage mechanism
+# entirely). SECRET_KEY/DRIVE_TOKEN_SECRET are shared with Castor and have
+# rotation disabled until Castor supports it (ROTATION_DISABLED, T13). Every
+# action logs to secret_rotation_log (0013): who, what,
 # which stored version, never the value.
 
 from app.services.secret_loader import (
-    MANAGED_SECRETS, AUTO_GENERATABLE, get_secret, get_secret_previous,
+    MANAGED_SECRETS, AUTO_GENERATABLE, ROTATION_DISABLED, get_secret, get_secret_previous,
     list_metadata, stage_new_value, rollback as _rollback_secret,
     generate_random_value, SecretNotConfigured,
 )
@@ -1239,7 +1323,10 @@ class SecretReauthRequest(BaseModel):
 
 
 class SecretRotateRequest(SecretReauthRequest):
-    value: Optional[str] = None  # required for GOOGLE_DRIVE_CLIENT_SECRET, optional (auto-gen) for the rest
+    # Optional for every secret in this panel now — all of MANAGED_SECRETS are
+    # auto-generatable (AUTO_GENERATABLE). GOOGLE_DRIVE_CLIENT_SECRET, which
+    # used to need an explicit value here, moved to api_key_config (T13).
+    value: Optional[str] = None
 
 
 class SecretTestRequest(BaseModel):
@@ -1258,7 +1345,18 @@ def _check_secret_name(name: str) -> None:
 
 @router.get("/secrets")
 def list_secrets(admin: User = Depends(require_admin)):
-    return [list_metadata(name) for name in MANAGED_SECRETS]
+    result = []
+    for name in MANAGED_SECRETS:
+        meta = list_metadata(name)
+        meta["rotation_disabled"] = name in ROTATION_DISABLED
+        meta["rotation_disabled_reason"] = ROTATION_DISABLED.get(name)
+        result.append(meta)
+    return result
+
+
+def _check_rotation_allowed(name: str) -> None:
+    if name in ROTATION_DISABLED:
+        raise HTTPException(status_code=403, detail=ROTATION_DISABLED[name])
 
 
 @router.get("/secrets/{name}/audit")
@@ -1337,21 +1435,16 @@ def test_secret(request: Request, name: str, payload: SecretTestRequest, admin: 
     if not candidate:
         raise HTTPException(status_code=400, detail="value is required for this secret (cannot auto-generate)")
 
+    # All of MANAGED_SECRETS has a tester — _check_secret_name above already
+    # filtered to one of these 3 names, so this dict is exhaustive, not a
+    # fallback for something unlisted (GOOGLE_DRIVE_CLIENT_SECRET isn't in
+    # MANAGED_SECRETS at all anymore, T13 — see secret_loader.py).
     testers = {
         "SECRET_KEY": _test_secret_key,
         "DRIVE_TOKEN_SECRET": _test_drive_token_secret,
         "DRIVE_STATE_SECRET": _test_drive_state_secret,
     }
-    tester = testers.get(name)
-    if tester is None:
-        return {
-            "ok": None,
-            "message": (
-                "No automated test for this secret — GOOGLE_DRIVE_CLIENT_SECRET's real value "
-                "lives in Google's own OAuth client config. Verify by actually connecting a "
-                "Drive account after rotating."
-            ),
-        }
+    tester = testers[name]
     try:
         message = tester(candidate)
         return {"ok": True, "message": message}
@@ -1395,6 +1488,7 @@ def rotate_secret(
     admin: User = Depends(require_admin), db: Session = Depends(get_db),
 ):
     _check_secret_name(name)
+    _check_rotation_allowed(name)
     _require_reauth(admin, payload.current_password)
 
     new_value = payload.value
@@ -1440,6 +1534,7 @@ def rollback_secret(
     admin: User = Depends(require_admin), db: Session = Depends(get_db),
 ):
     _check_secret_name(name)
+    _check_rotation_allowed(name)
     _require_reauth(admin, payload.current_password)
 
     meta = list_metadata(name)

@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import api from '../../lib/api'
 
-// Infra secrets panel (T8/T9 — docs/specs/secrets-panel.md). Covers the
-// secrets that live in env vars / Secret Manager today (SECRET_KEY,
-// DRIVE_TOKEN_SECRET, DRIVE_STATE_SECRET, GOOGLE_DRIVE_CLIENT_SECRET) — a
-// different concern from the OCR provider keys (AdminOcrManager's sibling,
-// api_key_config table). Never shows a real value: only the last-4 hint the
-// backend returns, same as api_key_config's pattern.
+// Infra secrets panel (T8/T9/T10 — docs/specs/secrets-panel.md). Covers the
+// 3 secrets backed by Secret Manager (SECRET_KEY, DRIVE_TOKEN_SECRET,
+// DRIVE_STATE_SECRET) — a different concern from the 3 third-party API keys
+// (ApiKeysTab's sibling, api_key_config table in leto-postgres).
+// GOOGLE_DRIVE_CLIENT_SECRET moved there in T13, so it's not listed here
+// anymore. Never shows a real value: only the last-4 hint the backend
+// returns, same as api_key_config's pattern.
 //
-// T9 scope: local only. The backend's secret_loader uses a dev file store,
-// not real Secret Manager — this UI doesn't know or care, it just talks to
-// /admin/secrets/*.
+// T13: SECRET_KEY and DRIVE_TOKEN_SECRET are shared with Castor, which
+// hasn't implemented the double-key window / Secret Manager reads yet —
+// rotating either from here would break Castor outright. The backend
+// enforces this (403 via secret_loader.ROTATION_DISABLED); this UI mirrors
+// it so the buttons are visibly disabled instead of failing silently.
 
 interface SecretMeta {
   name: string
@@ -19,6 +22,8 @@ interface SecretMeta {
   version: number | null
   last_rotated_at: number | null
   has_previous: boolean
+  rotation_disabled: boolean
+  rotation_disabled_reason: string | null
 }
 
 interface AuditEntry {
@@ -46,11 +51,6 @@ const SECRET_LABELS: Record<string, { label: string; risk: 'low' | 'medium' | 'h
     risk: 'low',
     hint: 'Firma el parámetro state del OAuth de Drive — vida útil de segundos, sin dato persistente.',
   },
-  GOOGLE_DRIVE_CLIENT_SECRET: {
-    label: 'GOOGLE_DRIVE_CLIENT_SECRET',
-    risk: 'medium',
-    hint: 'Client secret de Google — el valor nuevo tiene que salir de la consola de Google primero, no se autogenera acá.',
-  },
 }
 
 const RISK_COLOR: Record<string, string> = {
@@ -66,24 +66,21 @@ function fmtDate(epochSeconds: number | null): string {
 
 // ─── Reauth modal — required before Rotar / Rollback, never before Probar ──
 
-function ReauthModal({ title, warning, onConfirm, onCancel, needsValue }: {
+function ReauthModal({ title, warning, onConfirm, onCancel }: {
   title: string
   warning: string
-  needsValue: boolean
-  onConfirm: (password: string, value: string) => Promise<void>
+  onConfirm: (password: string) => Promise<void>
   onCancel: () => void
 }) {
   const [password, setPassword] = useState('')
-  const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   const submit = async () => {
     if (!password) { setError('Ingresá tu contraseña para confirmar.'); return }
-    if (needsValue && !value.trim()) { setError('Este secreto necesita un valor manual.'); return }
     setBusy(true); setError('')
     try {
-      await onConfirm(password, value)
+      await onConfirm(password)
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? 'La operación falló.')
     } finally {
@@ -96,13 +93,6 @@ function ReauthModal({ title, warning, onConfirm, onCancel, needsValue }: {
       <div className="bg-[#0d1117] border border-white/10 rounded-2xl p-6 max-w-md w-full flex flex-col gap-4">
         <h3 className="text-lg font-bold text-white">{title}</h3>
         <p className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/25 rounded-lg p-3">{warning}</p>
-        {needsValue && (
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-white/30">Valor nuevo (de la consola de Google)</span>
-            <input type="password" autoComplete="off" value={value} onChange={e => setValue(e.target.value)}
-              className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-cyan-400/40" />
-          </div>
-        )}
         <div className="flex flex-col gap-1">
           <span className="text-[10px] text-white/30">Tu contraseña (reautenticación)</span>
           <input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
@@ -167,11 +157,8 @@ export default function AdminSecretsManager() {
     }
   }
 
-  const doRotate = async (name: string, password: string, value: string) => {
-    await api.post(`/admin/secrets/${name}/rotate`, {
-      current_password: password,
-      ...(value ? { value } : {}),
-    })
+  const doRotate = async (name: string, password: string) => {
+    await api.post(`/admin/secrets/${name}/rotate`, { current_password: password })
     setModal(null)
     showToast('ok', `${name}: rotación aplicada.`)
     load()
@@ -224,6 +211,9 @@ export default function AdminSecretsManager() {
                       )}
                     </div>
                     <p className="text-[11px] text-white/30 mt-0.5 max-w-xl">{meta?.hint}</p>
+                    {s.rotation_disabled && (
+                      <p className="text-[11px] text-amber-400/80 mt-1 max-w-xl">⚠ Rotación deshabilitada: {s.rotation_disabled_reason}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 text-right">
                     <div>
@@ -238,11 +228,13 @@ export default function AdminSecretsManager() {
                     className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] text-white/50 border border-white/10 disabled:opacity-40">
                     {testing[s.name] ? 'Probando…' : 'Probar'}
                   </button>
-                  <button onClick={() => setModal({ name: s.name, action: 'rotate' })}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400/30 bg-amber-400/15 hover:bg-amber-400/25 text-amber-400 transition-colors">
+                  <button onClick={() => setModal({ name: s.name, action: 'rotate' })} disabled={s.rotation_disabled}
+                    title={s.rotation_disabled ? s.rotation_disabled_reason ?? undefined : undefined}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400/30 bg-amber-400/15 hover:bg-amber-400/25 text-amber-400 transition-colors disabled:opacity-30 disabled:hover:bg-amber-400/15">
                     Rotar
                   </button>
-                  <button onClick={() => setModal({ name: s.name, action: 'rollback' })} disabled={!s.has_previous}
+                  <button onClick={() => setModal({ name: s.name, action: 'rollback' })} disabled={!s.has_previous || s.rotation_disabled}
+                    title={s.rotation_disabled ? s.rotation_disabled_reason ?? undefined : undefined}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/50 transition-colors disabled:opacity-30">
                     Rollback
                   </button>
@@ -283,7 +275,6 @@ export default function AdminSecretsManager() {
       {modal && (
         <ReauthModal
           title={modal.action === 'rotate' ? `Rotar ${modal.name}` : `Rollback ${modal.name}`}
-          needsValue={modal.action === 'rotate' && modal.name === 'GOOGLE_DRIVE_CLIENT_SECRET'}
           warning={
             modal.action === 'rotate'
               ? (SECRET_LABELS[modal.name]?.risk === 'high'
@@ -292,8 +283,8 @@ export default function AdminSecretsManager() {
               : 'Esto revierte a la versión anterior — para DRIVE_TOKEN_SECRET también re-cifra los datos de vuelta.'
           }
           onCancel={() => setModal(null)}
-          onConfirm={(password, value) =>
-            modal.action === 'rotate' ? doRotate(modal.name, password, value) : doRollback(modal.name, password)
+          onConfirm={(password) =>
+            modal.action === 'rotate' ? doRotate(modal.name, password) : doRollback(modal.name, password)
           }
         />
       )}

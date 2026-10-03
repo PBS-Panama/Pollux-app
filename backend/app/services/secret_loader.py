@@ -58,17 +58,59 @@ SECRET_MANAGER_PROJECT_ID = os.environ.get("SECRET_MANAGER_PROJECT_ID", "pollux-
 # Secrets this panel knows how to manage. Anything not listed here can still
 # be read via get_secret() (it'll just seed-and-never-rotate from the env
 # var), but only these show up in the panel's list endpoint.
+#
+# GOOGLE_DRIVE_CLIENT_SECRET moved OUT of this panel entirely (T13,
+# 2026-10-03, Rick's call relayed by Dandy): Castor's contract
+# (Handover.md nota 136) puts it in api_key_config instead — same table
+# ANTHROPIC_API_KEY/GOOGLE_VISION_API_KEY already use, read via
+# app/services/secret_store.get_secret(). One source of truth for a value
+# both Pollux and Castor's google_drive.py read, instead of this panel's
+# Secret Manager copy and Castor having no copy at all. See
+# docs/specs/secrets-panel.md §9 for the full reasoning.
 MANAGED_SECRETS = (
     "SECRET_KEY",
     "DRIVE_TOKEN_SECRET",
     "DRIVE_STATE_SECRET",
-    "GOOGLE_DRIVE_CLIENT_SECRET",
 )
 
-# Secrets the store can generate a new random value for on rotation. The one
-# name NOT in here (GOOGLE_DRIVE_CLIENT_SECRET) can only be rotated with an
-# explicit value, because the real secret lives in Google's own OAuth client
-# config — this app has no authority to invent one.
+# Secrets shared with Castor's backend/Node process, where rotating here
+# would silently break the OTHER service: Castor has NOT implemented the
+# double-key verification window (SECRET_KEY) or Secret Manager reads
+# (DRIVE_TOKEN_SECRET) yet (T13, confirmed by reading Castor's repo, not
+# assumed). Rotation is disabled for these — still visible (hint, last
+# rotation) so the panel doesn't just hide that they exist — with the
+# reason surfaced to the admin instead of a bare 403. Lift this once
+# Castor's dev confirms the same support is live there (docs/specs/
+# secrets-panel.md §9, item 1 of the list for Castor's PM).
+#
+# DRIVE_STATE_SECRET is NOT in here: confirmed via Handover.md nota (41)
+# (2026-10-02, "SECRET_KEY y DRIVE_TOKEN_SECRET igualados a los de Castor")
+# that only those two were ever deliberately synced between the two local
+# envs — DRIVE_STATE_SECRET was never mentioned, consistent with it being
+# purely transient (an OAuth CSRF HMAC verified within the same request/
+# response cycle, nothing persisted) and never needing to match across
+# products. No value was read to reach this conclusion — see that module's
+# own note for the evidence trail if this ever needs re-confirming.
+ROTATION_DISABLED: dict[str, str] = {
+    "SECRET_KEY": (
+        "Compartido con el backend Python y el servidor Node de Castor. "
+        "Castor todavía no implementó la ventana de doble clave — rotar acá "
+        "tumbaría sus sesiones de inmediato. Pendiente de soporte en Castor."
+    ),
+    "DRIVE_TOKEN_SECRET": (
+        "Compartido con el backend Python de Castor (misma tabla "
+        "api_key_config y drive_tokens en leto-postgres). Castor todavía no "
+        "lee este secreto desde Secret Manager — rotar acá dejaría sus "
+        "filas cifradas ilegibles para su proceso. Pendiente de soporte en "
+        "Castor."
+    ),
+}
+
+# Secrets the store can generate a new random value for on rotation. The
+# names here are exactly MANAGED_SECRETS — GOOGLE_DRIVE_CLIENT_SECRET never
+# belonged here (it needs an explicit value from Google's own console, this
+# app has no authority to invent one) and has moved to api_key_config
+# anyway, where rotation already requires an explicit value by design.
 AUTO_GENERATABLE = (
     "SECRET_KEY",
     "DRIVE_TOKEN_SECRET",

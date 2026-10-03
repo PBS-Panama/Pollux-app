@@ -97,8 +97,8 @@ def _build_service(user_id: str, db: Session) -> DriveService:
         raise HTTPException(status_code=400, detail="Google Drive not connected")
     rt = decrypt_token(row.encrypted_rt)
     from app.services.google_drive import refresh_access_token
-    tok = refresh_access_token(rt)
-    return DriveService(access_token=tok["access_token"], refresh_token=rt)
+    tok = refresh_access_token(rt, db)
+    return DriveService(access_token=tok["access_token"], refresh_token=rt, db=db)
 
 
 # ─── Multipart upload to castor Express ──────────────────────────────────────
@@ -145,10 +145,10 @@ def _upload_to_castor(user_id: str, file_bytes: bytes, filename: str,
 # ─── Auth URL ────────────────────────────────────────────────────────────────
 
 @router.get("/drive/auth-url")
-def get_auth_url(current_user: User = Depends(get_current_user)):
+def get_auth_url(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role not in ("seafarer",):
         raise HTTPException(status_code=403)
-    if not is_configured():
+    if not is_configured(db):
         return {"configured": False, "url": None}
     state = _make_state(str(current_user.id))
     return {"configured": True, "url": build_auth_url(state)}
@@ -170,7 +170,7 @@ def oauth_callback(code: str = "", state: str = "", error: str = "", db: Session
         return RedirectResponse("/app/#/settings?drive=error&reason=csrf")
 
     try:
-        tok = exchange_code(code)
+        tok = exchange_code(code, db)
         access_token  = tok.get("access_token", "")
         refresh_token = tok.get("refresh_token", "")
         if not refresh_token:
@@ -203,7 +203,7 @@ def oauth_callback(code: str = "", state: str = "", error: str = "", db: Session
 def drive_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     row = _get_tokens(str(current_user.id), db)
     if not row:
-        return {"connected": False, "email": None, "lastSyncAt": None, "configured": is_configured()}
+        return {"connected": False, "email": None, "lastSyncAt": None, "configured": is_configured(db)}
     return {
         "connected": True,
         "email": row.google_email,

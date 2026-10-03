@@ -1,4 +1,3 @@
-import os
 import json
 import base64
 import urllib.error
@@ -8,11 +7,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.services.token_crypto import decrypt_token
+from app.services.secret_store import get_secret
 
 
 @dataclass
@@ -160,9 +158,6 @@ class ClaudeVisionProvider(OcrProvider):
     Only handles image/* MIME types; PDFs are handled upstream by PdfTextProvider."""
 
     _SUPPORTED = {"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"}
-    # Shared with check_api_key() below — the admin "Probar" button has to hit
-    # the same model the real analysis uses, or it can pass on a key that the
-    # analysis then fails with (model not available to that workspace).
     MODEL = "claude-sonnet-4-6"
 
     def __init__(self, api_key: str, doc_key: str = "", expected_keywords: Optional[List[str]] = None,
@@ -315,125 +310,12 @@ class PdfTextProvider(OcrProvider):
         return self._fallback.extract(file_bytes, mime_type)
 
 
-_DB_KEY_NAMES = ("ANTHROPIC_API_KEY", "GOOGLE_VISION_API_KEY")
-
-
-def _read_key_from_db(db: Session, key_name: str) -> str:
-    """Admin-configured key (Handover.md nota 48) takes priority over the env
-    var — the panel is the preferred path once someone uses it, but nothing
-    that already worked via env var stops working. Decrypt failures (wrong
-    DRIVE_TOKEN_SECRET, corrupted row) fall back to the env var rather than
-    hard-failing analysis over a config-table problem."""
-    try:
-        row = db.execute(
-            text("SELECT encrypted_value FROM api_key_config WHERE key_name = :k"),
-            {"k": key_name},
-        ).fetchone()
-        if row and row.encrypted_value:
-            return decrypt_token(row.encrypted_value).strip()
-    except Exception:
-        pass
-    return ""
-
-
-# ─── Admin "Probar" button (routers/admin.py, POST /config/api-keys/test) ────
-# 2026-10-02: Rick's Anthropic key was rejected by the API ("not scoped to a
-# workspace") and nobody knew until a document was analyzed. This makes one
-# minimal real call with the key the OCR would actually use, so a rejected key
-# is found on the Config screen instead of on the next seafarer upload.
-
-# 1x1 transparent PNG — the smallest valid image Vision will accept.
-_PROBE_PNG_B64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-)
-
-
-def _probe_anthropic(api_key: str) -> tuple[bool, str]:
-    import anthropic  # runtime import, same reason as ClaudeVisionProvider
-
-    def _provider_message(exc: "anthropic.APIStatusError") -> str:
-        body = exc.body
-        if isinstance(body, dict) and isinstance(body.get("error"), dict):
-            return str(body["error"].get("message") or exc.message)
-        return exc.message
-
-    try:
-        anthropic.Anthropic(api_key=api_key, timeout=20.0, max_retries=0).messages.create(
-            model=ClaudeVisionProvider.MODEL,
-            max_tokens=1,
-            messages=[{"role": "user", "content": "ping"}],
-        )
-    except anthropic.RateLimitError as exc:
-        # A 429 means the key authenticated — it's throttled, not rejected.
-        return False, f"Anthropic 429 (key accepted, rate-limited right now): {_provider_message(exc)}"
-    except anthropic.APIStatusError as exc:
-        return False, f"Anthropic {exc.status_code}: {_provider_message(exc)}"
-    except anthropic.APIConnectionError:
-        return False, "Could not reach Anthropic from this server."
-    return True, f"Anthropic accepted the key (model {ClaudeVisionProvider.MODEL})."
-
-
-def _probe_google_vision(api_key: str) -> tuple[bool, str]:
-    payload = json.dumps({
-        "requests": [{
-            "image": {"content": _PROBE_PNG_B64},
-            "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
-        }]
-    }).encode("utf-8")
-    # Key in a header here, not in the query string like extract() does — an
-    # error raised by urllib can carry the URL, and this result goes to a browser.
-    req = urllib.request.Request(
-        GoogleVisionProvider._ENDPOINT,
-        data=payload,
-        headers={"Content-Type": "application/json", "X-Goog-Api-Key": api_key},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            resp.read()
-    except urllib.error.HTTPError as exc:
-        try:
-            message = json.loads(exc.read().decode("utf-8"))["error"]["message"]
-        except Exception:
-            message = str(exc.reason)
-        return False, f"Google Vision {exc.code}: {message}"
-    except urllib.error.URLError:
-        return False, "Could not reach Google Vision from this server."
-    return True, "Google Vision accepted the key."
-
-
-def check_api_key(db: Session, key_name: str) -> dict:
-    """Resolves the key exactly like get_ocr_provider() does (panel row first,
-    env var as fallback) and probes the provider with it. Returns only
-    ok/detail/where the key came from — the key itself never leaves here.
-
-    `undecryptable` is the one thing get_ocr_provider() can't tell anyone: the
-    row is there but this server's DRIVE_TOKEN_SECRET can't read it (it
-    changed, or the row was saved by a backend with a different one — happened
-    in production on 2026-10-01 with the Vision key)."""
-    undecryptable = False
-    key, source = "", None
-    row = db.execute(
-        text("SELECT encrypted_value FROM api_key_config WHERE key_name = :k"),
-        {"k": key_name},
-    ).fetchone()
-    if row and row.encrypted_value:
-        try:
-            key, source = decrypt_token(row.encrypted_value).strip(), "panel"
-        except Exception:
-            undecryptable = True
-    if not key:
-        key = os.environ.get(key_name, "").strip()
-        source = "env" if key else None
-
-    if not key:
-        return {"ok": False, "source": None, "undecryptable": undecryptable,
-                "detail": "No key available: nothing usable in the panel and no env var on this server."}
-
-    ok, detail = (_probe_anthropic if key_name == "ANTHROPIC_API_KEY" else _probe_google_vision)(key)
-    # Neither provider echoes the key in its errors today; this is the belt to
-    # that suspender, since `detail` is rendered in a browser.
-    return {"ok": ok, "source": source, "undecryptable": undecryptable, "detail": detail.replace(key, "****")}
+# Key resolution (DB-first, env fallback) and the admin "Probar" button both
+# moved to app/services/secret_store.py + app/routers/admin.py (T13,
+# 2026-10-03) — same contract Castor ships (Handover.md nota 136), replacing
+# this file's own _read_key_from_db()/check_api_key()/_probe_*() from
+# 2026-10-02. get_secret() is the one resolver now, used here and by
+# google_drive.py for GOOGLE_DRIVE_CLIENT_SECRET.
 
 
 def get_ocr_provider(doc_key: str = "", rules_context: Optional[dict] = None,
@@ -446,8 +328,8 @@ def get_ocr_provider(doc_key: str = "", rules_context: Optional[dict] = None,
     db: optional session — when given, checks api_key_config (Handover.md nota
     48) before falling back to the env var. Callers with no DB session handy
     (tests, scripts) keep working on the env var alone."""
-    anthropic_key = (db and _read_key_from_db(db, "ANTHROPIC_API_KEY")) or os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    google_key = (db and _read_key_from_db(db, "GOOGLE_VISION_API_KEY")) or os.environ.get("GOOGLE_VISION_API_KEY", "").strip()
+    anthropic_key = get_secret("ANTHROPIC_API_KEY", db)
+    google_key = get_secret("GOOGLE_VISION_API_KEY", db)
     expected_keywords = (rules_context or {}).get("expected_keywords", [])
 
     if not anthropic_key and not google_key and settings.is_production:

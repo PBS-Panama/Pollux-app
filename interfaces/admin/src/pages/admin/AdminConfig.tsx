@@ -41,8 +41,8 @@ const FLEET_LABELS: Record<string, string> = {
 }
 
 export default function AdminConfig() {
-  const [tab, setTab] = useState<'settings' | 'catalog' | 'api-keys' | 'secrets'>('settings')
-  // The API Keys tab is admin-only on the backend (403); don't offer it to a
+  const [tab, setTab] = useState<'settings' | 'catalog' | 'security'>('settings')
+  // The Security tab is admin-only on the backend (403); don't offer it to a
   // session that isn't one.
   const isAdmin = useAuthStore((s) => s.user?.role) === 'admin'
 
@@ -184,10 +184,10 @@ export default function AdminConfig() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-1 w-fit">
-        {(['settings', 'catalog', 'api-keys', 'secrets'] as const).filter(t => (t !== 'api-keys' && t !== 'secrets') || isAdmin).map(t => (
+        {(['settings', 'catalog', 'security'] as const).filter(t => t !== 'security' || isAdmin).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${tab === t ? 'bg-cyan-400/15 text-cyan-400 border border-cyan-400/20' : 'text-white/35 hover:text-white/60'}`}>
-            {t === 'settings' ? 'Platform Settings' : t === 'catalog' ? `Rank Catalog (${Object.keys(catalog).length})` : t === 'api-keys' ? 'API Keys' : 'Secrets'}
+            {t === 'settings' ? 'Platform Settings' : t === 'catalog' ? `Rank Catalog (${Object.keys(catalog).length})` : 'Security'}
           </button>
         ))}
       </div>
@@ -244,11 +244,19 @@ export default function AdminConfig() {
         </div>
       )}
 
-      {/* ── API KEYS TAB ───────────────────────────────────────── */}
-      {tab === 'api-keys' && isAdmin && <ApiKeysTab />}
-
-      {/* ── SECRETS TAB (T8/T9/T10) ───────────────────────────── */}
-      {tab === 'secrets' && isAdmin && <AdminSecretsManager />}
+      {/* ── SECURITY TAB — una pantalla: claves de terceros + Secret Manager (T13) ── */}
+      {tab === 'security' && isAdmin && (
+        <div className="flex flex-col gap-6">
+          <div>
+            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wide mb-3">Claves de proveedores</h3>
+            <ApiKeysTab />
+          </div>
+          <div className="border-t border-white/[0.06] pt-6">
+            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wide mb-3">Secret Manager</h3>
+            <AdminSecretsManager />
+          </div>
+        </div>
+      )}
 
       {/* ── CATALOG TAB ────────────────────────────────────────── */}
       {tab === 'catalog' && (

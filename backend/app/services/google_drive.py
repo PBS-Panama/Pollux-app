@@ -19,6 +19,10 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Optional
 
+from sqlalchemy.orm import Session
+
+from app.services.secret_store import get_secret
+
 _TOKEN_URL     = "https://oauth2.googleapis.com/token"
 _REVOKE_URL    = "https://oauth2.googleapis.com/revoke"
 _USERINFO_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
@@ -30,12 +34,18 @@ _SCOPE         = "https://www.googleapis.com/auth/drive.file"
 # ─── Config helpers ─────────────────────────────────────────────────────────
 
 def get_client_id()     -> str: return os.environ.get("GOOGLE_DRIVE_CLIENT_ID", "")
-def get_client_secret() -> str: return os.environ.get("GOOGLE_DRIVE_CLIENT_SECRET", "")
+def get_client_secret(db: Optional[Session] = None) -> str:
+    """DB-first (admin panel), env var fallback — Handover.md nota 136. The
+    client ID stays env-only: it's not a secret (ships in the OAuth consent
+    URL itself), only the secret half moved to api_key_config. Coalesced to
+    "" (never None) — this value gets interpolated straight into urlencode()
+    request bodies below."""
+    return get_secret("GOOGLE_DRIVE_CLIENT_SECRET", db) or ""
 def get_redirect_uri()  -> str:
     return os.environ.get("GOOGLE_DRIVE_REDIRECT_URI", "http://localhost:4000/api/drive/callback")
 
-def is_configured() -> bool:
-    return bool(get_client_id() and get_client_secret())
+def is_configured(db: Optional[Session] = None) -> bool:
+    return bool(get_client_id() and get_client_secret(db))
 
 
 # ─── OAuth helpers (no DriveService instance needed) ─────────────────────────
@@ -53,12 +63,12 @@ def build_auth_url(state: str) -> str:
     return _AUTH_BASE + "?" + urllib.parse.urlencode(params)
 
 
-def exchange_code(code: str) -> dict:
+def exchange_code(code: str, db: Optional[Session] = None) -> dict:
     """Exchange authorization code for access + refresh tokens. Returns raw token response."""
     body = urllib.parse.urlencode({
         "code":          code,
         "client_id":     get_client_id(),
-        "client_secret": get_client_secret(),
+        "client_secret": get_client_secret(db),
         "redirect_uri":  get_redirect_uri(),
         "grant_type":    "authorization_code",
     }).encode()
@@ -67,12 +77,12 @@ def exchange_code(code: str) -> dict:
         return json.loads(resp.read())
 
 
-def refresh_access_token(refresh_token: str) -> dict:
+def refresh_access_token(refresh_token: str, db: Optional[Session] = None) -> dict:
     """Get a new access token using a stored refresh token."""
     body = urllib.parse.urlencode({
         "refresh_token": refresh_token,
         "client_id":     get_client_id(),
-        "client_secret": get_client_secret(),
+        "client_secret": get_client_secret(db),
         "grant_type":    "refresh_token",
     }).encode()
     req = urllib.request.Request(_TOKEN_URL, data=body, method="POST")
@@ -102,9 +112,10 @@ def revoke_token(token: str) -> None:
 class DriveService:
     """Thin wrapper around Drive v3 REST API. Handles transparent token refresh."""
 
-    def __init__(self, access_token: str, refresh_token: str):
+    def __init__(self, access_token: str, refresh_token: str, db: Optional[Session] = None):
         self._at  = access_token
         self._rt  = refresh_token
+        self._db  = db  # threaded through so a 401-triggered refresh (below) is DB-first too
         self._new_at: Optional[str] = None  # set when token is refreshed
 
     @property
@@ -130,7 +141,7 @@ class DriveService:
                 return raw
         except urllib.error.HTTPError as exc:
             if exc.code == 401 and retry and self._rt:
-                tok = refresh_access_token(self._rt)
+                tok = refresh_access_token(self._rt, self._db)
                 self._new_at = tok["access_token"]
                 return self._req(method, url, data=data, headers=headers,
                                  json_body=None, retry=False)
