@@ -1,11 +1,15 @@
-# Panel de secretos en el admin de Pollux — T8 (diseño) + T9 (local) + T10 (Secret Manager real)
+# Panel de secretos en el admin de Pollux — T8 (diseño) + T9 (local) + T10 (Secret Manager real) + T13/T14 (coordinación con Castor)
 
 **Estado:** T8 (diseño) y T9 (implementación local, dev-only) aceptados y hechos — ver
 `docs/handover/notas-pendientes-2026-09-28.md`. T10 agrega el backend REAL de Secret Manager a
 `secret_loader.py`, probado contra un secreto desechable en `pollux-app-507503` (creado y
-destruido en la misma corrida), y el **§8** de este documento es el plan exacto para pasar a
-producción — todavía sin ejecutar, pendiente de que Dandy y el PM de Castor lo revisen. No hay
-valores de secretos en este documento, solo nombres.
+destruido en la misma corrida). T13 saca `GOOGLE_DRIVE_CLIENT_SECRET` de este panel (se mueve a
+`api_key_config`, contrato de Castor). T14 corrige §8.1/§8.2 (nombres literales de secreto, no
+alias `leto-*`, aviso de Castor nota 140), actualiza §7 contra el código real de Castor
+(`1528c45`) y agrega el análisis de desbloqueo de `DRIVE_TOKEN_SECRET` en §9. El **§8** de este
+documento sigue siendo el plan exacto para pasar a producción — todavía sin ejecutar, pendiente
+de que Dandy y el PM de Castor lo revisen. No hay valores de secretos en este documento, solo
+nombres.
 
 **Alcance:** `pb-pollux` (`pollux-app-507503`) y `pb-castor` (`castor-app-506901`), que comparten
 la base `leto-postgres` y, según se confirma abajo, ya comparten infraestructura de Secret
@@ -284,32 +288,50 @@ significativo con el tráfico actual de estos dos servicios.
 
 ## 7. Qué necesita implementar Castor de su lado (lista para su PM)
 
-1. **`authMiddleware.js` (Express) — soportar doble clave en la verificación de `SECRET_KEY`**:
-   hoy prueba un solo valor; tiene que aceptar el actual y el anterior durante la ventana de
-   rotación, mismo criterio que el `decode_token()` de Python (§3.1).
-2. **Confirmar a qué secreto apunta realmente `pb-castor` hoy** para `SECRET_KEY`/`DATABASE_URL`
-   — el identificador que muestra `gcloud run services describe` no coincide en forma con
-   `leto-secret-key`/`leto-database-url` del listado de `pollux-app-507503` (§1.2). Antes de
-   construir sobre esa base, confirmar que de verdad es el mismo secreto y no uno huérfano.
-3. **Adoptar lectura desde Secret Manager (Opción A) para `DRIVE_TOKEN_SECRET`** en su propia
-   copia de `token_crypto.py` — mismo cambio que Pollux, mismo secreto centralizado.
-4. **Participar en la ventana de re-cifrado de `DRIVE_TOKEN_SECRET`** (§3.2): aunque el panel vive
-   en Pollux, el paso de re-cifrado toca tablas de la DB compartida que Castor también lee/escribe
-   (`drive_tokens`, `api_key_config` si Castor también los usa — confirmar). Necesita estar al
-   tanto de la ventana (aunque sea solo "no escribas en estas tablas por N minutos").
-5. **Confirmar si `GOOGLE_DRIVE_CLIENT_ID`/`SECRET` son el mismo cliente OAuth de Google en los
-   dos productos o dos clientes distintos** (§1.1) — determina si rotar ese secreto es una
-   operación o dos.
-6. **Decidir si Castor necesita su propio panel/endpoint de "probar" (§4) para los secretos que
-   lee pero no escribe** — aunque no rote nada, puede valer la pena que Castor tenga una forma de
-   verificar "¿la versión que estoy leyendo ahora mismo decodifica/descifra correctamente?" sin
-   depender de que el panel de Pollux se lo confirme.
-7. **Mismo criterio de auditoría del lado Node** si Castor llega a necesitar su propia tabla de
-   log (probablemente no, si todas las rotaciones pasan por el panel de Pollux — a confirmar).
-8. **Migración `0013_secret_rotation_log`**: copiarla tal cual al repo de Castor (mismo
-   `revision`/`down_revision`/nombre de archivo) antes de que cualquiera de los dos deploye más
-   allá de `0012` — si no, el `alembic upgrade head` que corra segundo no encuentra una cadena en
-   común y aborta (T9, ya resuelto del lado Pollux).
+**Estado T14 (2026-10-03)**, contra `PBS-Panama/Castor-app` `main` en `1528c45` (notas 136-140
+de su Handover, verificado leyendo su código, no solo su reporte):
+
+1. ⏳ **PENDIENTE** — `authMiddleware.js` (Express) — soportar doble clave en la verificación de
+   `SECRET_KEY`: hoy prueba un solo valor; tiene que aceptar el actual y el anterior durante la
+   ventana de rotación, mismo criterio que el `decode_token()` de Python (§3.1). Es el último del
+   orden que Castor viene siguiendo (`DRIVE_STATE_SECRET` → `GOOGLE_DRIVE_CLIENT_SECRET` →
+   `DRIVE_TOKEN_SECRET` → `SECRET_KEY`) — todavía no empezado. `SECRET_KEY` sigue y debe seguir
+   bloqueado en el panel de Pollux hasta que esto exista.
+2. ❓ **SIGUE SIN CONFIRMAR** — a qué secreto apunta realmente `pb-castor` hoy para
+   `SECRET_KEY`/`DATABASE_URL` (el identificador que muestra `gcloud run services describe` no
+   coincide en forma con `leto-secret-key`/`leto-database-url`, §1.2). No apareció resuelto en
+   ninguna de las notas 136-140 — sigue siendo una pregunta abierta para cuando se encare
+   `SECRET_KEY` (punto 1).
+3. ✅ **HECHO** (nota 140) — lectura desde Secret Manager para `DRIVE_TOKEN_SECRET`, cross-proyecto
+   contra `pollux-app-507503`, con reintento ante `InvalidToken` para la ventana de caché de 5 min
+   entre que Pollux re-cifra y esta instancia refresca su copia cacheada.
+4. ✅ **RESUELTO, pero distinto de lo que pedía el punto original** (nota 140) — Castor NO
+   participa en el re-cifrado: por diseño (§2.3, "un secreto, un proyecto, un escritor"), el
+   `_reencrypt_drive_secret_rows()` de Pollux es el único que toca `drive_tokens`/`api_key_config`
+   compartidas, en una sola transacción atómica — Castor solo necesita poder volver a leer bien
+   después (punto 3). No hace falta coordinación de "no escribas por N minutos": no hay fase
+   intermedia, es todo-o-nada por transacción de Postgres.
+5. ✅ **MOOT** — ya no aplica: `GOOGLE_DRIVE_CLIENT_SECRET` se movió a `api_key_config` (T13), una
+   sola fila en la DB compartida — no hay "dos clientes distintos" posibles, es el mismo valor por
+   construcción.
+6. ✅ **HECHO** (notas 138/140) — Castor tiene su propio endpoint `POST /api/admin/secrets/{name}/
+   test` (igual contrato que el de Pollux) para `DRIVE_STATE_SECRET` (prueba real) y
+   `DRIVE_TOKEN_SECRET` (`_test_drive_token_secret`, cifra+descifra un valor de prueba sin tocar
+   filas reales) — puede confirmar por su cuenta que lo que está leyendo ahora mismo funciona, sin
+   depender de Pollux.
+7. ✅ **CONFIRMADO, sin tabla propia** — Castor usa la MISMA `secret_rotation_log` en
+   `leto-postgres` (vía `GET/POST /api/admin/secrets/...`, mismos paths que Pollux) para las
+   rotaciones que sí hace (`DRIVE_STATE_SECRET`, el suyo propio) — no necesitó ni construyó una
+   tabla Node-side separada.
+8. ✅ **HECHO, verificado T14** — migración `0013_secret_rotation_log.py` copiada; diff byte a
+   byte contra la de Pollux (T14): **0 líneas de diferencia**, mismo `revision`/`down_revision`.
+   Sin correr todavía en ninguno de los dos lados (gate de siempre, autorización explícita antes
+   de `alembic upgrade head` contra `leto-postgres`).
+
+**Punto nuevo que no estaba en la lista original, aviso de Castor (nota 140):** los nombres de
+los secretos NUEVOS que cree Pollux en Secret Manager tienen que ser el nombre **literal** de la
+constante (`DRIVE_TOKEN_SECRET`, `DRIVE_STATE_SECRET`), no un alias con prefijo `leto-` — ver
+§8.1, corregido en T14. El código de los dos repos (`_secret_path()`) no soporta ningún mapeo.
 
 ---
 
@@ -324,19 +346,31 @@ secreto. Lo que sigue es el plan para que sí lo tenga, de forma acotada, cuando
 
 ### 8.1 Secretos — crear o reutilizar
 
+**Corrección (T14, 2026-10-03, decisión de Rick vía Dandy, aviso de Castor nota 140):** la
+versión anterior de esta tabla proponía nombres con prefijo `leto-` (`leto-drive-token-secret`,
+`leto-drive-state-secret`, `leto-google-drive-client-secret`) para los secretos NUEVOS. Es
+**incorrecto contra el código real**: `GcpSecretManagerStore._secret_path()` (en los dos
+repos, Pollux y Castor, confirmado línea por línea) arma el ID del secreto en Secret Manager
+como `f"projects/{project}/secrets/{name}"` usando el **nombre literal de la constante**
+(`DRIVE_TOKEN_SECRET`, `DRIVE_STATE_SECRET`) — no hay alias ni mapeo en ningún lado del código.
+Si alguien hubiera creado `leto-drive-token-secret` siguiendo la tabla vieja, **ningún backend lo
+habría encontrado nunca** (Castor lo detectó primero porque implementó el lado lectura antes de
+que esto se corrigiera acá). Decisión: los secretos nuevos se crean con el nombre **literal** de
+la constante, sin excepción.
+
 | Secreto | Acción | Nota |
 |---|---|---|
-| `leto-secret-key` (`SECRET_KEY`) | **Reutilizar** — ya existe en `pollux-app-507503`, ya tiene `secretAccessor` para `pollux-run@`/`castor-run@`. Falta: confirmar que es el mismo que referencia `pb-castor` hoy (§7, punto 2 de la lista de Castor) antes de dar por buena la lectura cross-proyecto que ya existe. | Alto riesgo — compartido |
-| `leto-database-url` (`DATABASE_URL`) | **No se toca** — fuera de alcance del panel (§3.3), esta tarea no la rota ni la lee vía `secret_loader`. | — |
-| `leto-drive-token-secret` (`DRIVE_TOKEN_SECRET`) | **Crear nuevo**, sembrado con el valor actual del env var de `pb-pollux` (copiarlo tal cual, no generar uno nuevo en la creación — generar uno nuevo es lo que hace la PRIMERA rotación real, después de que el código ya esté leyendo de Secret Manager en los dos productos). | Alto riesgo — compartido |
-| `leto-drive-state-secret` (`DRIVE_STATE_SECRET`) | **Crear nuevo**, mismo criterio. **No compartido** por defecto (Rick solo mencionó `SECRET_KEY`/`DRIVE_TOKEN_SECRET` como compartidos) — cada producto tendría el suyo salvo que el PM de Castor confirme que hoy usan el mismo valor. | Bajo riesgo |
-| `leto-google-drive-client-secret` (`GOOGLE_DRIVE_CLIENT_SECRET`) | **Crear nuevo**, mismo criterio. Compartido o no: pendiente de confirmar con Castor (§7, punto 5) — si confirman que es el mismo cliente OAuth, se agrega `castor-run@` después con un solo comando más. | Riesgo medio |
+| `SECRET_KEY` | **No se toca todavía** — sigue bloqueado en el panel (`ROTATION_DISABLED`, Castor no tiene doble clave para este). El secreto `leto-secret-key` que ya existe en `pollux-app-507503` **no se renombra ni se reutiliza** — es infraestructura previa a este panel (§1.2), con un nombre que no coincide con lo que el código buscaría si se lo activara (`SECRET_KEY` literal). **Dejar anotado para cuando se desbloquee:** en ese momento hace falta crear un secreto nuevo llamado literalmente `SECRET_KEY` (mismo criterio que los dos de abajo) — `leto-secret-key` queda como está, sin usarse por este código, salvo que alguien decida limpiarlo aparte. | Alto riesgo — compartido, bloqueado |
+| `DATABASE_URL` | **No se toca** — fuera de alcance del panel (§3.3), esta tarea no la rota ni la lee vía `secret_loader`. `leto-database-url` queda como está, sin relación con este panel. | — |
+| `DRIVE_TOKEN_SECRET` | **Crear nuevo con este nombre literal**, en `pollux-app-507503`, sembrado con el valor actual del env var de `pb-pollux` (copiarlo tal cual, no generar uno nuevo en la creación). Castor ya lee de acá (Handover nota 140) con el mismo nombre literal — confirmado. | Alto riesgo — compartido |
+| `DRIVE_STATE_SECRET` | **Crear nuevo con este nombre literal**, en `pollux-app-507503`, mismo criterio. **No compartido** — confirmado por los dos lados independientemente (Pollux: nota 41, solo `SECRET_KEY`/`DRIVE_TOKEN_SECRET` se igualaron; Castor: nota 137/138, mismo hallazgo) — Castor mantiene el suyo propio en `castor-app-506901`, también con nombre literal. | Bajo riesgo |
 
-Nombres con el prefijo `leto-` a propósito — es la convención ya establecida para infraestructura
-de Pollux en este proyecto (los dos secretos existentes la usan), no una referencia al futuro
-producto de IA.
+**`GOOGLE_DRIVE_CLIENT_SECRET` ya no va en esta tabla** — se movió fuera de este panel en T13
+(2026-10-03): vive en `api_key_config` (DB compartida), no en Secret Manager, confirmado también
+del lado de Castor (Handover nota 139, "ya estaba en api_key_config, confirmado"). No hace falta
+crear ningún secreto nuevo para esto.
 
-**Por qué crear los 3 nuevos ANTES de deployar el código nuevo, con el valor actual copiado tal
+**Por qué crear los 2 nuevos ANTES de deployar el código nuevo, con el valor actual copiado tal
 cual (no uno generado):** si no existen todavía cuando el código nuevo arranca,
 `GcpSecretManagerStore.seed_if_missing()` los crearía automáticamente al vuelo — lo cual
 necesitaría darle a `pollux-run@` permiso de `secrets.create`, un permiso más amplio del que hace
@@ -362,10 +396,12 @@ gcloud iam roles create polluxSecretRotator \
   --stage=GA
 ```
 
-Concedido **por secreto**, nunca a nivel de proyecto — para `leto-secret-key` y los 3 nuevos:
+Concedido **por secreto**, nunca a nivel de proyecto — para los 2 nuevos (nombres literales,
+corregido en T14; `SECRET_KEY`/`leto-secret-key` queda fuera de esta lista mientras siga
+bloqueado, ver §8.1):
 
 ```bash
-for s in leto-secret-key leto-drive-token-secret leto-drive-state-secret leto-google-drive-client-secret; do
+for s in DRIVE_TOKEN_SECRET DRIVE_STATE_SECRET; do
   gcloud secrets add-iam-policy-binding "$s" \
     --project=pollux-app-507503 \
     --member="serviceAccount:pollux-run@pollux-app-507503.iam.gserviceaccount.com" \
@@ -375,62 +411,73 @@ done
 
 Esto reemplaza los dos roles predefinidos que había propuesto antes (`secretAccessor` +
 `secretVersionAdder`) — el rol custom ya incluye `versions.access` (lectura de payload), así que
-no hace falta `secretAccessor` aparte para `pollux-run@` en los 3 secretos nuevos.
-`leto-secret-key` ya tiene `secretAccessor` concedido de antes (T8) — queda ese binding viejo
-intacto además del nuevo, no hace falta sacarlo (es redundante pero inofensivo; se puede limpiar
-después si se quiere, no es parte de este plan).
+no hace falta `secretAccessor` aparte para `pollux-run@`.
 
-`castor-run@` — ya tiene `secretAccessor` en `leto-secret-key` (confirmado T8). Falta, si se
-centraliza ahí como dice §2.3:
+`castor-run@` — necesita lectura en `DRIVE_TOKEN_SECRET` (el que de verdad usa hoy, nota 140 de
+Castor ya está leyendo de acá con este nombre):
 
 ```bash
-gcloud secrets add-iam-policy-binding leto-drive-token-secret \
+gcloud secrets add-iam-policy-binding DRIVE_TOKEN_SECRET \
   --project=pollux-app-507503 \
   --member="serviceAccount:castor-run@castor-app-506901.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 ```
 
-`castor-run@` **no** necesita nada en `leto-drive-state-secret` (no compartido por defecto, §8.1)
-ni en `leto-google-drive-client-secret` (pendiente de confirmar si es compartido).
+`castor-run@` **no** necesita nada en `DRIVE_STATE_SECRET` de Pollux — Castor tiene el suyo
+propio, independiente, en `castor-app-506901` (§8.1). `GOOGLE_DRIVE_CLIENT_SECRET` no aplica acá
+en absoluto, está fuera de Secret Manager desde T13.
 
 ### 8.3 Env vars nuevas de `pb-pollux`
 
 Ninguna variable de entorno nueva hace falta para que el código funcione — `secret_loader.py` ya
 usa `pollux-app-507503` por defecto (`SECRET_MANAGER_PROJECT_ID`), que es donde viven estos
-secretos. Lo que cambia es que, una vez desplegado el código nuevo y migrados los 3 secretos
-nuevos (§8.1), **las env vars actuales (`SECRET_KEY`, `DRIVE_TOKEN_SECRET`, `DRIVE_STATE_SECRET`,
-`GOOGLE_DRIVE_CLIENT_SECRET`) se pueden sacar de la configuración de Cloud Run** — dejan de
-leerse en producción (`_is_production()` fuerza el backend de Secret Manager, nunca cae al env
-var). No hace falta sacarlas en el mismo deploy que el código nuevo — pueden convivir unos días
-por las dudas, el código en producción simplemente las ignora.
+secretos. Lo que cambia es que, una vez desplegado el código nuevo y migrados los 2 secretos
+nuevos (§8.1), **las env vars actuales (`DRIVE_TOKEN_SECRET`, `DRIVE_STATE_SECRET`) se pueden
+sacar de la configuración de Cloud Run** — dejan de leerse en producción (`_is_production()`
+fuerza el backend de Secret Manager, nunca cae al env var). No hace falta sacarlas en el mismo
+deploy que el código nuevo — pueden convivir unos días por las dudas, el código en producción
+simplemente las ignora. `SECRET_KEY` sigue como env var plana mientras siga bloqueado (§8.1).
+`GOOGLE_DRIVE_CLIENT_SECRET` ya no aplica a este punto — no está en Secret Manager (T13).
 
 ### 8.4 Orden de deploy — Pollux y Castor
 
-El orden importa porque `SECRET_KEY`/`DRIVE_TOKEN_SECRET` son compartidos: si Pollux rota
-cualquiera de los dos en producción antes de que Castor sepa verificar/leer con el patrón de
-doble clave, Castor empieza a rechazar tokens o a fallar al descifrar — una caída real, no
-teórica.
+**Actualizado T14 (2026-10-03):** el código del lado de Castor para los puntos 1 y parte del 3 ya
+está hecho y confirmado por lectura contra `origin/main` de `PBS-Panama/Castor-app`
+(`1528c45`, notas 138-140 de su Handover) — **todavía no desplegado a `pb-castor`** (son commits
+en el repo, no una revisión nueva de Cloud Run corriendo). Lo que sigue describe el orden
+completo igual, marcando qué parte ya está lista para desplegar y qué falta.
 
-1. **Castor despliega primero** (o al mismo tiempo, nunca después): doble clave en
-   `authMiddleware.js` (§7, punto 1) + lectura de `DRIVE_TOKEN_SECRET` desde Secret Manager (§7,
-   punto 3) + migración `0013` copiada (§7, punto 8, sin correrla todavía si Pollux no la corrió).
-   Con esto desplegado, Castor sigue funcionando exactamente igual que hoy (lee los mismos env
-   vars de siempre) — el cambio es que YA PUEDE tolerar que Pollux rote, sin que Castor todavía
-   haga nada distinto.
+El orden importa porque `DRIVE_TOKEN_SECRET` es compartido: si Pollux rota en producción antes de
+que el deploy de Castor con lectura desde Secret Manager esté corriendo, Castor empieza a fallar
+al descifrar — una caída real, no teórica. (`SECRET_KEY` no entra en este orden todavía: sigue
+bloqueado, Castor no tiene doble clave para él — ver §7 actualizado.)
+
+1. **Desplegar el código de Castor ya hecho** (o al mismo tiempo que el paso 5, nunca después):
+   doble clave en `DRIVE_STATE_SECRET` vía `secret_loader` (nota 138) + lectura de
+   `DRIVE_TOKEN_SECRET` desde Secret Manager cross-proyecto, con reintento ante `InvalidToken`
+   (nota 140) + migración `0013` copiada (idéntica, verificado T14 — sin correrla todavía si
+   Pollux no la corrió). Con esto desplegado, Castor sigue funcionando exactamente igual que hoy
+   para todo lo demás — el cambio es que YA PUEDE tolerar que Pollux rote `DRIVE_TOKEN_SECRET`,
+   sin que Castor todavía haga nada distinto por su cuenta (nunca escribe ese secreto — bloqueado
+   también de su lado, por diseño, no por falta de soporte).
 2. **Correr la migración `0013`** contra `leto-postgres` (procedimiento ya establecido: backup,
    túnel, `alembic upgrade head`, verificación con salida real — igual que `0007`→`0012`). Una
-   sola vez, no una por producto.
-3. **Crear y sembrar los 3 secretos nuevos** (§8.1) con los valores actuales — todavía sin tocar
-   IAM ni deployar código que los lea.
+   sola vez, no una por producto. Confirmado T14: el archivo es idéntico byte a byte en los dos
+   repos — no hay nada que reconciliar antes de correrla.
+3. **Crear y sembrar los 2 secretos nuevos** (§8.1, nombres literales) con los valores actuales —
+   todavía sin tocar IAM ni deployar código que los lea.
 4. **Conceder el IAM** (§8.2) — en este punto `pollux-run@`/`castor-run@` ya pueden leer/rotar,
    pero el código viejo de `pb-pollux` (sin este cambio) ni siquiera lo intenta — sin efecto
    todavía.
 5. **Deployar Pollux** (el código de T9+T10, `pb-pollux-v2` primero, verificar, después
    `pb-pollux`, regla de siempre de este repo). A partir de acá el panel funciona de verdad en
    producción, pero **nadie rota nada todavía** — el deploy en sí no dispara ninguna rotación.
-6. **Probar el panel en prod** empezando por el secreto de menor riesgo
-   (`DRIVE_STATE_SECRET`, como ya definió el plan de prueba de T8 §6), después
-   `GOOGLE_DRIVE_CLIENT_SECRET`, después `DRIVE_TOKEN_SECRET`, `SECRET_KEY` al final.
+6. **Probar el panel en prod** empezando por el secreto de menor riesgo (`DRIVE_STATE_SECRET`,
+   como ya definió el plan de prueba de T8 §6), después `DRIVE_TOKEN_SECRET` — **solo si para
+   entonces se desbloqueó su `ROTATION_DISABLED`, ver §7 actualizado, decisión pendiente de
+   Rick**. `SECRET_KEY` al final, cuando exista doble clave del lado de Castor (todavía no
+   empezado). `GOOGLE_DRIVE_CLIENT_SECRET` sale de esta secuencia — no vive en este panel desde
+   T13, se prueba/rota desde `api_key_config` (Settings → Security, ya en producción local).
 
 ### 8.5 Cómo volver atrás, en cada paso
 
@@ -448,3 +495,69 @@ teórica.
 `DATABASE_URL` sigue exactamente igual (§3.3, fuera de alcance). El backend de archivo de
 desarrollo (T9) sigue siendo lo que usa el stack local — nada de esto afecta el flujo de
 `docker compose up` de nadie.
+
+---
+
+## 9. T14 — Análisis: ¿se puede desbloquear ya la rotación de `DRIVE_TOKEN_SECRET`?
+
+**No se tocó `ROTATION_DISABLED` en el código** — esto es análisis y propuesta únicamente, a la
+espera del OK explícito de Rick, como pidió.
+
+### El mecanismo ya es seguro, en el papel
+
+Con el código que Castor ya tiene (sin desplegar todavía, nota 140):
+- Lectura cross-proyecto confirmada contra el mismo secreto (`DRIVE_TOKEN_SECRET` literal, mismo
+  proyecto `pollux-app-507503`, §3 de este documento).
+- `decrypt_token()` del lado Castor reintenta ante `InvalidToken` invalidando su caché y
+  releyendo — cubre exactamente la ventana de hasta 5 minutos entre que Pollux re-cifra/activa la
+  versión nueva y el caché de otra instancia (la de Castor, o cualquier otra réplica de Pollux que
+  no haya sido la que rotó) se actualiza solo.
+- Pollux sigue siendo el único escritor (`_reencrypt_drive_secret_rows()`), una sola transacción
+  atómica — Castor nunca escribe, ni re-cifra, ni crea una segunda pasada que pueda competir con
+  la de Pollux (`_check_castor_owns()` lo bloquea también a nivel de código, no solo HTTP).
+
+Ningún hallazgo de Castor (nota 140, incluida la actualización con los 3 fixes que pidió su PM)
+quedó sin resolver sobre este punto específico — el `seed_if_missing()` que podía escribir sin
+querer en el proyecto de Pollux ya se cerró (punto 2 de esa nota), y es justamente el tipo de
+problema que este desbloqueo necesitaba tener resuelto antes de considerarse.
+
+### Pero el desbloqueo no es solo un flag — depende de qué esté REALMENTE corriendo en prod
+
+Hoy, en producción, ni `pb-pollux` ni `pb-castor` leen `DRIVE_TOKEN_SECRET` de Secret Manager
+todavía — los dos siguen con el env var plano de Cloud Run (el código de T9/T10 de Pollux nunca
+se desplegó más allá de local/pruebas puntuales con un secreto desechable, §8 arriba sigue
+"pendiente de ejecutar"; el de Castor está commiteado y pusheado pero no desplegado, nota 140). Si
+se saca `DRIVE_TOKEN_SECRET` de `ROTATION_DISABLED` HOY, en el código fuente, no pasa nada por sí
+solo — pero es una bandera que queda lista para que la primera rotación real en producción, el día
+que se despliegue, ya no esté bloqueada. El riesgo real no es el flag, es el **orden de deploy**:
+si alguien rota `DRIVE_TOKEN_SECRET` en prod mientras `pb-castor` sigue en la revisión VIEJA (env
+var plano, sin `secret_loader`, sin el reintento ante `InvalidToken`), esa instancia vieja no
+tiene ningún mecanismo para enterarse — el env var de Cloud Run no cambia solo porque Secret
+Manager tenga una versión nueva. Mismo resultado que describe hoy el texto de
+`ROTATION_DISABLED`: filas cifradas ilegibles para Castor, sin forma de recuperarse sola.
+
+### Propuesta
+
+**No desbloquear el código todavía.** Condicionar el desbloqueo de `DRIVE_TOKEN_SECRET` en
+`ROTATION_DISABLED` a que se cumplan, en este orden, los tres pasos de §8.4 que todavía no
+pasaron:
+
+1. Migración `0013` corrida contra `leto-postgres` (paso 2 de §8.4) — sin esto, ni rotar ni
+   hacer rollback puede escribir auditoría, revienta antes de llegar a la pregunta de si Castor
+   está listo o no.
+2. **`pb-castor` desplegado con el código de las notas 138-140** (paso 1 de §8.4) — confirmado por
+   el PM de Castor con la revisión real corriendo, no solo "está commiteado". Esto es lo único que
+   de verdad habilita el desbloqueo: sin esto, el mecanismo entero (lectura + reintento) no existe
+   en producción, por más seguro que esté en el repo.
+3. `pb-pollux` desplegado con el código T9/T10 (paso 5 de §8.4) y el secreto `DRIVE_TOKEN_SECRET`
+   ya creado/sembrado con el valor actual (paso 3) — para que la primera rotación real tenga algo
+   coherente de donde partir.
+
+Recién con los tres confirmados, sacar `DRIVE_TOKEN_SECRET` de `ROTATION_DISABLED` en
+`secret_loader.py` pasa a ser un cambio de una línea, de bajo riesgo — el mismo commit que se haga
+en ese momento puede ser el que lo saque, no hace falta anticiparlo ahora. Mientras tanto queda
+bloqueado y visible en el panel, con el motivo actual.
+
+**`SECRET_KEY` sigue bloqueado, sin cambios** — Castor no tiene doble clave para este (confirmado,
+§7 punto 1, todavía no empezado del lado de Castor). No aplica nada de este análisis a `SECRET_KEY`
+todavía.
