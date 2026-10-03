@@ -2,6 +2,53 @@
 
 ---
 
+## 🔧 DEV POLLUX — 2026-10-02 (41) — Local con la base de Castor (como producción): `docker-compose.shared-db.yml` · el ciclo Pollux→Castor→Pollux verificado en vivo con un marino real
+
+Rick confirmó el modelo: Pollux lee y alimenta los datos de los marinos de Castor en una sola
+base. En local eso no existía (cada producto con su Postgres). Ahora:
+
+**`docker-compose.shared-db.yml`** (commit `c194dd54`): el backend de Pollux se une a la red
+`pbsds-leto_default` de Castor y apunta `DATABASE_URL` al contenedor `pbsds-leto-postgres-1`
+(por nombre de contenedor, no por el alias `postgres`, que las dos pilas tienen). Uso:
+`docker compose -p pollux-app -f docker-compose.yml -f docker-compose.shared-db.yml up -d --build`.
+Castor tiene que estar arriba primero. El Postgres propio de Pollux sigue arrancando sin uso.
+
+**`.env` local de Pollux:** `SECRET_KEY` y `DRIVE_TOKEN_SECRET` igualados a los de Castor (copia
+por script, verificada por hash, sin imprimir valores; respaldo en `.env.bak-separate-db`,
+ignorado por git). Hace falta para que Castor Express acepte el token de servicio con el que
+Pollux descarga archivos — **mismo requisito que producción, que sigue sin verificarse allá**.
+
+**Efecto colateral, avisar al dev de Castor:** el seed de Pollux corre contra la base de Castor y
+cambió la contraseña del admin `pollux@pollux-app.com` de ESA base local a la del `.env` de Pollux
+(log: `seeds: admin pollux@pollux-app.com password updated`). `admin.local@castor-app.com` no se
+tocó. Alembic: `schema OK — 0012`, sin DDL (las migraciones son idénticas en los dos repos salvo
+un comentario en `0002`).
+
+**Verificado en vivo (base local de Castor: 35 marinos, 11 documentos):**
+
+1. Empresa demo creada POR POLLUX en la base compartida (`POST /auth/register` 201), verificada y
+   aprobada con el admin desde la API de Pollux. Queda: `demo.company@pollux.com` / "Demo Shipping
+   Co." / `demo1234`, aprobada.
+2. Scouting ve a los marinos reales de Castor (2 descubribles y verificados, entre ellos Ricardo).
+3. Contratar + buque + asignación (como `master`, 2026-11-15 → 2027-03-15): 201/201/201.
+4. **Dirección inversa:** `GET /api/seafarers/me/company-schedule` **servido por el backend de
+   Castor (`localhost:4000`)** con el token del marino devuelve la asignación hecha en Pollux
+   (`linked: true`, "Demo Shipping Co.", buque, rango, fechas). Castor consume ese endpoint en
+   `routes/SeafarerCalendar/SeafarerCalendar.tsx`.
+5. **Archivos:** el token de servicio de Pollux es aceptado por Castor Express (token basura → 401;
+   el nuestro → 404). El 404 es porque los archivos de `demo@castor.com` no están en el disco
+   local de Castor (`myfiles/` vacío): dato de prueba, no integración.
+
+Datos de prueba (buque, asignación, contratación) borrados; la empresa demo se queda.
+
+**Lo que sigue (fase local, en este orden salvo que Rick diga otra cosa):** los 4 defectos de la
+(40) (fechas invertidas, baja sin cancelar asignaciones, transiciones de estado, ruta
+`export-manifest`), botones que faltan en `interfaces/leto` (editar/cancelar asignación y buque,
+abrir documento, estado "pendiente de aprobación"), luego entrevistas en backend, luego contrato y
+evaluaciones (requieren definición de Rick).
+
+---
+
 ## 📋 DEV POLLUX — 2026-10-02 (40) — `/admin` sin barra arreglado en producción · revisión de qué tan listo está Pollux para un piloto con una naviera real (solo local, sin cambios de código)
 
 ### 1) `/admin` daba 404 en producción — arreglado y desplegado
