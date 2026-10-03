@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     # doesn't just add a second admin next to a still-working one.
     ADMIN_SEED_EMAIL: str = "pollux@pollux-app.com"
     ADMIN_SEED_PASSWORD: str | None = None
+    # Password for the seeded demo company (demo.company@pollux.com), read
+    # by seed_demo_data() — same "no hardcoded fallback" rule as
+    # ADMIN_SEED_PASSWORD above (T12, 2026-10-03: the old literal value had
+    # ended up copy-pasted into several handover docs over time). Unset
+    # means the demo company just doesn't get created — not "use the old
+    # value anyway".
+    DEMO_COMPANY_PASSWORD: str | None = None
 
     # Company approval (Rick, 2026-09-14) — email verification links point back
     # at this app's own public origin (nginx routes /api/ to this backend).

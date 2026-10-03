@@ -186,7 +186,7 @@ Sin cambios en `durable-sky-484422-b5`, `castor-app-506901`, Cloud SQL ni en el 
   no decorativo: el backend (`schemas/auth.py` + `routers/auth.py`) lo valida contra la `Company`
   vinculada a la cuenta, mismo 401 genérico que una contraseña mal escrita. Solo aplica a cuentas
   `role="company"` — admin y seafarer no se tocan. Cambio confinado a esta carpeta (no a Cástor).
-  Demo: `demo.company@leto.com` / `demo1234` / empresa **"Demo Shipping Co."**. Verificado con 6 casos
+  Demo: `demo.company@leto.com` / `<DEMO_COMPANY_PASSWORD>` / empresa **"Demo Shipping Co."**. Verificado con 6 casos
   reales contra el backend (sin nombre, nombre erróneo, nombre correcto, normalización, admin sin
   afectar, cuenta nueva registrada hoy).
 

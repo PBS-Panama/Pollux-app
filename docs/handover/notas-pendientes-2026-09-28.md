@@ -2608,3 +2608,126 @@ custom acotado a exactamente lo necesario) y recomendé el primero por el mismo 
 usaste para no sumar una SA aparte — queda en §8.2 del doc para que lo confirmes.
 
 **Sin commit en ningún momento de T10.**
+
+---
+
+## T11 — push del panel de secretos + hallazgo real de divergencia (2026-10-03)
+
+**Actualicé §8.2 de `docs/specs/secrets-panel.md`** con la decisión de Rick: nada de
+`secretVersionManager` (incluye `destroy`, irreversible). Rol custom en `pollux-app-507503`
+(`polluxSecretRotator`) con exactamente `versions.add/.access/.get/.list/.enable/.disable`,
+concedido por secreto, nunca a nivel de proyecto — comando `gcloud iam roles create` + el loop de
+`add-iam-policy-binding` por secreto, documentado.
+
+**Hallazgo antes de tocar nada:** `main` de `Pollux-app` no estaba en `4ee54d66` (mi última base)
+sino en `585f432b` — 8 commits de otra sesión (2026-10-02/03, coautoría "Claude Fable 5.1"):
+pestaña API Keys en el admin, enlace de recuperación de contraseña, fix de `/admin` sin barra
+final, compose compartido con la base de Castor, notas (37)-(42) del Handover. **El disco de
+Patch NO tenía nada de eso** — esa sesión trabajó en otro lado y pusheó directo. Si hubiera
+hecho el mismo método de T3/T6 (vaciar + copiar todo desde el disco de Patch), habría **borrado
+las 8 commits de la otra sesión** al pushear.
+
+En vez de eso: cloné `585f432b` como base, y en 2 archivos donde las dos sesiones tocaron lo
+mismo (`backend/app/routers/admin.py` — ellos agregaron `api-keys/test`/`updated_by_email` justo
+en el mismo punto donde yo había insertado todo el panel de secretos; `AdminConfig.tsx` — ellos
+agregaron la pestaña "API Keys") hice un merge quirúrgico: tomé su versión actual como base y
+reinserté mi bloque completo en el mismo lugar, sin tocar lo de ellos. El resto de mis archivos
+(nuevos o solo míos) se copiaron tal cual desde el disco de Patch — no hubo colisión ahí.
+`.gitignore` también lo tocaron los dos (ellos: `.env.*`/`!.env.example`; yo: `.devsecrets`) —
+combinado, sin conflicto real.
+
+**Verificación del merge, no solo "debería andar":**
+- `python3 -m py_compile` en los 6 archivos Python tocados: OK.
+- `tsc --noEmit` sobre el admin completo (mi `AdminSecretsManager.tsx` + su `ApiKeysTab.tsx` +
+  `AdminConfig.tsx` fusionado): **0 errores**.
+- Build real + contenedor corriendo contra el Postgres local: `GET /admin/config/api-keys` (de
+  ellos) y `GET /admin/secrets` (mío) **los dos devuelven 200** en el mismo proceso — confirmado
+  con llamadas HTTP reales, no supuesto por el diff.
+- Conteo de líneas: `admin.py` pasó de 2133 (en `585f432b`) a 2398 líneas — exactamente +265, el
+  tamaño de mi bloque. El `diff --stat` de git mostraba "4531" líneas cambiadas (ilegible, un
+  artefacto de su heurística de alineación) — la aritmética real confirma que fue una inserción
+  limpia, nada borrado ni reordenado.
+
+**`Handover.md`, nota (41):** encontrada en `## 🔧 DEV POLLUX — 2026-10-02 (41) — Local con la
+base de Castor...` (no en el formato `## (41)` que esperaba — el grep inicial no la encontró por
+eso). Una sola ocurrencia de la clave demo dentro de esa nota específica, reemplazada por
+`<DEMO_COMPANY_PASSWORD>`. No toqué las otras ~9 apariciones de la misma clave en el resto del
+archivo todavía (quedó para T12, ver más abajo).
+
+**Limpieza:** un `__pycache__`/`.pyc` que generó mi propio
+`py_compile` casi queda en el commit — lo saqué del staging antes de confirmar, y aproveché para
+agregar `__pycache__/`/`*.pyc` al `.gitignore` (no existía ninguna regla de Python ahí todavía).
+
+**Commit:** `25ae8c60ae970976980c9cee751fd62c5095d68a` sobre `585f432b`, mensaje exacto pedido,
+17 archivos. `gitleaks`: "no leaks found". Grep de patrones: 0 hallazgos reales (incluyendo una
+segunda pasada después de sacar un `node_modules` que se me había colado sin querer en el clon
+para la prueba de `tsc` — nunca llegó a estar staged, confirmado, pero lo volví a escanear limpio
+igual). Push `git push origin main` (sin `--force`) → fast-forward limpio, `585f432b..25ae8c60`.
+`ls-remote`: `development`/`IDM`/`IDM-vessel-icons`/5 `dependabot/*` intactos; apareció una rama
+nueva `pollux/admin-api-keys-tab` (de la otra sesión, no la toqué).
+
+**Sincronicé el disco de Patch** con el resultado fusionado (`admin.py`, `AdminConfig.tsx`,
+`Handover.md`, `.gitignore`, y los otros archivos que había tocado la otra sesión —
+`ocr_provider.py`, `docker-compose.shared-db.yml`, `nginx-cloudrun.conf`, `Login.tsx`,
+`ApiKeysTab.tsx`) para que la PRÓXIMA tarea no vuelva a arrastrar esta divergencia. Verificado:
+comparación byte a byte de un clon fresco de GitHub contra el disco de Patch filtrado — **0
+diferencias** en todo lo que existe en los dos lados. Rebuild completo + smoke: **11/11**.
+
+**Sin deploy, sin tocar GCP, en ningún momento de T11.**
+
+---
+
+## T12 — sin claves demo en texto plano (2026-10-03)
+
+**Alcance real, no solo Handover.md:** busqué la clave demo literal en TODOS los `.md` del repo
+(no solo Handover.md) y en código/seeds, partiendo de un clon fresco de `main` (confirmado en
+`25ae8c60`, la misma base que dejó T11 — sin sorpresas esta vez).
+
+- **Handover.md:** 9 apariciones restantes (más la de la nota 41 ya hecha en T11) →
+  `<DEMO_COMPANY_PASSWORD>`. Dos de ellas (líneas 2033-2039) eran parte de una narración sobre un
+  incidente real de longitud mínima de contraseña (la clave de 8 caracteres vs. una temporal de
+  12) — reescribí el párrafo para que siga teniendo sentido sin ningún valor real, en vez de un
+  reemplazo ciego que lo hiciera ilegible.
+- **Otros 5 `.md`:** `RESUMEN-SESION-2026-09-03.md`, `Project_Leto.md` (2), tres
+  `docs/handover/sessions/session_2026-09-0{3,9}.md`/`session_2026-09-10.md` — mismo reemplazo.
+- **`docs/handover/notas-pendientes-2026-09-28.md`:** encontré 2 apariciones propias (mi reporte
+  de T11 citando el valor al explicar qué había hecho) — también reemplazadas, mismo criterio.
+- **Extendí el alcance un poco más allá de lo pedido textualmente:** encontré el valor temporal de
+  12 caracteres del incidente de arriba (misma cuenta demo, usado solo esa vez) — mismo criterio
+  de "sin claves demo en texto plano", lo saneé también aunque Rick solo nombró la clave original
+  de 8 caracteres explícitamente.
+- **Verificación final:** grep de la clave literal con `--include=*.md` sobre todo el repo → vacío,
+  confirmado.
+
+**Código — `backend/app/db/seeds.py` + `backend/app/core/config.py`:** `seed_demo_data()` tenía
+la clave hardcodeada en el `hash_password(...)` de la cuenta demo. Agregué
+`DEMO_COMPANY_PASSWORD: str | None = None` a `Settings` (mismo patrón exacto que
+`ADMIN_SEED_PASSWORD` — sin fallback hardcodeado, "no configurada" significa "no se crea la
+cuenta demo", no "usar el valor viejo"), y `seed_demo_data()` ahora lee
+`settings.DEMO_COMPANY_PASSWORD` y sale con un log claro si no está seteada, en vez de fallar en
+silencio o usar el valor viejo. `.env.example` documentado con el nombre de la variable (sin
+valor real).
+
+**CRLF, otra vez (como en T6):** `Project_Leto.md` tenía CRLF en el original (481 líneas) — mi
+primer reemplazo con Python en modo texto normalizó TODO el archivo a LF sin querer (diff de 962
+líneas para 2 reemplazos). Lo noté por el tamaño raro del diff, revertí, y rehice el reemplazo en
+modo binario (bytes, sin tocar los finales de línea) — diff final de 4 líneas, limpio. Verifiqué
+los otros `.md` tocados (ya eran LF) y los `.py` tocados (ya tenían CRLF, mis líneas nuevas lo
+respetaron solas vía la herramienta de edición normal) — ningún otro archivo tuvo el problema.
+
+**Verificación funcional, no solo el código leído:** rebuild completo del backend local, confirmé
+con una llamada directa a `seed_demo_data()` adentro del contenedor los dos caminos —
+`DEMO_COMPANY_PASSWORD` seteada (sigue funcionando, idempotente, no rompe nada) y sin setear
+(sale con el log de "skipped", sin crashear). Agregué la variable al `.env` LOCAL de Patch (con
+el mismo valor de siempre, nunca al repo) para que el stack local siga funcionando igual que
+antes. Smoke:
+**11/11**. `test_secret_rotation.py` (del panel de T9/T10, para confirmar que tocar `config.py`
+no rompió nada ahí): **24/24**.
+
+**Commit:** `docs: sin claves demo en texto plano` — 9 archivos (5 `.md` + `Handover.md` +
+`config.py` + `seeds.py` + `.env.example`), sobre `25ae8c60` (confirmado con `ls-remote` antes de
+empezar). `gitleaks`: "no leaks found". Grep de patrones: 0 reales. Push sin `--force`,
+fast-forward. Sincronicé el disco de Patch con el resultado (mismo hábito de T11).
+
+**Sin deploy, sin tocar GCP. Queda en espera de que Dandy coordine con Castor antes de pasar el
+panel de secretos a producción.**

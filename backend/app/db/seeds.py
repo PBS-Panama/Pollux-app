@@ -368,7 +368,18 @@ def seed_reference_data(engine: Engine) -> None:
 
 
 def seed_demo_data(engine: Engine) -> None:
-    # Seed demo company — idempotent
+    """Seeds demo.company@pollux.com — idempotent, create-once.
+
+    Reads settings.DEMO_COMPANY_PASSWORD directly (T12, 2026-10-03) — no
+    hardcoded fallback, same rule as ADMIN_SEED_PASSWORD in seed_admin()
+    above. Unset means the demo company just doesn't get created (loud
+    about it, not silent) rather than falling back to a value that used to
+    be hardcoded here and had leaked into several handover docs over time.
+    """
+    password = settings.DEMO_COMPANY_PASSWORD
+    if not password:
+        print("[leto-api] seeds: demo company seed skipped (no DEMO_COMPANY_PASSWORD)", flush=True)
+        return
     with engine.connect() as _conn:
         _demo_co_existing = _conn.execute(
             text("SELECT id FROM users WHERE email = 'demo.company@pollux.com'")
@@ -393,9 +404,10 @@ def seed_demo_data(engine: Engine) -> None:
                 VALUES (:id, :email, :pw, 'company', :co_id, true, true, :now, :now)
             """), {
                 "id": _co_user, "email": "demo.company@pollux.com",
-                "pw": hash_password("demo1234"), "co_id": _co_id, "now": _now,
+                "pw": hash_password(password), "co_id": _co_id, "now": _now,
             })
             _conn.commit()
+            print("[leto-api] seeds: demo company demo.company@pollux.com created", flush=True)
 
 
 # Same 32 names CoreTransport.js's CREW_SEEDS fakes client-side — ported here so the

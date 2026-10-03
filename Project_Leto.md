@@ -225,7 +225,7 @@ AdminGuard checks role === 'admin' — redirects to / if not met
 | Email | Password | Role |
 |---|---|---|
 | `ricardo@pbs.com` | `admins123` | admin |
-| `demo.seafarer@leto.com` | `demo1234` | seafarer |
+| `demo.seafarer@leto.com` | `<DEMO_COMPANY_PASSWORD>` | seafarer |
 | *(no demo company yet)* | — | — |
 
 ---
@@ -382,7 +382,7 @@ Sprint 7 just shipped (MyProfile header layout + Compliance card polish — see 
 
 10. **Verify `interfaces/leto/src/routes/index.js`** exports `Compliance` — same fix already applied to `interfaces/castor/`.
 11. **Lock company interface role** — edit `interfaces/leto/src/components/MainNavBars/MainNavBars.tsx` so `getUserRole()` always returns `'company'` (see Section 8 for exact code).
-12. **Add demo company account** — `POST /api/auth/register` with `{ email: "demo.company@leto.com", password: "demo1234", role: "company" }`.
+12. **Add demo company account** — `POST /api/auth/register` with `{ email: "demo.company@leto.com", password: "<DEMO_COMPANY_PASSWORD>", role: "company" }`.
 13. **Verify nginx routing** for `/company/` → `interfaces/company:8081` (docker-compose service exists; confirm nginx config).
 14. **Mirror Cástor app polish** — once Cástor patterns stabilize, apply same MyProfile/Compliance treatment to Leto side.
 

@@ -2032,11 +2032,12 @@ local (`localhost:4001`):
 
 **Efecto secundario real y permanente sobre datos de esta corrida de Docker (no sobre el volumen
 si se recrea desde cero):** la contraseña de `demo.company@pollux.com` en el Postgres local de
-*esta* corrida quedó en `demo12345678`, no en `demo1234` — el endpoint nuevo exige ≥12 caracteres
-y `demo1234` tiene 8, así que no pude devolverla a su valor original vía el flujo (que es la única
-vía correcta ahora — no fui a la base a mano). Si otro dev usa esta misma base local sin volver a
-levantarla desde el volumen fresco (`docker compose down -v`), la clave semilla documentada en
-otros lados (`demo1234`) ya no entra — usar `demo12345678` o resetear el volumen.
+*esta* corrida quedó en una temporal de 12 caracteres, no en `<DEMO_COMPANY_PASSWORD>` — el
+endpoint nuevo exige ≥12 caracteres y `<DEMO_COMPANY_PASSWORD>` tiene 8, así que no pude
+devolverla a su valor original vía el flujo (que es la única vía correcta ahora — no fui a la base
+a mano). Si otro dev usa esta misma base local sin volver a levantarla desde el volumen fresco
+(`docker compose down -v`), la clave semilla documentada en otros lados (`<DEMO_COMPANY_PASSWORD>`)
+ya no entra — usar la temporal de 12 caracteres (Rick la tiene) o resetear el volumen.
 
 ### Replicado a Castor (backend) — corrección 62 aplica: la ruta existe del otro lado
 
@@ -9761,7 +9762,7 @@ Build React: sin errores. Screenshot /login: 3 campos, sin toggle, subtítulo "A
 ```
 
 **Dato útil para pruebas de Rick:** la cuenta demo de empresa es `demo.company@leto.com` /
-`demo1234`, y su nombre real en la base es **`Demo Shipping Co.`** — hace falta escribir eso
+`<DEMO_COMPANY_PASSWORD>`, y su nombre real en la base es **`Demo Shipping Co.`** — hace falta escribir eso
 exactamente (o con espacios/mayúsculas distintas, es tolerante) en "Nombre de empresa" para entrar.
 
 ---
@@ -10825,10 +10826,10 @@ perdería esta validación silenciosamente. Vale la pena que Rick decida cuándo
 `main` o cherry-pickear el commit.
 
 De paso, la contraseña real en la DB local de `demo.company@pollux.com` había quedado
-desincronizada de la documentada (`demo1234`) — restablecida para que coincida (mismo método de
+desincronizada de la documentada (`<DEMO_COMPANY_PASSWORD>`) — restablecida para que coincida (mismo método de
 hash `bcrypt` que usa el backend).
 
-**Verificado con Chrome headless:** login real (`demo.company@pollux.com` / `demo1234` /
+**Verificado con Chrome headless:** login real (`demo.company@pollux.com` / `<DEMO_COMPANY_PASSWORD>` /
 `company_name: "Demo Shipping Co."`) → menú muestra el email real y "Log out" → clic en logout
 limpia `leto-auth`/`leto-user` y redirige a `/`. Estado anónimo (sin sesión) → menú muestra
 "Anonymous user" y "Log in / Sign up" → `/`. SW no-op confirmado sirviéndose en
@@ -12797,7 +12798,7 @@ Después del rebuild, hacer **Ctrl+Shift+R** en el browser para limpiar el Servi
 ### ¿Hay algo roto o bloqueado?
 - Deploy a Cloud Run pendiente — requiere `gcloud sql connect` para crear `leto_db` (acción manual Rick en terminal)
 - **NOTA**: Verified Badge bridge (Sprint 3A) fue resuelto en Sprint 6A — FastAPI ahora es única fuente de verdad
-- Demo seafarer `demo.seafarer@leto.com` / `demo1234` → Carlos Mendoza (2nd-mate, merchant) con 5 documentos demo seeded ✅
+- Demo seafarer `demo.seafarer@leto.com` / `<DEMO_COMPANY_PASSWORD>` → Carlos Mendoza (2nd-mate, merchant) con 5 documentos demo seeded ✅
 
 ---
 
@@ -12928,7 +12929,7 @@ Después del rebuild, hacer **Ctrl+Shift+R** en el browser para limpiar el Servi
 - [x] **`apiRoutes.js`** — rotate endpoint rewritten: eliminado lookup en `data.json` (ya no se escribe desde Sprint 6A); ahora acepta `savedName` directamente en el body del request; añadido `fs.existsSync()` check antes de leer el PDF
 - [x] **`apiClient.js`** — `rotateDocument(userId, docId, direction, savedName)` — añadido parámetro `savedName` al helper y al body del POST
 - [x] **`Library.js`** — rotate calls corregidas: (1) `api.DEFAULT_USER_ID` → `api.getUserId()` (resuelve UUID real desde localStorage en vez del fallback legacy `'SF-001'`); (2) pasa `savedName` del `selectedDocRecord` al helper; (3) 180° = doble CW, 270° = CCW
-- [x] **`main.py` demo seafarer seed** — Carlos Mendoza (`demo.seafarer@leto.com` / `demo1234`), rango `2nd-mate`, flota `merchant`, Panamá; 5 documentos demo: CoC (verified + registry_result completo), BST (verified), Medical Fitness (pending), GMDSS GOC (rejected + rejection_reason), PSCRB (pending)
+- [x] **`main.py` demo seafarer seed** — Carlos Mendoza (`demo.seafarer@leto.com` / `<DEMO_COMPANY_PASSWORD>`), rango `2nd-mate`, flota `merchant`, Panamá; 5 documentos demo: CoC (verified + registry_result completo), BST (verified), Medical Fitness (pending), GMDSS GOC (rejected + rejection_reason), PSCRB (pending)
 - [x] **Fix `status` NOT NULL** — columna `status` (ORM-only default, no DB-level default) faltaba en el INSERT raw de documentos → añadida con valor `'active'`
 - [x] **Fix `CAST(:flags AS JSONB)`** — SQLAlchemy `text()` no reconoce `:param` seguido de `::jsonb` cast; ambos INSERTs (seafarers + documents) usan `CAST(:param AS JSONB)` en su lugar
 - [x] Backend rebuild: startup limpio, sin errores ✅
@@ -13259,7 +13260,7 @@ gcloud run deploy pb-leto \
 | Rol | Email | Password | Notas |
 |---|---|---|---|
 | Admin | `ricardo@pbs.com` | `admins123` | Acceso completo a `/admin` |
-| Seafarer (demo) | `demo.seafarer@leto.com` | `demo1234` | Carlos Mendoza, 2nd-mate, merchant. 5 documentos pre-seeded en distintos estados |
+| Seafarer (demo) | `demo.seafarer@leto.com` | `<DEMO_COMPANY_PASSWORD>` | Carlos Mendoza, 2nd-mate, merchant. 5 documentos pre-seeded en distintos estados |
 | Seafarer (demo original) | `demo@leto.com` | `Demo1234!` | Jhon Leto, master, merchant. Datos mock anteriores |
 
 ---
