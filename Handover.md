@@ -2,6 +2,54 @@
 
 ---
 
+## 📌 RESUMEN DE SESIÓN — 2026-10-02 (42) · para el PM y los devs de Castor · qué quedó hecho, qué está en producción y qué sigue
+
+Detalle en las notas (37) a (41) de abajo. Todo lo de hoy está en `main` (push de hoy).
+
+### Hecho hoy
+
+| Qué | Estado | Nota |
+|---|---|---|
+| Pestaña **API Keys** en Platform Config (cargar/rotar claves de Anthropic y Google Vision) + botón **Probar** (`POST /api/admin/config/api-keys/test`) | ✅ en producción | (37) |
+| Deploy de `pb-pollux` con todo lo acumulado desde el 15-sep (reescritura de la interfaz de empresa, embarques, notificaciones, reset de contraseña) | ✅ `pb-pollux-00019-siw`, 100% tráfico, sigue "latest" | (38) |
+| Enlace "¿Olvidaste tu contraseña?" en el login (la página existía, nadie enlazaba) | ✅ en producción | (39) |
+| Contraseña del admin de producción `pollux@pollux-app.com` renovada (vía `ADMIN_SEED_PASSWORD`, variable ya retirada, revisión intermedia borrada) | ✅ entregada a Rick por chat | (39) |
+| Empresa demo en producción: `pollux+demo@pollux-app.com` / "Demo Shipping Co." (pendiente de verificar correo y aprobar en `/admin/` → Companies) | ⏳ Rick | (38) |
+| `/admin` sin barra daba 404 en producción (nginx) | ✅ arreglado y desplegado | (40) |
+| Revisión de flujos de naviera (scouting, entrevista, contratación, buque, rotación, evaluaciones) | 📋 ver tabla en (40) | (40) |
+| Local con la **misma base que Castor** (`docker-compose.shared-db.yml`) y ciclo Pollux→Castor→Pollux verificado en vivo | ✅ | (41) |
+
+### Para los devs de Castor — lo que les toca o les afecta
+
+1. **Un solo `DRIVE_TOKEN_SECRET` y un solo `SECRET_KEY` en producción, en los dos servicios.**
+   Pollux cifra las claves de API con `DRIVE_TOKEN_SECRET` y firma con `SECRET_KEY` el token con
+   que descarga archivos de Castor Express. Si difieren: Castor no puede leer la clave cargada
+   desde el panel (cae en silencio a su variable de entorno) y las descargas dan 401. **Nadie ha
+   comparado los valores de producción** — comando para hacerlo sin imprimirlos en la (37).
+2. Portar a Castor `check_api_key()` + `POST /config/api-keys/test` (`ocr_provider.py`, `admin.py`),
+   para que "Probar" también confirme que Castor descifra la clave.
+3. `GET /api/seafarer/me/documents/export-manifest` está roto en Pollux (la ruta `{doc_id}` se la
+   traga); Castor lo tiene bien. Es drift entre copias.
+4. En local, el seed de Pollux corre contra la base de Castor: cambia la contraseña del admin
+   `pollux@pollux-app.com` de esa base a la del `.env` de Pollux.
+5. Castor guarda disponibilidad del marino y confirmaciones de entrevista fuera de Postgres (store
+   Express por usuario) — Pollux no puede leerlos. Si la empresa debe ver disponibilidad, hay que
+   moverlos a tablas.
+
+### Pendientes de Pollux (orden propuesto)
+
+1. Defectos de la (40): asignación con desembarque anterior al embarque; dar de baja no cancela
+   asignaciones futuras; transiciones de estado sin reglas; `export-manifest`.
+2. Pantalla de empresa: editar/cancelar asignación y buque, abrir/descargar documento, estado
+   "pendiente de aprobación" en vez de un error genérico, Dashboard que muestre la tripulación
+   propia, Calendar en español.
+3. Entrevistas en backend (hoy solo `localStorage`), con notificación al marino.
+4. Contrato (oferta, términos, aceptación del marino) y evaluaciones — requieren definición de Rick.
+5. `README.md` de la raíz sigue siendo el de Stremio ("Freedom to Stream"); reemplazar.
+6. Verificación paso 7 de la (37) con clave real y documento real desde Castor en producción.
+
+---
+
 ## 🔧 DEV POLLUX — 2026-10-02 (41) — Local con la base de Castor (como producción): `docker-compose.shared-db.yml` · el ciclo Pollux→Castor→Pollux verificado en vivo con un marino real
 
 Rick confirmó el modelo: Pollux lee y alimenta los datos de los marinos de Castor en una sola
