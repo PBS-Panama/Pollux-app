@@ -14216,3 +14216,52 @@ tareas más larga que la que se le está pidiendo.
 remoto `PBS-Panama/Pollux-app`). Por instrucción del PM (2026-09-28, tras aceptar el informe):
 **no tocar código ni git hasta nuevo aviso** — queda todo en espera de que Rick revise el
 informe legal.
+
+---
+
+## (53) Dev — T13: alinear Pollux con el contrato de Castor (claves de terceros + rotación bloqueada en el panel) — 2026-10-03
+
+**Nota de continuidad, antes de T13:** tras el informe legal (nota 52), Rick retomó el trabajo
+con una serie de tareas (T7–T12: spec de OCR en GCS, diseño e implementación del panel de
+secretos — Secret Manager con doble clave, re-cifrado, auditoría, backend real probado contra
+GCP con un secreto descartable, plan de producción, limpieza de `demo1234` en texto plano) que
+sí se commitearon y pushearon a este repo (ver `git log` — commits `b91454b5` en adelante hasta
+`b2e43ebe`), pero cuyas notas narrativas de Handover **no llegaron a escribirse acá** — quedó
+pendiente entre tarea y tarea y nadie volvió a cerrarlo. Lo dejo asentado como hueco conocido en
+vez de reconstruirlo de memoria: el detalle real de esas 6 tareas está en los mensajes de commit
+y en el código mismo (`secret_loader.py`, migración `0013_secret_rotation_log.py`,
+`docs/specs/secrets-panel.md`, `docs/specs/ocr-references-gcs.md`).
+
+**T13 en sí** (pedido de Rick vía Dandy, contra la nota 136 del Handover de Castor, commit
+`fcbebd7` de `PBS-Panama/Castor-app`): Castor implementó su propio contrato para las 3 claves
+de terceros (Anthropic, Google Vision, Google Drive client secret) — DB-primero con fallback a
+env, caché de 60s, endpoint de prueba por **path** (no body), siempre 200 con
+`{key_name, ok, detail}` salvo 400/403. Pollux tenía su propia versión (del 02/10, otra sesión)
+con forma de respuesta distinta y el secreto de Drive viviendo en el panel de Secret Manager en
+vez de en `api_key_config`. Alineé Pollux al contrato de Castor:
+
+1. **`secret_store.py` nuevo** (backend) — copia exacta del contrato de Castor: `get_secret(name, db)` DB primero (`api_key_config`, descifrado con `token_crypto`) con fallback a env, `None` si no hay nada en ningún lado (nunca `""`), caché de 60s por proceso, `invalidate(name)`.
+2. **`GOOGLE_DRIVE_CLIENT_SECRET` se mudó** de `secret_loader.MANAGED_SECRETS` (Secret Manager) a `secret_store.SECRET_NAMES` (`api_key_config`) — ahora hay una sola fuente que leen Pollux y Castor por igual. `google_drive.py`/`drive.py` (4 call sites) ahora reciben `db` y lo pasan a `get_client_secret(db)`.
+3. **Endpoint nuevo** `POST /admin/config/api-keys/{key_name}/test` (path, reemplaza al de body del 02/10) con `_run_key_test()` — Anthropic y Vision se prueban de verdad (llamada mínima sin costo de tokens / 1×1 PNG transparente contra `images:annotate`), Drive devuelve `ok=None` con el texto exacto de Castor ("no verificable sin consentimiento del usuario...").
+4. **`ROTATION_DISABLED` nuevo en `secret_loader.py`**: `SECRET_KEY` y `DRIVE_TOKEN_SECRET` quedan con rotación **bloqueada (403)** porque Castor todavía no implementó la ventana de doble clave ni lee Secret Manager — rotarlos desde Pollux tumbaría a Castor de inmediato (sesiones inválidas / filas cifradas ilegibles). Siguen visibles en el panel con el motivo. `DRIVE_STATE_SECRET` queda rotable: no está sincronizado entre los dos (confirmado por evidencia documental — la nota 41 original de este repo, la de sincronizar secretos con Castor, solo menciona `SECRET_KEY` y `DRIVE_TOKEN_SECRET` — sin leer ningún valor para llegar a esa conclusión) y su naturaleza es puramente transitoria (HMAC del `state` de OAuth, vive solo durante un request/response).
+5. **Frontend** (`interfaces/admin`): `ApiKeysTab.tsx` actualizado al nuevo contrato (`ok: boolean|null`, endpoint por path, tercera fila para Drive); `AdminSecretsManager.tsx` ya no lista `GOOGLE_DRIVE_CLIENT_SECRET` y ahora pinta `rotation_disabled`/`rotation_disabled_reason` (Rotar/Rollback deshabilitados con el motivo visible); `AdminConfig.tsx` fusiona los 2 tabs viejos (`api-keys` + `secrets`) en un único tab **Security** con las 3 claves de terceros arriba y el bloque de Secret Manager abajo, una sola pantalla (pedido explícito de Rick).
+
+**`api_key_config`** — confirmado: misma tabla y mismas columnas en los dos lados (`key_name VARCHAR(64) PK, encrypted_value TEXT, hint VARCHAR(16), updated_at TIMESTAMPTZ, updated_by VARCHAR(36) FK users`), mismo archivo de migración `0009_api_key_config.py` en ambos repos.
+
+**Verificación:**
+- `test_secret_store.py` (nuevo, 21 checks, espejo exacto del de Castor) — ✅ todo verde.
+- `test_secret_rotation.py` (reescrito — la versión del T9 asumía que SECRET_KEY/DRIVE_TOKEN_SECRET rotaban, ahora lo correcto es que no): confirma 403 + motivo en SECRET_KEY/DRIVE_TOKEN_SECRET (rotate y rollback), y que DRIVE_STATE_SECRET sigue rotando/revirtiendo de punta a punta de verdad, incluida la ventana de doble clave para un `state` firmado justo antes de rotar — 28/28 ✅.
+- `test_ocr_mock_guard.py` (12) y `test_compliance_engine.py` (7) sin romperse — ✅.
+- `tsc --noEmit` en `interfaces/admin` — 0 errores.
+- Smoke `tests/smoke/smoke.js` contra :4001 con Playwright real (hubo que instalarle el chromium que le faltaba al `node_modules` local de `tests/smoke`, quedó resuelto) — **11/11 pantallas OK**.
+- Verificación visual manual del tab Security logueado como admin real (login completo por `/login`, no el fallback): las 3 claves de terceros + el bloque de Secret Manager se ven en una sola pantalla, con los botones de SECRET_KEY/DRIVE_TOKEN_SECRET grisados y el motivo de Castor visible, y DRIVE_STATE_SECRET con Rotar habilitado.
+- `gitleaks` sobre el diff: 2 falsos positivos (`generic-api-key` matcheando el string literal `"rotation_disabled=true"` dentro de una aserción del test, no un secreto real) — revisados a mano, sin valor real expuesto. Grep adicional de patrones de clave/password/private-key sobre el diff: 0.
+
+**Commit** `1c857daa` (`main`, fast-forward desde `b2e43ebe`, sin `--force`) — 11 archivos, 706
+inserciones/390 borrados. `ls-remote` antes y después: solo avanzó `main`, el resto de las
+ramas (`development`, `IDM`, `IDM-vessel-icons`, dependabot, `pollux/admin-api-keys-tab`)
+intactas. Disco de Patch sincronizado con lo pusheado, byte a byte, sin normalización CRLF.
+
+**Sin GCP, sin deploy** — tal como pidió Rick. Queda en espera de que Dandy confirme con Castor
+que están listos (requiere el resto de los puntos T8-T10 §9 de su lado, incluida la migración
+0013 compartida) antes de cualquier paso a producción del panel.
