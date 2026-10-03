@@ -419,7 +419,21 @@ def invalidate(name: Optional[str] = None) -> None:
 def _load_latest(name: str) -> Optional[SecretVersion]:
     store = _active_store()
     latest = store.get_latest(name)
-    if latest is None:
+    if latest is None and not _is_production():
+        # Seeding-from-env on first read is a LOCAL DEV convenience only
+        # (DevFileSecretStore's whole reason to exist). In production this
+        # would make a plain READ implicitly call
+        # GcpSecretManagerStore.seed_if_missing() -> add_version(), i.e.
+        # auto-create the secret and write the env var's value into Secret
+        # Manager the first time anything reads it — not a problem this
+        # process can hit in practice (pollux-run@'s custom role has no
+        # secrets.create, so it would fail with PermissionDenied instead of
+        # silently writing), but it's still the wrong failure mode: a
+        # missing secret in production is a deploy-ordering mistake (create
+        # it first — docs/runbooks/secrets-panel-prod.md), never something
+        # to paper over by writing on read. T16 (2026-10-03): mirrors the
+        # gate Castor's copy of this file already had (nota 140) — found
+        # while reviewing Castor's fix for the identical risk on their side.
         latest = store.seed_if_missing(name, os.environ.get(name))
     return latest
 
@@ -434,6 +448,14 @@ def get_secret(name: str) -> str:
         return cached.value
     latest = _load_latest(name)
     if latest is None:
+        if _is_production():
+            raise SecretNotConfigured(
+                f"{name} has no version in Secret Manager project "
+                f"'{SECRET_MANAGER_PROJECT_ID}', and production never creates "
+                "one implicitly on read (T16). Create it there explicitly "
+                "(gcloud secrets create + add a version, or rotate it from "
+                "the panel that owns it) before this process can read it."
+            )
         raise SecretNotConfigured(
             f"{name} is not set. Set it as a real environment variable "
             "(your local .env in development) or rotate it once from the "
