@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.core.deps import get_current_user, require_admin
 from app.models.user import User
 from app.models.seafarer import Seafarer
+from app.routers.company import _require_company, _require_discoverable_or_hired
 from app.schemas.seafarer import (
     SeafarerAmpUpdate,
     SeafarerAmpResponse,
@@ -247,6 +248,14 @@ def get_badges(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Owner and admin read directly; a company needs the same gate as the
+    # by-id profile route (approved + verified + discoverable or active hire).
+    if current_user.id != seafarer_id and current_user.role != "admin":
+        _require_company(current_user, db)
+        seafarer = db.query(Seafarer).filter(Seafarer.id == seafarer_id).first()
+        if not seafarer:
+            raise HTTPException(status_code=404, detail="Seafarer not found")
+        _require_discoverable_or_hired(seafarer_id, seafarer, current_user, db)
     rows = db.execute(text(_BADGE_QUERY), {"sid": seafarer_id}).fetchall()
     return _badge_rows_to_list(rows)
 
@@ -258,6 +267,8 @@ def upsert_badge(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.id != seafarer_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Cannot modify another user's badges")
     now = datetime.now(timezone.utc)
     existing = db.execute(
         text("SELECT id, status FROM seafarer_learning_progress WHERE seafarer_id = :sid AND series_id = :ser"),

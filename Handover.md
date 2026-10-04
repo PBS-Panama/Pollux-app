@@ -14265,3 +14265,155 @@ intactas. Disco de Patch sincronizado con lo pusheado, byte a byte, sin normaliz
 **Sin GCP, sin deploy** — tal como pidió Rick. Queda en espera de que Dandy confirme con Castor
 que están listos (requiere el resto de los puntos T8-T10 §9 de su lado, incluida la migración
 0013 compartida) antes de cualquier paso a producción del panel.
+
+---
+
+### 2026-10-04 — PM: verificación de plugins tras reinicio (orden de Rick via Dandy)
+
+Sesión del PM reiniciada. Plugins que **sí detecta** (skills/agentes visibles en la sesión):
+
+- **ecc** ✅ (skills `ecc:*`, agentes `ecc:*`, MCP chrome-devtools; hook GateGuard activo)
+- **agent-skills** ✅ (`agent-skills:spec`, `:plan`, `:review`, `:code-review-and-quality`, agentes code-reviewer/security-auditor/test-engineer/web-performance-auditor)
+- **understand-anything** ✅ (`understand-anything:understand` y derivados + sus agentes)
+- **ponytail** ✅ (`ponytail:ponytail`, `:ponytail-review`, `:ponytail-audit`…; modo full activo al iniciar)
+- **design** ✅ · **engineering** ✅ · **marketing** ✅ · **small-business** ✅ · **cowork-plugin-management** ✅ · **adobe-for-creativity** ✅ (skills visibles; sus MCP externos piden autenticación aparte)
+- **github** ⚠️ cargado pero su MCP **falló al conectar**: `400 Authorization header is badly formatted` → falta/está mal el token. No bloquea al PM (uso `gh` CLI).
+
+Nota: `installed_plugins.json` lista solo ecc, agent-skills, understand-anything y ponytail; los de marketplace llegan por la vía sincronizada, pero igual aparecen en la sesión.
+
+---
+
+## (54) PM — Revisión completa con plugins (ecc / agent-skills / ponytail) + plan — 2026-10-04
+
+**Orden de Rick via Dandy (verificada con `pm-order-check`):** avanzar con lo pendiente usando los plugins
+nuevos y hacer una revisión completa de estructura de backend, conexiones y funcionalidades.
+
+**Cómo se revisó (solo lectura, nada tocado):** 3 revisores en paralelo — `ecc:fastapi-reviewer` (backend),
+`ecc:security-reviewer` (seguridad), explorador de cableado (front↔back, nginx, compose, integraciones).
+No se leyeron `.env` ni valores de secretos. No se ejecutaron tests ni builds.
+
+### Resultado general
+- **Sin CRITICAL.** AuthZ de admin sólida (`require_admin` en todo salvo `/alerts`), aislamiento entre
+  empresas correcto (`_require_company` + discoverable/relación activa), SQL parametrizado, CORS con
+  lista explícita, sin secretos en archivos trackeados.
+- Restos de Stremio: **ya no queda** alias `stremio`, `stremio-router`, `@stremio/*` ni `CoreTransport`
+  (la F6 del plan 52 está hecha de hecho). Solo sobra `common/CoreSuspender.js`.
+- Todas las llamadas del front (company, admin, landing) apuntan a endpoints existentes, salvo los rotos de abajo.
+
+### Hallazgos HIGH (seguridad / backend)
+| # | Qué | Dónde |
+|---|---|---|
+| H1 | `/auth/refresh` no revisa `is_active` ni `password_changed_at` → un refresh robado sobrevive al cambio/reset de contraseña y a la desactivación. Sin rate limit. | `backend/app/routers/auth.py:78-91` |
+| H2 | IDOR en insignias: cualquier usuario con token lee/escribe insignias de **cualquier** marino (las ven las empresas). | `backend/app/routers/seafarers.py:244,254` |
+| H3 | Rate limit de login evadible: toma la **primera** IP de `X-Forwarded-For` y nginx la concatena (`$proxy_add_x_forwarded_for`). | `core/rate_limit.py:36-39`, `infra/nginx/nginx-cloudrun.conf:49` |
+| H4 | OCR síncrono dentro de `async def` → bloquea el único worker de uvicorn mientras corre el OCR. | `admin.py:2188-2195`, `embarkations.py:404` |
+| H5 | Referencias OCR se guardan en disco del contenedor → en Cloud Run se pierden en cada deploy; `Dockerfile.prod` ni copia `ocr-references/`. | `admin.py:2162-2258`, `Dockerfile.prod:60` |
+
+### Hallazgos MEDIUM
+- `POST /api/admin/alerts` abierto, sin rate limit ni tope de tamaño (`admin.py:1739`).
+- `/auth/register` acepta contraseñas de 1 carácter (change/reset exigen 12) (`auth.py:94`).
+- `state` de OAuth Drive determinista, sin nonce ni expiración (`drive.py:56-62`).
+- Subidas sin tope: `avatar_b64` (acepta SVG), `drive.download_file`; nombres con `\r\n` en multipart a Castor.
+- `PATCH /admin/config/api-keys` no pide contraseña actual (rotate sí) (`admin.py:1157`).
+- `/api/docs` y `/openapi.json` expuestos en prod; falta CSP/Permissions-Policy en nginx prod.
+- Dependencias viejas: `python-multipart 0.0.12`, `fastapi 0.115.0` (starlette con DoS), `python-jose 3.3.0`; varias sin fijar. `Dockerfile.prod` corre como root. *(falta `pip-audit` real)*
+- `/health` responde ok sin tocar la DB; el arranque traga errores de migración → Cloud Run ve "healthy" con DB caída.
+- `seed_admin` **reescribe la contraseña del admin en cada cold start** si `ADMIN_SEED_PASSWORD` está seteada (`seeds.py:78-83`).
+- `admin.py` = 2493 líneas / ~70 endpoints con SQL crudo en el router; `company.py` 879. 3 copias del "fetch de archivo desde Castor".
+- Pool de SQLAlchemy por defecto (5+10) × instancias × 2 servicios (Pollux+Castor) contra la misma `leto-postgres`.
+- Migraciones compartidas: 0001→0013 lineal OK, pero `downgrade` de 0012/0013 hace DROP de tablas que usa Castor.
+- **Tests:** no hay tests de autorización por ruta, ni pytest/CI; solo scripts sueltos.
+
+### Conexiones rotas / funcionalidad falsa
+| Tipo | Elemento | Dónde |
+|---|---|---|
+| Roto | Link de adjunto de embarque sin Bearer → 403 siempre | `interfaces/admin/.../AdminEmbarkationDetail.tsx:536` |
+| Roto | UI de catálogo hace PATCH/DELETE/POST que el backend responde 410 | `AdminConfig.tsx:122,139,158` / `admin.py:1627` |
+| Roto | Link de verificación de email devuelve JSON crudo (no hay página en landing) | `auth.py:43,~183` |
+| Roto | Drive OAuth: redirect por defecto a :4000 y callback a `/app/#/settings` (no existe en Pollux) | `google_drive.py:45`, `drive.py:162-196` |
+| Prod≠local | Kill-switch de `service-worker.js` solo en nginx local | `nginx-cloudrun.conf` |
+| Falso | Entrevistas y eventos de Calendar solo en `localStorage`; `confirmInterview` sin escritor | `common/crewStore.js`, `seafarerStore.js`, `Calendar.tsx` |
+| Riesgo | `EMAIL_PROVIDER` por defecto `logger` y la validación de prod no lo exige → verificación/reset podrían quedarse en el log | `core/config.py:80,122-158` |
+| Riesgo | Bucket GCS por defecto es el de Castor (`castor-app-506901-uploads`) | `config.py:96` |
+| Sin UI | Editar/borrar buque, editar asignación, export de marino, renovar token | `company.py`, `auth.py` |
+| Muerto | `crewDocData.js`, `nginx-integrated.conf`, `CoreSuspender.js`, `interfaces/leto/supervisord.prod.conf` duplicado, `main.py.bak`; `http_server.js:17` `max-age: 7200` mal escrito | — |
+
+### ⚠️ Backend duplicado con Castor
+H1, H2, H3, `/alerts`, register, seeds, health y deps **existen igual en Castor**. Todo arreglo de backend
+se hace en Pollux y se le pasa a Castor como lista vía Dandy (no tocamos su repo). Sin migraciones nuevas
+en esta ronda (no hace falta ninguna).
+
+### Plan (una tarea al dev a la vez; cada entrega pasa `ecc:code-review` + `ponytail-review` antes de cerrarse)
+1. **T14 — Seguridad backend:** H1, H2, H3, `/alerts`, register ≥12, reauth en api-keys, topes de subida/avatar sin SVG, sanear `\r\n`, docs off en prod, `state` OAuth con nonce+TTL. + `tests/test_authz.py` (401 sin token / 403 con rol equivocado en cada ruta). → lista para Castor.
+2. **T15 — Robustez de arranque/infra:** `/health` + `/ready` con `SELECT 1`; seeds solo crean admin si no existe; OCR a threadpool (H4); pool explícito; validación de prod exige `EMAIL_PROVIDER≠logger`; CSP + kill-switch SW en nginx prod; `USER` no-root; bump de deps con `pip-audit`.
+3. **T16 — Conexiones rotas del front:** adjunto como blob, quitar UI de catálogo muerta, página de verificación de email en landing, limpieza de muertos.
+4. **T17 — OCR references a GCS (H5)** — necesita bucket propio de Pollux (ver decisiones).
+5. **T18 — Estructura:** partir `admin.py` por dominio (mecánico, sin cambiar lógica), un solo helper de fetch a Castor, `print`→`logging`.
+6. **Después (producto):** Calendar/entrevistas con backend real; UI de editar/borrar buque y asignación.
+
+### Decisiones que le tocan a Rick
+- **Bucket propio de Pollux** en `pollux-app-507503` para OCR refs/adjuntos (crear recurso = lista roja).
+- **Drive en Pollux:** ¿se usa o se apaga? Hoy no hay UI y el callback está roto.
+- **Deploy:** T14/T15 tocan prod; no se despliega sin OK explícito y sin coordinar con Castor.
+- Confirmar que en Cloud Run `EMAIL_PROVIDER` no está en `logger` (Rick o la sesión con gcloud).
+
+**Commits:** la orden autoriza avanzar; el dev commitea por tarea en `PBS-Panama/Pollux-app` `main` (sin
+`--force`) tras revisión aceptada del PM. **Deploy no incluido.**
+
+
+## (55) Dev — T14 Seguridad backend — 2026-10-04 · SIN commit · SIN deploy
+
+**Orden:** Rick via Dandy (PM nota 54). Solo `pbsds-pollux-app/backend` + `infra/nginx/nginx-cloudrun.conf`. Castor y migraciones intactos.
+
+### Qué se hizo (10/10)
+| # | Cambio | Archivo |
+|---|---|---|
+| 1 | `/auth/refresh`: rechaza `not is_active` e `iat < password_changed_at`; la lógica salió de `get_current_user` a `load_active_user()` (una sola copia, la usan ambos); `@limiter 30/min` | `core/deps.py`, `routers/auth.py` |
+| 2 | Badges: POST solo dueño/admin (403); GET dueño/admin, o empresa con `_require_company` + `_require_discoverable_or_hired` (importados de `company.py`) | `routers/seafarers.py` |
+| 3 | IP real = **última** entrada de XFF; nginx: `map` que toma la última entrada del XFF entrante → `$real_client_ip` (ver desvío abajo) | `core/rate_limit.py`, `infra/nginx/nginx-cloudrun.conf` |
+| 4 | `POST /alerts`: `@limiter 20/min`, `source` ≤100, `message` ≤2000, `context` ≤4000 chars serializado | `routers/admin.py` |
+| 5 | Register: mínimo 12 (constante `MIN_PASSWORD_LENGTH` compartida con change/reset) | `routers/auth.py` |
+| 6 | `PATCH /config/api-keys`: exige `current_password` (`_require_reauth`) | `routers/admin.py` |
+| 7 | Avatar: ≤200 000 chars y solo `data:image/(png\|jpeg\|webp);base64,` (sin SVG); `file_name/doc_name/category_label/mime_type` sin `\r \n "`, con `max_length`; `download_file` tope 25 MB (`max_bytes`) | `routers/users.py`, `routers/drive.py`, `services/google_drive.py` |
+| 8 | `/api/docs`, `/api/redoc`, `/api/openapi.json` = None si `is_production` | `main.py` |
+| 9 | State OAuth Drive: `user_id.ts.nonce.HMAC-sha256 completo`, TTL 10 min, `compare_digest`, sigue probando la clave previa (rotación) | `routers/drive.py` |
+| 10 | `backend/tests/test_authz.py` (320 casos) + `backend/tests/test_t14_logic.py` (11) | nuevos |
+
+### ⚠️ Desvíos / cosas que Dandy y el PM deben saber
+1. **Ítem 3 — no hice literal `X-Forwarded-For $remote_addr`.** Dentro del contenedor, `$remote_addr` es el proxy de Google (igual para todos) → todos los visitantes quedarían bajo la misma IP, el bug que `rate_limit.py` describe. Cloud Run *agrega* la IP del cliente al final del XFF; por eso el `map` toma la última entrada. Probado con un nginx de prueba (`6.6.6.6, 1.2.3.4`→`1.2.3.4`; sin header→`$remote_addr`). `nginx -t` OK. **No se pudo verificar contra Cloud Run real (sin deploy).** `nginx.conf`/`nginx-integrated.conf` locales no se tocaron (local no tiene el problema).
+2. **`HTTPBearer` devolvía 403 sin token**, no 401. Para cumplir "401 sin token" puse `auto_error=False` y `get_current_user` levanta 401. Cambio de comportamiento global (más correcto; el refresh-on-401 del front ahora sí se dispara sin token).
+3. **REGRESIÓN CONOCIDA EN LA UI:** `interfaces/admin/.../ApiKeysTab.tsx:83` hace `PATCH /admin/config/api-keys` sin `current_password` → ahora da 422 hasta que el front pida la contraseña (patrón ya existente en `AdminSecretsManager.tsx`). **No toqué el front** (fuera de T14, tiene cambios ajenos). Propongo meterlo en T16. Hasta entonces, guardar claves desde el panel no funciona (local; nada desplegado).
+4. `test_authz.py`: lista PUBLIC explícita (9 + 7 catálogos de lectura que hoy son públicos: `/compliance/catalog*`, `/compliance/required-docs`, `/exams/centers|courses`, `/learning/series*`). **Decisión de PM:** ¿esos 7 deben seguir públicos? Si no, se quitan de PUBLIC y el test dicta el arreglo.
+5. El nonce del state Drive es aleatoriedad en la firma, no es de un solo uso (sin tabla; no hay migraciones).
+6. Drive en Pollux sigue sin UI y con callback roto (decisión pendiente de Rick, nota 54); esto solo endurece lo que hay.
+
+### Pruebas (todas dentro de contenedor/stack local, tras `docker compose build backend && up -d backend`)
+- `pytest tests` → **331 passed**. (pytest/httpx se instalan en contenedor efímero; no están en `requirements.txt`.)
+- `test_secret_store`, `test_secret_loader_production_gate`, `test_ocr_mock_guard`, `test_compliance_engine` → verdes; `test_secret_rotation` (contra stack vivo) → All checks passed.
+- Smoke `interfaces/leto/tests/smoke/smoke.js` contra :4001 → **11/11**.
+- En vivo :4001: refresh válido 200 / basura 401; badges sin token 401; empresa lee badges de marino discoverable 200, POST badge 403; register con pw corta 422; docs 200 en dev.
+- **gitleaks** (`--no-git`, los 12 archivos tocados): no leaks.
+- **ecc:code-review** y **ponytail-review** sobre mi diff: 0 CRITICAL/HIGH propios (el HIGH funcional es el #3 de arriba). Arreglé 2 menores: avatar con `fullmatch` (el `$` aceptaba `\n` final) e inliné un helper de un solo uso. No se pudo correr `pip-audit`/mypy (fuera de alcance).
+- Nota: el working tree tiene cambios previos ajenos en `admin.py`, `drive.py`, `google_drive.py`, `config.py` etc.; el diff de T14 está mezclado con ellos — por eso lo listo por ítem arriba.
+
+### LISTA de cambios replicables para Castor (backend duplicado)
+1. `core/deps.py`: extraer `load_active_user(db, user_id, payload)` + `HTTPBearer(auto_error=False)` con 401 si falta credencial.
+2. `routers/auth.py`: `/refresh` usa `load_active_user` y `@limiter`; `MIN_PASSWORD_LENGTH=12` en register/change/reset.
+3. `routers/seafarers.py` (o equivalente en Castor): POST badges solo dueño/admin; GET dueño/admin (Castor no tiene el rol empresa → bastaría dueño/admin).
+4. `core/rate_limit.py`: última entrada de XFF + el `map $real_client_ip` en su nginx de Cloud Run.
+5. `admin.py`: `AlertCreate` con topes + `@limiter` en `POST /alerts`; `ApiKeyPatch.current_password` + `_require_reauth` (y su front).
+6. `users.py`: regex de avatar + `Field(max_length=200_000)`.
+7. `drive.py`/`google_drive.py` (si Castor los tiene): state `user.ts.nonce.hmac` con TTL 600 s, sanitizado de nombres, `max_bytes` en download.
+8. `main.py`: docs/redoc/openapi `None` si producción.
+9. Copiar `tests/test_authz.py` y ajustar PUBLIC.
+
+---
+
+## (56) PM — T14 ACEPTADA + decisiones — 2026-10-04
+
+Revisé la nota (55) y el diff de `auth.py`, `deps.py` y `nginx-cloudrun.conf`. **Aceptada.**
+1. **XFF:** el `map` con la última entrada es correcto. `$remote_addr` literal habría puesto a todos bajo la IP del proxy de Google. Pendiente: verificarlo con `curl -H "X-Forwarded-For: 1.1.1.1"` × 6 contra `/api/auth/login` **en el primer deploy**. Queda en la checklist de deploy.
+2. **ApiKeysTab sin `current_password`:** entra en T16. **T16 es requisito antes de cualquier deploy**, porque sin ella el panel no puede guardar claves.
+3. **7 GET de catálogo públicos:** se quedan públicos. Son catálogos de referencia de solo lectura, sin datos de usuarios. Si alguno llegara a exponer datos de empresas o marinos, se cierra.
+4. **401 sin token:** aceptado, es el comportamiento correcto.
+5. **Commit autorizado** (orden de Rick, nota 54): solo los archivos de T14, en `PBS-Panama/Pollux-app` `main`, sin `--force` y sin arrastrar los cambios ajenos del working tree. La lista para Castor se reenvía vía Dandy.

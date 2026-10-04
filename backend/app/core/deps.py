@@ -5,21 +5,14 @@ from app.db.session import get_db
 from app.core.security import decode_token
 from app.models.user import User
 
-bearer = HTTPBearer()
+# auto_error=False: HTTPBearer's own missing-token error is 403; a missing
+# credential is a 401 (and the frontend's refresh-on-401 depends on it).
+bearer = HTTPBearer(auto_error=False)
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer),
-    db: Session = Depends(get_db),
-) -> User:
-    token = credentials.credentials
-    payload = decode_token(token)
-    user_id = payload.get("sub")
-    if not user_id or payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
+def load_active_user(db: Session, user_id: str, payload: dict) -> User:
+    """Shared by get_current_user and /auth/refresh: the user must exist, be
+    active, and the token must not predate the last password change."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -38,6 +31,23 @@ def get_current_user(
         if iat is None or iat < user.password_changed_at.timestamp():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
     return user
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    db: Session = Depends(get_db),
+) -> User:
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    token = credentials.credentials
+    payload = decode_token(token)
+    user_id = payload.get("sub")
+    if not user_id or payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    return load_active_user(db, user_id, payload)
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:

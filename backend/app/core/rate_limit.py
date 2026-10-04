@@ -14,10 +14,11 @@ the whole internet as one caller: the FIRST five people to hit /auth/login
 in a minute lock out everyone else, and it never protects anything because
 an attacker is indistinguishable from a legitimate burst of traffic.
 
-The real client IP arrives in `X-Forwarded-For` (set by the load balancer,
-not the caller — Cloud Run's edge overwrites any client-supplied value, so
-this header can't be spoofed from outside). It can list a chain of
-"client, proxy1, proxy2"; the first entry is the original client.
+The real client IP arrives in `X-Forwarded-For`. The caller can prepend
+entries to that header, so the FIRST one is attacker-controlled; only the
+LAST one is written by a proxy we trust. nginx (infra/nginx) sets the header
+to `$remote_addr` — the address Cloud Run's edge saw — so the last entry is
+the real client.
 
 Local dev (docker-compose) has no proxy in front, so `X-Forwarded-For` is
 absent — fall back to `request.client.host` there, which is the only case
@@ -30,7 +31,7 @@ from starlette.requests import Request
 def get_real_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 

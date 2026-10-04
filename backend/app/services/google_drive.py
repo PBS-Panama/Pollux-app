@@ -109,6 +109,11 @@ def revoke_token(token: str) -> None:
 
 # ─── DriveService ────────────────────────────────────────────────────────────
 
+# Same ceiling as nginx's client_max_body_size — a bigger file couldn't be
+# re-uploaded to Castor anyway.
+MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
+
+
 class DriveService:
     """Thin wrapper around Drive v3 REST API. Handles transparent token refresh."""
 
@@ -123,7 +128,7 @@ class DriveService:
         return self._new_at or self._at
 
     def _req(self, method: str, url: str, *, data=None, headers: dict | None = None,
-             json_body=None, retry: bool = True) -> dict | bytes:
+             json_body=None, retry: bool = True, max_bytes: int | None = None) -> dict | bytes:
         hdrs = {"Authorization": f"Bearer {self.current_access_token}"}
         if headers:
             hdrs.update(headers)
@@ -135,7 +140,9 @@ class DriveService:
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 ct = resp.headers.get("Content-Type", "")
-                raw = resp.read()
+                raw = resp.read() if max_bytes is None else resp.read(max_bytes + 1)
+                if max_bytes is not None and len(raw) > max_bytes:
+                    raise ValueError(f"Drive file exceeds {max_bytes} bytes")
                 if "application/json" in ct:
                     return json.loads(raw)
                 return raw
@@ -144,7 +151,7 @@ class DriveService:
                 tok = refresh_access_token(self._rt, self._db)
                 self._new_at = tok["access_token"]
                 return self._req(method, url, data=data, headers=headers,
-                                 json_body=None, retry=False)
+                                 json_body=None, retry=False, max_bytes=max_bytes)
             raise
 
     # ── Folder operations ────────────────────────────────────────────────
@@ -202,4 +209,5 @@ class DriveService:
         return result.get("files", [])  # type: ignore[union-attr]
 
     def download_file(self, file_id: str) -> bytes:
-        return self._req("GET", f"{_DRIVE_BASE}/files/{file_id}?alt=media")  # type: ignore[return-value]
+        return self._req("GET", f"{_DRIVE_BASE}/files/{file_id}?alt=media",  # type: ignore[return-value]
+                         max_bytes=MAX_DOWNLOAD_BYTES)

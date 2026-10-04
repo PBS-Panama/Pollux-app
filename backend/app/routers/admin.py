@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 from sqlalchemy import text, bindparam
 from sqlalchemy.dialects.postgresql import JSONB
@@ -1126,6 +1126,9 @@ def update_setting(
 class ApiKeyPatch(BaseModel):
     key_name: str
     value: str
+    # Same reauth as /secrets/{name}/rotate — a stolen admin session alone
+    # must not be able to swap the OCR/Drive keys.
+    current_password: str
 
 
 def _key_hint(value: str) -> str:
@@ -1167,6 +1170,7 @@ def update_api_key(
             status_code=400,
             detail=f"key_name must be one of {SECRET_NAMES}",
         )
+    _require_reauth(admin, payload.current_password)
     value = payload.value.strip()
     if not value:
         raise HTTPException(status_code=400, detail="value cannot be empty")
@@ -1731,13 +1735,25 @@ def analytics_overview(admin: User = Depends(require_admin), db: Session = Depen
 
 class AlertCreate(BaseModel):
     level: str = "warn"           # info | warn | error
-    source: str                   # e.g. "Library.js", "Compliance.js"
-    message: str
+    source: str = Field(max_length=100)  # e.g. "Library.js", "Compliance.js"
+    message: str = Field(max_length=2000)
     context: Optional[dict] = None
+
+    @field_validator("context")
+    @classmethod
+    def _cap_context(cls, v):
+        if v is not None and len(json.dumps(v)) > MAX_ALERT_CONTEXT_CHARS:
+            raise ValueError("context too large")
+        return v
+
+
+MAX_ALERT_CONTEXT_CHARS = 4000
 
 
 @router.post("/alerts", status_code=201)
+@limiter.limit("20/minute")
 def create_alert(
+    request: Request,
     payload: AlertCreate,
     db: Session = Depends(get_db),
 ):
@@ -1756,7 +1772,7 @@ def create_alert(
         "level": payload.level if payload.level in ("info", "warn", "error") else "warn",
         "source": payload.source[:100],
         "message": payload.message,
-        "context": __import__("json").dumps(payload.context) if payload.context else None,
+        "context": json.dumps(payload.context) if payload.context else None,
         "now": now,
     })
     db.commit()

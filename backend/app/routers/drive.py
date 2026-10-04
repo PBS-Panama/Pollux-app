@@ -15,6 +15,9 @@ Endpoints:
 import hashlib
 import hmac
 import json
+import re
+import secrets
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -22,7 +25,7 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -53,30 +56,35 @@ _CASTOR_BASE  = settings.CASTOR_BASE_URL
 
 # ─── State HMAC helpers (CSRF protection in OAuth callback) ──────────────────
 
-def _sign(user_id: str, secret: str) -> str:
-    return hmac.new(secret.encode(), user_id.encode(), hashlib.sha256).hexdigest()[:16]
+STATE_TTL_SECONDS = 600
+
+
+def _sign(payload: str, secret: str) -> str:
+    return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 def _make_state(user_id: str) -> str:
-    sig = _sign(user_id, get_secret("DRIVE_STATE_SECRET"))
-    return f"{user_id}:{sig}"
+    payload = f"{user_id}.{int(time.time())}.{secrets.token_urlsafe(8)}"
+    return f"{payload}.{_sign(payload, get_secret('DRIVE_STATE_SECRET'))}"
 
 
 def _verify_state(state: str) -> str:
-    """Return user_id if state is valid, raise HTTPException otherwise.
+    """Return user_id if state is valid and fresh, raise HTTPException otherwise.
+    State = user_id.ts.nonce.hmac; expires after STATE_TTL_SECONDS.
     Tries the current DRIVE_STATE_SECRET, then the previous one — an OAuth
     flow started just before a rotation can still complete instead of
     forcing the user to restart it (T9 §3.1 pattern, reused here even though
     this secret doesn't strictly need the dual-key window)."""
-    try:
-        user_id, sig = state.split(":", 1)
-    except ValueError:
+    parts = state.split(".")
+    if len(parts) != 4 or not parts[1].isdigit():
         raise HTTPException(status_code=400, detail="Invalid state")
-    if hmac.compare_digest(sig, _sign(user_id, get_secret("DRIVE_STATE_SECRET"))):
-        return user_id
-    previous = get_secret_previous("DRIVE_STATE_SECRET")
-    if previous and hmac.compare_digest(sig, _sign(user_id, previous)):
-        return user_id
+    user_id, ts, _nonce, sig = parts
+    payload = ".".join(parts[:3])
+    if time.time() - int(ts) > STATE_TTL_SECONDS:
+        raise HTTPException(status_code=400, detail="State expired")
+    for secret in (get_secret("DRIVE_STATE_SECRET"), get_secret_previous("DRIVE_STATE_SECRET")):
+        if secret and hmac.compare_digest(sig, _sign(payload, secret)):
+            return user_id
     raise HTTPException(status_code=400, detail="State mismatch — possible CSRF")
 
 
@@ -321,12 +329,19 @@ def drive_files(current_user: User = Depends(get_current_user), db: Session = De
 # ─── Import from Drive ────────────────────────────────────────────────────────
 
 class ImportPayload(BaseModel):
-    file_id:        str
-    file_name:      str
-    doc_name:       str
+    file_id:        str = Field(max_length=200)
+    file_name:      str = Field(max_length=255)
+    doc_name:       str = Field(max_length=255)
     category:       int = 5
     category_label: str = "Other Certificates"
     mime_type:      str = "application/pdf"
+
+    @field_validator("file_name", "doc_name", "category_label", "mime_type")
+    @classmethod
+    def _no_header_injection(cls, v):
+        # Drop CR/LF/quotes: these are interpolated into multipart headers sent
+        # to Castor, where a newline would inject extra headers.
+        return re.sub(r'[\r\n"]', "", v)
 
 
 @router.post("/drive/import")

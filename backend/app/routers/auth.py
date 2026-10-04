@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, load_active_user
 from app.models.user import User, UserRole
 from app.models.seafarer import Seafarer
 from app.models.company import Company
@@ -19,6 +19,8 @@ from app.services.seafarer_code import generate_seafarer_code
 from app.services.email_sender import get_email_sender
 
 router = APIRouter()
+
+MIN_PASSWORD_LENGTH = 12
 
 # Company approval (Rick, 2026-09-14) — single-use, time-boxed token stored
 # in email_verification_tokens (not an ORM model, same convention as
@@ -76,14 +78,12 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def refresh(request: Request, payload: RefreshRequest, db: Session = Depends(get_db)):
     data = decode_token(payload.refresh_token)
     if not data or data.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-    user_id = data.get("sub")
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    user = load_active_user(db, data.get("sub"), data)
     token_data = {"sub": user.id, "role": user.role, "company_id": user.company_id}
     return TokenResponse(
         access_token=create_access_token(token_data),
@@ -97,6 +97,8 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     # Validate role
     if payload.role not in ("seafarer", "company"):
         raise HTTPException(status_code=400, detail="role must be 'seafarer' or 'company'")
+    if len(payload.password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=422, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
 
     # Check duplicate email
     if db.query(User).filter(User.email == payload.email).first():
@@ -237,8 +239,8 @@ def change_password(
     """
     if not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Current password is incorrect")
-    if len(payload.new_password) < 12:
-        raise HTTPException(status_code=422, detail="New password must be at least 12 characters")
+    if len(payload.new_password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=422, detail=f"New password must be at least {MIN_PASSWORD_LENGTH} characters")
     if payload.new_password == payload.current_password:
         raise HTTPException(status_code=422, detail="New password must be different from the current one")
 
@@ -311,8 +313,8 @@ def reset_password(request: Request, payload: ResetPasswordRequest, db: Session 
         raise HTTPException(status_code=400, detail="This reset link was already used")
     if row.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="This reset link has expired")
-    if len(payload.new_password) < 12:
-        raise HTTPException(status_code=422, detail="New password must be at least 12 characters")
+    if len(payload.new_password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=422, detail=f"New password must be at least {MIN_PASSWORD_LENGTH} characters")
 
     user_row = db.execute(text("SELECT hashed_password FROM users WHERE id = :id"), {"id": row.user_id}).fetchone()
     if not user_row:

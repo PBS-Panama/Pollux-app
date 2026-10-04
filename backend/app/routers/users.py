@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from pydantic import BaseModel
+import re
+
+from pydantic import BaseModel, Field
 from app.db.session import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
@@ -9,8 +11,13 @@ from app.models.user import User
 router = APIRouter()
 
 
+# ~200 KB of base64 text. Raster formats only: an SVG data URI can carry script.
+MAX_AVATAR_CHARS = 200_000
+_AVATAR_RE = re.compile(r"data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*")
+
+
 class AvatarRequest(BaseModel):
-    avatar_b64: str
+    avatar_b64: str = Field(max_length=MAX_AVATAR_CHARS)
 
 
 # Was `bearer_optional` (HTTPBearer(auto_error=False)): with no token it fell
@@ -25,7 +32,7 @@ def upload_avatar(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not payload.avatar_b64.startswith("data:image/"):
+    if not _AVATAR_RE.fullmatch(payload.avatar_b64):
         raise HTTPException(status_code=400, detail="Invalid image data")
 
     db.execute(
