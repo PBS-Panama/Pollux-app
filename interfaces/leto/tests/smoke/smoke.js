@@ -178,8 +178,9 @@ const visit = async (page, { name, url, waitMs = 1500, screenshotName }) => {
             const hireButton = page.getByRole('button', { name: 'Agregar a mi personal' });
             await hireButton.waitFor({ state: 'visible', timeout: 5000 });
             await hireButton.click();
-            await page.waitForFunction(() => Array.from(document.querySelectorAll('button'))
-                .some((b) => b.textContent && b.textContent.trim() === 'Ya en tu personal'), { timeout: 10000 });
+            // Locator wait, not waitForFunction: that one eval()s a string in the
+            // page, which the production CSP (script-src 'self') correctly blocks.
+            await page.getByRole('button', { name: 'Ya en tu personal', exact: true }).waitFor({ state: 'visible', timeout: 10000 });
             await page.screenshot({ path: path.join(OUT_DIR, 'add-to-roster.png'), fullPage: true }).catch(() => {});
             addToRosterOk = true;
         } catch (err) {

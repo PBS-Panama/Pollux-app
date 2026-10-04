@@ -78,6 +78,15 @@ class Settings(BaseSettings):
     # delegation — Google retired SMTP app passwords for Workspace on
     # 2026-05-01, so that plan is dead; see email_sender.py/gmail_api.py.
     EMAIL_PROVIDER: str = "logger"
+    # SQLAlchemy pool per instance. Pollux and Castor share one Postgres
+    # (leto-postgres): total connections = (pool_size + max_overflow) x
+    # instances x 2 services, so these are explicit and tunable per service.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    # seed_admin only CREATES the admin when missing. Setting this to true
+    # also resets an existing admin's password to ADMIN_SEED_PASSWORD on the
+    # next start — an explicit break-glass, never a default.
+    ADMIN_SEED_RESET: bool = False
     # Mailbox EMAIL_PROVIDER=gmail_api sends as (and delegation is scoped to).
     # Pollux mails from its own address, Castor from its own — never mix.
     EMAIL_FROM: str = "pollux@pollux-app.com"
@@ -144,6 +153,11 @@ class Settings(BaseSettings):
                 "FRONTEND_URL still points at a dev default — the email-verification "
                 "link auth.py builds from it would point at localhost. A verification "
                 "email with a localhost link is worse than not sending one."
+            )
+        if self.EMAIL_PROVIDER.strip().lower() == "logger":
+            problems.append(
+                "EMAIL_PROVIDER is 'logger' — verification and password-reset "
+                "emails would only be written to the log, never delivered"
             )
         # NOTE for whoever redeploys pb-pollux or pb-castor next (2026-09-14):
         # the FRONTEND_URL check above is NEW, and as of today NEITHER live

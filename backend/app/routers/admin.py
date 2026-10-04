@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from typing import Optional
+from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
@@ -2219,7 +2220,9 @@ async def upload_ocr_reference(
     (target_dir / safe_name).write_bytes(file_bytes)
 
     mime = file.content_type or "application/octet-stream"
-    ocr = get_ocr_provider(doc_key, db=db).extract(file_bytes, mime)
+    # Sync OCR (network call to the provider) must not run on the event loop:
+    # it would freeze the single uvicorn worker for every other request.
+    ocr = await run_in_threadpool(lambda: get_ocr_provider(doc_key, db=db).extract(file_bytes, mime))
     text = ocr.text or ""
 
     # Suggest keywords from OCR text: frequent single words + 2-grams

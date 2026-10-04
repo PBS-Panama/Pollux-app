@@ -58,6 +58,12 @@ WORKDIR /app/backend
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
+# Backend and Express run as an unprivileged user (supervisord drops to it via
+# user= in supervisord.prod.conf). nginx's master stays root only to bind :80;
+# its workers already run as www-data. /app/ocr_references is the one path the
+# backend writes at runtime.
+RUN useradd --system --uid 10001 --no-create-home app \
+    && mkdir -p /app/ocr_references && chown app:app /app/ocr_references
 
 # ── Leto Express server (:8081, PORT env var) ─────────────────────────────
 WORKDIR /app/leto

@@ -13,6 +13,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -431,7 +432,9 @@ async def admin_record_contact_attempt(
     attachment_ref = None
     if attachment is not None and attachment.filename:
         content = await attachment.read()
-        attachment_ref = embarkation_storage.store_attachment(
+        # GCS upload is blocking I/O — keep it off the event loop.
+        attachment_ref = await run_in_threadpool(
+            embarkation_storage.store_attachment,
             content, attachment.filename, attachment.content_type or "application/pdf",
         )
     parsed_contacted_at = datetime.fromisoformat(contacted_at) if contacted_at else None

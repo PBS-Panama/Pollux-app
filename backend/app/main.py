@@ -3,8 +3,10 @@ import threading
 import time
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
+from sqlalchemy import text
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
@@ -110,4 +112,23 @@ app.include_router(notifications_router.router, prefix="/api", tags=["Notificati
 
 @app.get("/health", tags=["Health"])
 def health():
+    """Liveness only — never touches the DB, so a DB blip can't make the
+    platform restart a perfectly healthy process."""
     return {"status": "ok", "service": "leto-api", "version": "0.1.0"}
+
+
+@app.get("/ready", tags=["Health"])
+def ready():
+    """Readiness: the DB answers AND the schema is at the Alembic head the
+    code expects (the startup thread only prints SCHEMA MISMATCH). 503 otherwise."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        current, head, is_current = schema_status(engine)
+    except Exception as exc:
+        print(f"[leto-api] /ready: database check failed: {exc}", flush=True)
+        return JSONResponse({"status": "unavailable", "reason": "database"}, status_code=503)
+    if not is_current:
+        print(f"[leto-api] /ready: schema mismatch database={current} expected={head}", flush=True)
+        return JSONResponse({"status": "unavailable", "reason": "schema"}, status_code=503)
+    return {"status": "ready"}

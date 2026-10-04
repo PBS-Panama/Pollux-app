@@ -75,14 +75,14 @@ def seed_admin(engine: Engine) -> None:
         existing = _conn.execute(
             text("SELECT id FROM users WHERE email = :e"), {"e": email}
         ).fetchone()
-        if existing and password:
+        if existing and password and settings.ADMIN_SEED_RESET:
             _conn.execute(text("""
                 UPDATE users SET hashed_password = :pw, updated_at = :now WHERE id = :id
             """), {"pw": hash_password(password), "now": datetime.now(timezone.utc), "id": existing.id})
             _conn.commit()
-            print(f"[leto-api] seeds: admin {email} password updated", flush=True)
-        elif existing and not password:
-            print(f"[leto-api] seeds: admin {email} exists, no password change requested", flush=True)
+            print(f"[leto-api] seeds: admin {email} password RESET (ADMIN_SEED_RESET=true)", flush=True)
+        elif existing:
+            print(f"[leto-api] seeds: admin {email} exists, left untouched", flush=True)
         elif not existing and password:
             _conn.execute(text("""
                 INSERT INTO users (id, email, hashed_password, role, is_active, email_verified, created_at, updated_at)

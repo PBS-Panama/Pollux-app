@@ -8,13 +8,11 @@ Run (needs pytest + httpx; no database: auth fails before any query):
 """
 import os
 import re
-from datetime import date
 
 os.environ.setdefault("SECRET_KEY", "x" * 48)
 os.environ.setdefault("DRIVE_STATE_SECRET", "y" * 48)
 
 import pytest
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from app.core.deps import get_current_user
@@ -24,6 +22,7 @@ from app.models.user import User
 # (method, path) that are public ON PURPOSE. Everything else must demand a token.
 PUBLIC = {
     ("GET", "/health"),
+    ("GET", "/ready"),
     ("POST", "/api/auth/register"),
     ("POST", "/api/auth/login"),
     ("POST", "/api/auth/refresh"),
@@ -47,26 +46,35 @@ PUBLIC = {
 COMPANY_PREFIX = "/api/company"
 
 
+SCHEMA = app.openapi()  # public API: stable across FastAPI versions (app.routes is not)
+
+
 def _routes():
-    for r in app.routes:
-        if not isinstance(r, APIRoute):
-            continue
-        for m in r.methods - {"HEAD", "OPTIONS"}:
-            yield m, r.path
+    for path, ops in SCHEMA["paths"].items():
+        for method in ops:
+            yield method.upper(), path
 
 
-_DUMMY = {str: "x", int: 0, float: 0.0, bool: False, list: [], dict: {}, date: "2026-01-01"}
+_DUMMY = {"string": "x", "integer": 0, "number": 0.0, "boolean": False, "array": [], "object": {}}
+
+
+def _resolve(schema: dict) -> dict:
+    ref = schema.get("$ref")
+    return SCHEMA["components"]["schemas"][ref.rsplit("/", 1)[-1]] if ref else schema
 
 
 def _body(method: str, path: str) -> dict:
     """Minimal valid JSON body so body validation (422) can't mask the role
-    check that runs inside the handler. Best-effort: required scalar fields only."""
-    route = next(r for r in app.routes if isinstance(r, APIRoute) and r.path == path and method in r.methods)
-    if route.body_field is None:
+    check that runs inside the handler. Best-effort: required fields only."""
+    content = SCHEMA["paths"][path][method.lower()].get("requestBody", {}).get("content", {})
+    if "application/json" not in content:
         return {}
-    model = route.body_field.type_
-    fields = getattr(model, "model_fields", {})
-    return {n: _DUMMY.get(f.annotation, "x") for n, f in fields.items() if f.is_required()}
+    model = _resolve(content["application/json"]["schema"])
+    props = model.get("properties", {})
+    return {
+        n: "2026-01-01" if props[n].get("format") == "date" else _DUMMY.get(props[n].get("type"), "x")
+        for n in model.get("required", [])
+    }
 
 
 def _url(path: str) -> str:

@@ -38,15 +38,11 @@
     <link rel="alternate" hreflang="es" href="https://pollux-app.com/" />
     <link rel="alternate" hreflang="x-default" href="https://pollux-app.com/" />
 
-    <!-- ── Google Fonts — preconnect + carga asíncrona (no bloquea el render).
+    <!-- ── Google Fonts — preconnect + hoja normal (sin onload inline: la CSP de producción lo bloquea).
          El <noscript> conserva las fuentes cuando JS está desactivado. ───── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" />
-    </noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" />
 
     <!-- ── JSON-LD Structured Data ──────────────────────────────────────── -->
     <script type="application/ld+json">

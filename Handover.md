@@ -14417,3 +14417,71 @@ Revisé la nota (55) y el diff de `auth.py`, `deps.py` y `nginx-cloudrun.conf`. 
 3. **7 GET de catálogo públicos:** se quedan públicos. Son catálogos de referencia de solo lectura, sin datos de usuarios. Si alguno llegara a exponer datos de empresas o marinos, se cierra.
 4. **401 sin token:** aceptado, es el comportamiento correcto.
 5. **Commit autorizado** (orden de Rick, nota 54): solo los archivos de T14, en `PBS-Panama/Pollux-app` `main`, sin `--force` y sin arrastrar los cambios ajenos del working tree. La lista para Castor se reenvía vía Dandy.
+
+
+## (57) Dev — T14 commiteada + T15 Robustez — 2026-10-04 · T15 SIN commit · SIN deploy
+
+### T14 — commit hecho (autorizado en nota 56)
+- Repo: `PBS-Panama/Pollux-app` `main`. `ls-remote` ANTES: `e07e6675…`; DESPUÉS: `a8660539091282ea96f83a75c88f4d56826e0cd3`. Push fast-forward, sin `--force`.
+- **Cómo se aisló:** esta carpeta no es un repo propio (su git es el del monorepo `pb-website`, desactualizado para Pollux). Clone limpio de `Pollux-app` en scratchpad, `diff -r` contra la carpeta → solo difería lo de T14, así que no había cambios ajenos; commit de 13 archivos (12 de T14 + Handover). **Ojo:** mis scripts de parche habían convertido CRLF→LF en 6 archivos (diff de +1200/-1200 líneas); lo detecté antes de commitear y restauré CRLF (diff real: +478/-60). Desde T15 las ediciones preservan los saltos de línea.
+- gitleaks `protect --staged` antes del commit: sin hallazgos. El monorepo `pb-website` NO se tocó.
+
+### T15 — qué se hizo
+| Ítem | Cambio | Archivo |
+|---|---|---|
+| `/health` + `/ready` | `/health` = liveness sin DB. `/ready` = `SELECT 1` + `schema_status` (503 si DB caída o esquema ≠ head; el cuerpo no revela revisiones). nginx expone `/ready` | `main.py`, `nginx-cloudrun.conf` |
+| Seed admin | Solo **crea** si no existe. El reset de contraseña requiere `ADMIN_SEED_RESET=true` | `seeds.py`, `config.py` |
+| OCR bloqueante | OCR de `upload_ocr_reference` y la subida a GCS de `admin_record_contact_attempt` → `run_in_threadpool` | `admin.py`, `embarkations.py` |
+| Pool | `DB_POOL_SIZE` (5) y `DB_MAX_OVERFLOW` (10) por env | `db/session.py`, `config.py` |
+| Validación prod | `EMAIL_PROVIDER=logger` → el contenedor no arranca | `config.py` |
+| nginx prod | CSP (script-src 'self' estricto), Permissions-Policy, kill-switch de `service-worker.js` (en `/` y `/company/`, con `expires -1` y sin `add_header` para no perder los headers heredados) | `nginx-cloudrun.conf` |
+| No-root | usuario `app` (uid 10001) para uvicorn y Express vía `user=` de supervisord; `/app/ocr_references` con dueño `app`. HEALTHCHECK sigue en `/health` | `Dockerfile.prod`, `supervisord.prod.conf` |
+| Deps | fastapi 0.115.0→**0.142.2**, starlette→**1.7.0** (fijada), python-multipart 0.0.12→**0.0.32**, python-jose 3.3.0→**3.5.0**; fijadas `pypdf==6.19.0`, `anthropic==1.11.0`, `xhtml2pdf==0.2.21` (lo que ya corría) | `requirements.txt` |
+| Hallazgos del CSP | `interfaces/leto/src/index.html`: quité `<script async …appleid.auth.js>` (no se usa en ningún lado, solo cargaba un script de terceros en cada página de empresa). `landing/index.html`: quité el `onload` inline de Google Fonts (+ `preload`/`noscript` redundantes); la hoja de fuentes ahora es normal (no asíncrona) | esos 2 archivos |
+| Smoke | `smoke.js`: `waitForFunction` (que hace `eval` en la página y la CSP bloquea con razón) → `locator.waitFor` | `smoke.js` |
+| Tests | `tests/test_t15_logic.py` (7: gate de email, `/ready` ok/DB caída/esquema, `/health` sin DB, seed crea/no pisa/reset con flag). `test_authz.py` ahora enumera rutas con `app.openapi()` porque FastAPI 0.142 ya no expone rutas planas en `app.routes` (`_IncludedRouter`) | `tests/` |
+
+### ⚠️ Desvíos y avisos
+1. **"USER no-root" parcial, a propósito.** nginx necesita root solo para abrir `:80`; sus workers ya corren como `www-data`. Un `USER` único exigiría mover nginx a un puerto alto, o sea cambiar `--port` del servicio Cloud Run (config de deploy que no puedo verificar). Verificado con `docker top`: uvicorn y node = uid 10001, nginx master = root, workers = www-data. Si Rick quiere no-root total, es decisión de deploy.
+2. **`/ready` en Cloud Run:** el probe se configura al desplegar (startup/liveness probe a `/ready`); no está en la imagen.
+3. **Antes del deploy, `EMAIL_PROVIDER` debe estar seteada en `pb-pollux`** (≠ `logger`) o el contenedor se niega a arrancar — mismo patrón que la nota de `FRONTEND_URL` en `config.py`. Pendiente de confirmar (nota 54).
+4. **Comportamiento nuevo de `ADMIN_SEED_PASSWORD`:** ya no se reaplica en cada arranque; en local, para cambiar la clave del admin con el `.env` hay que arrancar con `ADMIN_SEED_RESET=true` una vez.
+5. **Salto fuerte de versiones (FastAPI 0.142 / starlette 1.x):** validado local con pytest, scripts y smoke; **no con tráfico real**. Debe pasar por `pb-pollux-v2` antes de producción. Además, el contenedor de prod ahora corre sin `ENVIRONMENT=production` en mis pruebas locales (uso `development` + tmpfs en `.devsecrets` para poder usar demo/seeds); el camino de prod real (Secret Manager) está cubierto por `test_secret_loader_production_gate`, no por esta corrida.
+6. **pip-audit final:** limpio salvo `ecdsa 0.19.2` (sin versión corregida; dependencia de python-jose, no se usa: solo HS256) y `pip`/`setuptools` (herramientas de build de la imagen, no del runtime). Antes: python-multipart (17 avisos), starlette (14), python-jose (5).
+7. La fuente de Google Fonts del SPA de login/registro ya no carga en asíncrono (la CSP no admite `onload` inline). Efecto: algo más de bloqueo de render solo en esas páginas; `/` (sitio estático) no cambió.
+8. Sigue pendiente T16 (requisito antes de deploy): `current_password` en `ApiKeysTab.tsx`.
+
+### Pruebas
+- `pytest tests` → **338 passed** (stack nuevo, dentro del contenedor del backend).
+- `test_secret_store`, `test_secret_loader_production_gate`, `test_ocr_mock_guard`, `test_compliance_engine` y `test_secret_rotation` (stack vivo) → verdes.
+- **`docker build -f Dockerfile.prod` OK.** Corrí esa imagen en :4002 (misma `nginx-cloudrun.conf`, supervisord, no-root): `/health` 200, `/ready` 200, headers CSP/Permissions-Policy presentes, SW kill-switch 200 `application/javascript` en `/service-worker.js` y `/company/service-worker.js`.
+- **Smoke 11/11 en :4002 (con CSP real) y 11/11 en :4001.** Barrido de consola (landing `/`, `/recursos.html`, `/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/`): sin violaciones de CSP (solo 401 esperados de `/admin/` sin sesión).
+- Rate limit sobre el nginx de prod: 5×401 y luego 429 para la misma IP; otra IP en la cola del XFF no se bloquea.
+- code-review y ponytail-review sobre el diff: sin CRITICAL/HIGH. Aplicado el de ponytail (kill-switch duplicado → un solo `location` con regex; preload/noscript de fuentes borrados).
+
+### LISTA para Castor (replicable)
+1. `config.py`: `DB_POOL_SIZE`/`DB_MAX_OVERFLOW` + `create_engine(pool_size, max_overflow)`; `ADMIN_SEED_RESET` y `seed_admin` que solo crea; validación de prod que exige `EMAIL_PROVIDER != logger`.
+2. `main.py`: `/health` liviano + `/ready` (SELECT 1 + `schema_status`, 503, sin revelar revisiones) y exponerlo en su nginx.
+3. OCR y subidas a GCS dentro de `async def` → `run_in_threadpool`.
+4. nginx Cloud Run: CSP (ajustar `connect-src`/`img-src` a Castor y probar con su smoke), Permissions-Policy, kill-switch de service worker.
+5. Dockerfile: usuario no-root para la app (nginx master queda root por el puerto).
+6. `requirements.txt`: mismas versiones (fastapi 0.142.2, starlette 1.7.0, python-multipart 0.0.32, python-jose 3.5.0) y pins; si tienen tests que recorren `app.routes`, pasarlos a `app.openapi()`.
+7. Revisar scripts/handlers inline y de terceros que ya no se usan antes de activar su CSP (en Pollux eran `appleid.auth.js` y un `onload` inline).
+
+---
+
+## (58) PM — T15 ACEPTADA + checklist de deploy — 2026-10-04
+
+Verificado: `Pollux-app` `main` = `a8660539` (T14). La nota (57) existe y las versiones nuevas de deps están fijadas en `requirements.txt`. **T15 aceptada.**
+- **No-root parcial** (uvicorn y node con uid 10001, nginx master root): aceptado. Mover nginx a un puerto alto implica cambiar `--port` en Cloud Run y no lo vale ahora.
+- **Commit de T15 autorizado:** solo sus archivos, en `Pollux-app` `main`, sin `--force`.
+
+### Checklist obligatoria del primer deploy (requiere OK de Rick)
+1. T16 hecha (ApiKeysTab con `current_password`).
+2. `EMAIL_PROVIDER` seteada en `pb-pollux` (≠ `logger`), o el contenedor no arranca.
+3. Deploy primero a un servicio de prueba (`pb-pollux-v2`) por el salto a fastapi 0.142 / starlette 1.7.
+4. Startup/readiness probe apuntando a `/ready`.
+5. `ADMIN_SEED_RESET` sin setear (solo si se quiere reponer la contraseña del admin).
+6. Probar el rate limit por XFF: 6 logins con `X-Forwarded-For` falso → el 6º debe dar 429.
+7. Revisar la consola en prod por violaciones de CSP (admin, landing, company).
+8. Castor coordinado (backend duplicado y DB compartida): Dandy.
