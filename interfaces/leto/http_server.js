@@ -2,8 +2,7 @@
 
 // Copyright (C) 2017-2023 Smart code 203358507
 
-const INDEX_CACHE = 7200;
-const ASSETS_CACHE = 2629744;
+const HASHED_CACHE = 31536000; // scripts/ and styles/: name changes with content
 const HTTP_PORT = parseInt(process.env.PORT) || 8080;
 
 const express = require('express');
@@ -14,11 +13,14 @@ const index_path = path.join(build_path, 'index.html');
 
 express().use(express.static(build_path, {
     setHeaders: (res, path) => {
-        if (path === index_path) res.set('cache-control', `public, max-age=${INDEX_CACHE}`);
-        // Left as-is on purpose (T16): this header is malformed ("max-age:"), so browsers
-        // revalidate. Fixing it would cache bundles for 30 days, and with COMMIT_HASH="build"
-        // in Docker (no .git) the asset URLs do NOT change between deploys → stale JS.
-        else res.set('cache-control', `public, max-age: ${ASSETS_CACHE}`);
+        // index.html must revalidate: each deploy publishes new bundle names and removes the
+        // old ones, so a cached index would point at files that no longer exist.
+        if (path === index_path) res.set('cache-control', 'no-cache');
+        // Only content-hashed bundles may be immutable. Images/fonts/favicons/manifest keep
+        // their plain names, so they must revalidate (ETag → cheap 304), never be pinned.
+        else if (/[\\/](scripts|styles)[\\/][^\\/]+\.[0-9a-f]{8,}\.(js|css)(\.map)?$/.test(path)) {
+            res.set('cache-control', `public, max-age=${HASHED_CACHE}, immutable`);
+        } else res.set('cache-control', 'no-cache');
     }
 })).all('*', (_req, res) => {
     // TODO: better 404 page

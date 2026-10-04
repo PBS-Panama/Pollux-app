@@ -46,7 +46,9 @@ module.exports = (env, argv) => ({
     },
     output: {
         path: path.join(__dirname, 'build'),
-        filename: `${COMMIT_HASH}/scripts/[name].js`,
+        // [contenthash]: the file name changes only when its content does (no git needed,
+        // so it also works in the Docker build where COMMIT_HASH is the constant "build").
+        filename: 'scripts/[name].[contenthash].js',
         clean: true,
     },
     module: {
@@ -238,7 +240,7 @@ module.exports = (env, argv) => ({
             ]
         }),
         new MiniCssExtractPlugin({
-            filename: `${COMMIT_HASH}/styles/[name].css`
+            filename: 'styles/[name].[contenthash].css'
         }),
         new HtmlWebPackPlugin({
             template: './src/index.html',

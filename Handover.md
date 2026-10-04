@@ -14538,3 +14538,40 @@ Verificado: `Pollux-app` `main` = `208d8071` (T15) y nota (59) presente. **T16 a
 - El requisito de deploy de la nota 56 (ApiKeysTab) queda cumplido.
 
 **Próximo:** T16b (contenthash) → T18 (partir `admin.py`, mecánico). T17 (OCR refs a GCS) espera la decisión de Rick sobre el bucket propio.
+
+
+## (61) Dev — T16 commiteada + T16b `[contenthash]` en los bundles de leto — 2026-10-04 · T16b SIN commit · SIN deploy
+
+### T16 — commit hecho (autorizado en nota 60)
+`PBS-Panama/Pollux-app` `main`: `ls-remote` ANTES `208d8071…` → DESPUÉS **`03d3301ee0d296d35c561281442a11df10f61618`**. Fast-forward, sin `--force`; 21 archivos (+254/−461, incluye los 4 borrados); gitleaks `protect --staged` limpio.
+
+### T16b — qué se hizo
+- `interfaces/leto/webpack.config.js`: `scripts/[name].[contenthash].js` y `styles/[name].[contenthash].css` (ya no cuelgan de `COMMIT_HASH` ni de `.git`; no hay build-arg). `COMMIT_HASH` se queda **solo** para el texto "Build version" de Settings.
+- `interfaces/leto/http_server.js`: bundles con hash → `public, max-age=31536000, immutable` (la regex exige `scripts|styles/<nombre>.<hex≥8>.js|css[.map]`); index sin cambios (`public, max-age=7200`).
+
+### ⚠️ Desvío 1 (a propósito): todo lo demás pasó a `no-cache`, no a `immutable`
+La orden decía "max-age largo (immutable) para assets". Pero en `build/` conviven archivos **sin hash** (`images/`, `fonts/`, `favicons/`, `flags/`, `manifest.json`, `service-worker.js`, workbox) — webpack los nombra `[name][ext]`. Marcarlos `immutable` por un año habría reintroducido el problema que T16 evitó, para imágenes. Esos quedan en `Cache-Control: no-cache` (el navegador revalida con ETag → 304 barato; antes iban con el header malformado, que en la práctica era lo mismo).
+
+### ⚠️ Desvío 2 / riesgo que te toca decidir: el index con `max-age=7200`
+Con nombres por contenido, **cada deploy borra los bundles viejos** (`output.clean: true`) y publica nombres nuevos. Un navegador que tenga el `index.html` cacheado (hasta 2 h) pedirá el JS viejo → 404 → **pantalla en blanco hasta que expire el index o recargue duro**. Antes no pasaba porque las URLs eran fijas. Lo dejé como ordenaste ("index sin cambios") pero **recomiendo `no-cache` para el index** (una línea: `INDEX_CACHE` → `'no-cache'`; el index pesa casi nada). Mismo efecto durante un rollout de Cloud Run con dos revisiones vivas. Dime si lo cambio.
+
+### Pruebas
+- **Reproducibilidad (3 builds con `pnpm build` dentro del mismo contenedor base):** build 1 y build 2 sin cambios → mismos nombres: `main.9c744751463801f9dfae.js` / `main.c2642046dc63e7ad5356.css` (y los `.map`). El build de la imagen de dev (otra construcción de Docker) dio **el mismo hash** → es reproducible entre builds, no solo dentro de uno.
+- **Cambio de código** (`console.info(...)` añadido a `src/index.js`): el JS pasó a `main.f55ac0d91f33558074bf.js`; el CSS **no** cambió (correcto: solo cambió JS). Nota: la primera prueba con un *comentario* no cambió el nombre porque Terser lo elimina — no es un fallo del hash.
+- **curl en :4001** (`/company/…`): index `public, max-age=7200`; `scripts/main.<hash>.js`, `styles/main.<hash>.css` y `.js.map` → `public, max-age=31536000, immutable`; `favicons/favicon.ico` y `manifest.json` → `no-cache`.
+- **Smoke 11/11** en :4001 con los bundles nuevos.
+- Sin tests unitarios nuevos: es config de build; la prueba es la de reproducibilidad de arriba.
+
+### LISTA para Castor
+Si su webpack/Express usa `${COMMIT_HASH}/scripts/` con `COMMIT_HASH='build'` en Docker, pasar a `[contenthash]` y copiar la regla de cabeceras (immutable solo para lo hasheado, `no-cache` para lo demás); y decidir lo mismo sobre el `max-age` del index.
+
+---
+
+## (63) PM — T16b ACEPTADA — 2026-10-04
+
+**T16b aceptada.**
+- Lo que no lleva hash (imágenes, fuentes, manifest, service-worker) queda en `no-cache`: correcto.
+- **Index → `no-cache`**: sí. El riesgo de pantalla en blanco tras un deploy es real, porque un index viejo pediría bundles que ya se borraron. Es un cambio de una línea, va en el mismo commit.
+- **Commit de T16b autorizado** (sin `--force`). T18 sigue en curso.
+
+**Adenda a (61), tras la nota (63) del PM:** el index pasó a `Cache-Control: no-cache` (se eliminó `INDEX_CACHE`). Verificado con curl en :4001: `/company/` y `/company/index.html` → `no-cache`; `scripts/main.<hash>.js` → `public, max-age=31536000, immutable`. Smoke 11/11 repetido.
