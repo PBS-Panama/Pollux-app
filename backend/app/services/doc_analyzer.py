@@ -7,30 +7,22 @@ Called from:  documents.py sync endpoint via FastAPI BackgroundTasks
               and the manual re-trigger POST endpoint.
 """
 
+import logging
 import re
 import json
-import urllib.request
-import urllib.parse
 from sqlalchemy import text
 
-from app.core.config import settings
-from app.core.security import create_access_token
 from app.db.session import SessionLocal
+from app.services.castor_files import fetch_castor_file
 from app.services.ocr_provider import get_ocr_provider
 
-CASTOR_BASE = settings.CASTOR_BASE_URL
+logger = logging.getLogger(__name__)
 
 
 def _fetch_file(user_id: str, saved_name: str) -> bytes:
-    encoded = urllib.parse.quote(saved_name, safe="")
-    url = f"{CASTOR_BASE}/api/users/{user_id}/myfiles/download/{encoded}"
-    # Runs as a background task on behalf of the platform (OCR pipeline), not
-    # a live request from user_id — an explicit service marker, not a
-    # disguised admin user (see company.py's _fetch_castor_file for why).
-    token = create_access_token({"sub": "pollux-ocr-proxy", "svc": True})
-    req = urllib.request.Request(url, method="GET", headers={"Authorization": f"Bearer {token}"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.read()
+    # Runs as a background task on behalf of the platform (OCR pipeline), not a
+    # live request from user_id; bigger files than the viewer proxy, hence 30 s.
+    return fetch_castor_file(user_id, saved_name, service="pollux-ocr-proxy", timeout=30)[0]
 
 
 def _get_rules(doc_key: str, db):
@@ -179,11 +171,9 @@ def analyze_document_background(
         try:
             file_bytes = _fetch_file(user_id, saved_name)
         except Exception as exc:
-            # Recorded in ai_verdict (visible via the document's own record),
-            # but that's easy to miss from Cloud Run's log viewer — print too,
-            # same reasoning as company.py's _fetch_castor_file.
-            status = getattr(exc, "code", None)
-            print(f"[doc_analyzer] fetch failed status={status} doc_id={doc_id} user_id={user_id}: {exc}", flush=True)
+            # Recorded in ai_verdict (visible via the document's own record) and
+            # logged — castor_files logs the URL/cause, this adds which document.
+            logger.error("doc_analyzer fetch failed doc_id=%s user_id=%s", doc_id, user_id)
             _set_verdict(db, doc_id, {
                 "status": "error", "confidence": 0,
                 "flags": [f"fetch_error:{str(exc)[:120]}"],

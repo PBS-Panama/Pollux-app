@@ -14575,3 +14575,72 @@ Si su webpack/Express usa `${COMMIT_HASH}/scripts/` con `COMMIT_HASH='build'` en
 - **Commit de T16b autorizado** (sin `--force`). T18 sigue en curso.
 
 **Adenda a (61), tras la nota (63) del PM:** el index pasó a `Cache-Control: no-cache` (se eliminó `INDEX_CACHE`). Verificado con curl en :4001: `/company/` y `/company/index.html` → `no-cache`; `scripts/main.<hash>.js` → `public, max-age=31536000, immutable`. Smoke 11/11 repetido.
+
+
+## (62) Dev — T16b commiteada + T18 Estructura: `admin.py` partido por dominio + un solo fetch a Castor — 2026-10-04 · T18 SIN commit · SIN deploy
+
+### T16b — commit hecho (autorizado en nota 63)
+`PBS-Panama/Pollux-app` `main`: `ls-remote` ANTES `03d3301e…` → DESPUÉS **`06a0a9d3969567751a41f1ca658059810c705ce3`**. Fast-forward, sin `--force`; 3 archivos (`webpack.config.js`, `http_server.js`, `Handover.md`); gitleaks limpio. Incluye el cambio que pediste: **el index ahora es `Cache-Control: no-cache`** (verificado con curl en :4001: `/company/` y `/company/index.html` → `no-cache`; `scripts/main.<hash>.js` → `public, max-age=31536000, immutable`; smoke 11/11 repetido).
+
+### T18 — qué se hizo
+**1. `backend/app/routers/admin.py` (2466 líneas, 94 definiciones, 154 rutas) → paquete `backend/app/routers/admin/`:**
+
+| Módulo | Contenido | Líneas |
+|---|---|---|
+| `overview` | `/me`, `/stats` | 35 |
+| `seafarers` | usuarios marino (1A) | 188 |
+| `companies` | usuarios empresa (1B) | 197 |
+| `documents` | cola de verificación de documentos | 165 |
+| `compliance` | monitor de compliance | 122 |
+| `relationships` | empresa–marino | 150 |
+| `exams` | exámenes y centros | 291 |
+| `config_secrets` | settings, claves de terceros (+ test), panel de secretos de infra, catálogo (solo lectura) | 560 |
+| `analytics` / `alerts` / `fleet` / `cv_template` | uno por dominio | 101 / 64 / 110 / 98 |
+| `ocr_rules` / `ocr_review` / `ocr_references` | reglas, cola de revisión + proxy de archivo + feedback, archivos de referencia | 122 / 287 / 178 |
+| `__init__` | agrega los 15 routers **en el mismo orden** que tenían los endpoints en el archivo único (FastAPI resuelve por orden de registro) y re-exporta `AlertCreate` y `_run_key_test` (los usan tests) | 49 |
+
+Movimiento **mecánico por script**: cada módulo es el texto original de su sección, solo con los imports podados a lo que usa (más un docstring de cabecera). Ningún bloque cruzaba secciones: el único símbolo compartido era `router`. `main.py` no cambió (`from app.routers import admin as admin_router` sigue funcionando). Ningún módulo pasa de 560 líneas.
+
+**2. `backend/app/services/castor_files.py` — un solo helper** `fetch_castor_file(user_id, saved_name, *, service, timeout=15) -> (bytes, content_type)` + `CastorFetchError` (mensaje **genérico**: "Could not fetch file from storage"). Reemplaza las 3 copias: `admin/ocr_review.py` (proxy del visor de documentos), `routers/company.py` (`_fetch_castor_file`, ahora un wrapper de 5 líneas que devuelve `None` si falla, igual que antes) y `services/doc_analyzer.py` (`_fetch_file`, timeout 30 s como antes). El token sigue llevando `svc: true` + `sub` propio de cada llamador (`pollux-admin-proxy` / `pollux-company-proxy` / `pollux-ocr-proxy`), sin `role`. La URL, el status y la causa van **solo al log** (`logger.error`, nunca el token). **`print` → `logging`** en lo tocado (el del proxy de admin y el de `doc_analyzer`); el resto del repo no se movió, no se tocó.
+
+### Evidencia de que las rutas son idénticas (antes = línea base tomada con el `admin.py` original; después = código final con el helper de Castor)
+```
+$ diff before.sorted.txt final.sorted.txt        # método+path, ordenado
+(vacío)
+$ diff before.routes.txt final.routes.txt        # método+path, en orden de registro
+(vacío)
+$ diff before.openapi.json final.openapi.json    # el OpenAPI COMPLETO (params, cuerpos, respuestas, tags, operationId)
+(vacío)
+154 rutas antes · 154 después
+```
+Además, comparación de AST de las 94 definiciones (funciones/clases/constantes) del original contra las del paquete: **0 faltantes, 0 sobrantes, 0 cuerpos distintos** (hecha *antes* de tocar el helper de Castor, para que la prueba de "movimiento puro" sea limpia).
+
+### ⚠️ Lo único que cambia de comportamiento (a pedido: "mensaje de error genérico")
+1. `GET /admin/documents/{id}/file`: si Castor falla, el `502` ahora dice `Could not fetch file from storage` (antes añadía la excepción cruda, con URL/status).
+2. `doc_analyzer`: el flag del veredicto en un fallo de fetch pasa de `fetch_error:<excepción>` a `fetch_error:Could not fetch file from storage` (el detalle queda en el log).
+3. Los fallos de fetch ahora salen por `logging` (a stderr por el handler de último recurso de Python: lo vi en vivo), no por `print`.
+Nada más cambió: mismos timeouts, mismos tokens, misma respuesta en éxito.
+
+### Pruebas
+- `pytest tests` → **331 passed** (329 + 2 nuevos de `test_t18_logic.py`: el helper devuelve bytes+tipo, manda el token de servicio sin `role` y con el timeout pedido; y un fallo da mensaje genérico al cliente con el detalle —`status=404`— solo en el log, sin `Bearer`). **`test_authz` (320 casos) sigue verde sobre el paquete.**
+- `test_secret_store`, `test_secret_loader_production_gate`, `test_ocr_mock_guard`, `test_compliance_engine` y `test_secret_rotation` (stack vivo) → verdes.
+- `pyflakes` sobre el paquete + `company.py` + `doc_analyzer.py` + `castor_files.py`: solo avisa de los 2 re-exports intencionales de `__init__.py`.
+- **Smoke 11/11** en :4001 (el panel admin llama a muchos de estos endpoints).
+- **En vivo contra el Castor local** (mismo código, dentro del contenedor): el helper llegó a Castor, recibió `401` (el Castor de dev no comparte `SECRET_KEY` con este Pollux) y se comportó como debe: log `castor fetch failed service=… status=401 url=…` y al llamador `Could not fetch file from storage`. **No pude probar el camino feliz contra un archivo real**: el dev local no tiene documentos con `saved_name` y los dos servicios no comparten secreto; lo cubre el test unitario con `urlopen` simulado.
+- code-review y ponytail-review: sin HIGH. (Lo único de ponytail: la lista de módulos aparece dos veces en `__init__.py`; la dejé explícita porque el orden de inclusión importa y prefiero que se lea.)
+
+### Para el PM
+- El dev de Castor tiene su propio `admin.py` duplicado: la partición no es obligatoria para él, pero el helper `castor_files.py` sí es copiable tal cual (necesita `settings.CASTOR_BASE_URL` y `create_access_token`).
+- Pendiente de lo que ya estaba en tu lista: T17 (OCR references a GCS) sigue bloqueado por el bucket propio de Pollux; T18 deja `ocr_references.py` aislado, que es donde irá ese cambio.
+
+---
+
+## (64) PM — T18 ACEPTADA + siguiente — 2026-10-04
+
+Verificado: `Pollux-app` `main` = `06a0a9d3` (T16b); paquete `routers/admin/` (15 módulos) y `services/castor_files.py` presentes.
+**T18 aceptada.** La evidencia es suficiente: las rutas, el OpenAPI y el AST quedan idénticos. **Commit autorizado** (sin `--force`).
+Camino feliz del fetch a Castor con un archivo real → re-probar en el primer deploy (checklist de la nota 58, punto 10).
+
+**Siguiente — T19:** UI de empresa para editar y borrar buques y para editar asignaciones. Los endpoints ya existen sin consumidor: `PATCH/DELETE /company/vessels/{id}` y `PATCH /company/assignments/{id}`. Solo hay que hacer el front, sin migraciones.
+
+**Queda para Rick:** T17 (bucket propio), Drive en Pollux, Calendar/entrevistas con backend real (necesita una tabla nueva en la DB compartida, o sea migración en los dos repos y coordinación con Castor) y el OK de deploy.

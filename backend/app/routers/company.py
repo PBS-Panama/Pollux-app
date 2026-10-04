@@ -2,8 +2,6 @@ import io
 import uuid
 import zipfile
 import unicodedata
-import urllib.request
-import urllib.parse
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,18 +11,14 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.db.session import get_db
-from app.core.config import settings
 from app.core.deps import get_current_user
-from app.core.security import create_access_token
 from app.models.user import User
 from app.models.company import Company
 from app.models.seafarer import Seafarer
 from app.models.document import Document
 from app.models.embarkation import Embarkation
+from app.services.castor_files import CastorFetchError, fetch_castor_file
 from app.services.compliance_engine import build_compliance_report
-
-CASTOR_BASE = settings.CASTOR_BASE_URL
-
 
 def _safe_slug(text: str) -> str:
     nfkd = unicodedata.normalize("NFKD", text or "")
@@ -39,28 +33,11 @@ def _file_ext(file_name: str) -> str:
 
 
 def _fetch_castor_file(user_id: str, saved_name: str):
-    encoded = urllib.parse.quote(saved_name, safe="")
-    url = f"{CASTOR_BASE}/api/users/{user_id}/myfiles/download/{encoded}"
+    """Bytes of a seafarer's file, or None if it can't be fetched (the ZIP export
+    skips it; castor_files already logged why)."""
     try:
-        # Operates on another user's (the seafarer's) files on behalf of a
-        # company action — an explicit service marker, not a disguised admin
-        # user (Rick/Castor, 2026-09-14): `role: "admin"` made this token
-        # indistinguishable from a real admin's, and a leaked admin JWT would
-        # have granted file access it was never meant to. Castor's guard
-        # accepts `svc: true` additively alongside `role === 'admin'`, so no
-        # coordination window was needed to land this.
-        token = create_access_token({"sub": "pollux-company-proxy", "svc": True})
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return resp.read()
-    except Exception as exc:
-        # Was `except Exception: return None` — a document silently missing
-        # from a ZIP with zero trace anywhere. This was the exact pattern
-        # that hid the /api routing bug for weeks (2026-09-13 postmortem);
-        # a SECRET_KEY mismatch between the two services would look
-        # identical to this same silence. Never log `token`.
-        status = getattr(exc, "code", None)
-        print(f"[company._fetch_castor_file] failed status={status} url={url} user_id={user_id}: {exc}", flush=True)
+        return fetch_castor_file(user_id, saved_name, service="pollux-company-proxy")[0]
+    except CastorFetchError:
         return None
 
 
