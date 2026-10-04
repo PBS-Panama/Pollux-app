@@ -708,13 +708,24 @@ def delete_vessel(
     db: Session = Depends(get_db),
 ):
     _require_company(current_user, db)
-    now = datetime.now(timezone.utc)
-    result = db.execute(text("""
-        UPDATE vessels SET is_active = FALSE, updated_at = :now
-        WHERE id = :id AND company_id = :cid RETURNING id
-    """), {"now": now, "id": vessel_id, "cid": current_user.company_id}).fetchone()
-    if not result:
+    owned = db.execute(text("SELECT id FROM vessels WHERE id = :id AND company_id = :cid"),
+                       {"id": vessel_id, "cid": current_user.company_id}).fetchone()
+    if not owned:
         raise HTTPException(status_code=404, detail="Vessel not found")
+    # Soft delete would leave scheduled/aboard rotations orphaned on a vessel nobody can
+    # see anymore: refuse until they are completed or cancelled (no cascade, on purpose).
+    open_count = db.execute(text("""
+        SELECT COUNT(*) FROM crew_assignments
+        WHERE vessel_id = :id AND status IN ('scheduled', 'aboard')
+    """), {"id": vessel_id}).scalar()
+    if open_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Vessel has {open_count} open assignment{'s' if open_count != 1 else ''} "
+                   "(scheduled or aboard). Complete or cancel them before deleting the vessel.",
+        )
+    db.execute(text("UPDATE vessels SET is_active = FALSE, updated_at = :now WHERE id = :id"),
+               {"now": datetime.now(timezone.utc), "id": vessel_id})
     db.commit()
 
 
@@ -773,6 +784,30 @@ def list_assignments(
     return {"items": [_assignment_row_to_dict(a) for a in rows]}
 
 
+def _raise_if_assignment_conflict(db: Session, vessel_id: str, rank: str, embark, disembark, exclude_id: str = "") -> None:
+    """409 if another active assignment already covers `rank` on this vessel over an
+    overlapping period. Shared by POST (create) and PATCH (edit, excluding itself).
+    A NULL disembark_date is open-ended ('infinity') on both sides — otherwise a
+    permanent rotation would silently escape the check, which is exactly the case
+    that matters most."""
+    conflict = db.execute(text("""
+        SELECT a.id, s.first_name, s.last_name
+        FROM crew_assignments a
+        JOIN seafarers s ON s.id = a.seafarer_id
+        WHERE a.vessel_id = :vid AND a.rank = :rank
+          AND a.status NOT IN ('cancelled', 'completed')
+          AND a.id <> :exclude_id
+          AND a.embark_date <= COALESCE(:new_disembark, 'infinity'::date)
+          AND :new_embark <= COALESCE(a.disembark_date, 'infinity'::date)
+    """), {
+        "vid": vessel_id, "rank": rank, "exclude_id": exclude_id,
+        "new_embark": embark, "new_disembark": disembark,
+    }).fetchone()
+    if conflict:
+        name = f"{conflict.first_name or ''} {conflict.last_name or ''}".strip()
+        raise HTTPException(status_code=409, detail=f"{name} already covers {rank} on this vessel for an overlapping period")
+
+
 @router.post("/company/vessels/{vessel_id}/assignments", status_code=201)
 def create_assignment(
     vessel_id: str,
@@ -794,25 +829,7 @@ def create_assignment(
     if not staff:
         raise HTTPException(status_code=400, detail="Seafarer must be hired staff before being assigned to a vessel")
 
-    # Conflict check: no two crew members covering the same rank on the same vessel
-    # for overlapping dates. Both sides of the range treat a NULL disembark_date as
-    # open-ended ('infinity') — otherwise a permanent rotation would silently escape
-    # the check, which is exactly the case that matters most.
-    conflict = db.execute(text("""
-        SELECT a.id, s.first_name, s.last_name
-        FROM crew_assignments a
-        JOIN seafarers s ON s.id = a.seafarer_id
-        WHERE a.vessel_id = :vid AND a.rank = :rank
-          AND a.status NOT IN ('cancelled', 'completed')
-          AND a.embark_date <= COALESCE(:new_disembark, 'infinity'::date)
-          AND :new_embark <= COALESCE(a.disembark_date, 'infinity'::date)
-    """), {
-        "vid": vessel_id, "rank": payload.rank,
-        "new_embark": payload.embark_date, "new_disembark": payload.disembark_date,
-    }).fetchone()
-    if conflict:
-        name = f"{conflict.first_name or ''} {conflict.last_name or ''}".strip()
-        raise HTTPException(status_code=409, detail=f"{name} already covers {payload.rank} on this vessel for an overlapping period")
+    _raise_if_assignment_conflict(db, vessel_id, payload.rank, payload.embark_date, payload.disembark_date)
 
     new_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
@@ -837,10 +854,11 @@ def update_assignment(
     db: Session = Depends(get_db),
 ):
     _require_company(current_user, db)
-    owned = db.execute(text("""
-        SELECT a.id FROM crew_assignments a WHERE a.id = :id AND a.company_id = :cid
+    current = db.execute(text("""
+        SELECT a.id, a.vessel_id, a.rank, a.embark_date, a.disembark_date, a.status
+        FROM crew_assignments a WHERE a.id = :id AND a.company_id = :cid
     """), {"id": assignment_id, "cid": current_user.company_id}).fetchone()
-    if not owned:
+    if not current:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     if payload.status is not None and payload.status not in ("scheduled", "aboard", "completed", "cancelled"):
@@ -849,6 +867,18 @@ def update_assignment(
     fields = payload.dict(exclude_unset=True)
     if not fields:
         return {"id": assignment_id}
+
+    # Same overlap rule as creating one — but only when the edit actually changes who
+    # covers what/when, so a notes-only edit never trips on an overlap that already
+    # existed before this check did. Closing it (cancelled/completed) frees the slot.
+    changed = any(k in fields and fields[k] != getattr(current, k) for k in ("rank", "embark_date", "disembark_date", "status"))
+    new_status = fields.get("status", current.status)
+    if changed and new_status not in ("cancelled", "completed"):
+        _raise_if_assignment_conflict(
+            db, current.vessel_id, fields.get("rank", current.rank),
+            fields.get("embark_date", current.embark_date), fields.get("disembark_date", current.disembark_date),
+            exclude_id=current.id,
+        )
     set_clause = ", ".join(f"{k} = :{k}" for k in fields)
     fields.update({"id": assignment_id, "now": datetime.now(timezone.utc)})
     db.execute(text(f"UPDATE crew_assignments SET {set_clause}, updated_at = :now WHERE id = :id"), fields)

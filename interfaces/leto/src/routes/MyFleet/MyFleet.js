@@ -70,6 +70,45 @@ const fileToResizedDataUrl = (file, maxDim) => new Promise((resolve, reject) => 
 const formatDate = (s) => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-PA') : null;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
+const ASSIGNMENT_STATUS_LABELS = { scheduled: 'Programada', aboard: 'A bordo', completed: 'Completada', cancelled: 'Cancelada' };
+
+const vesselToForm = (v) => ({
+    name: v.name || '', vessel_type: v.vessel_type || 'merchant', flag_country: v.flag_country || '',
+    imo_number: v.imo_number || '', mmsi_number: v.mmsi_number || '',
+    crew_capacity: v.crew_capacity != null ? String(v.crew_capacity) : '', photo_b64: v.photo_b64 || null,
+});
+
+// Fields shared by "+ Agregar Barco" and "Editar barco" (same inputs, same order).
+const VesselFormFields = ({ form, setForm, onPhotoChange }) => {
+    const set = (key) => (e) => setForm((f) => Object.assign({}, f, { [key]: e.target.value }));
+    return (
+        <React.Fragment>
+            <input className={styles['text-input']} placeholder="Nombre del barco"
+                value={form.name} onChange={set('name')} required />
+            <div className={styles['form-row']}>
+                <select className={styles['text-input']} value={form.vessel_type} onChange={set('vessel_type')}>
+                    {Object.entries(CATEGORY_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                </select>
+                <input className={styles['text-input']} placeholder="Bandera / país"
+                    value={form.flag_country} onChange={set('flag_country')} />
+            </div>
+            <div className={styles['form-row']}>
+                <input className={styles['text-input']} placeholder="Número IMO"
+                    value={form.imo_number} onChange={set('imo_number')} />
+                <input className={styles['text-input']} placeholder="MMSI"
+                    value={form.mmsi_number} onChange={set('mmsi_number')} />
+                <input className={styles['text-input']} type="number" min="0" placeholder="Capacidad de tripulación"
+                    value={form.crew_capacity} onChange={set('crew_capacity')} />
+            </div>
+            <label className={styles['form-field']}>
+                <span className={styles['form-label']}>Foto del barco</span>
+                <input type="file" accept="image/*" onChange={onPhotoChange} />
+            </label>
+            {form.photo_b64 && <img src={form.photo_b64} alt="" className={styles['photo-preview']} />}
+        </React.Fragment>
+    );
+};
+
 // ── Staff tab ─────────────────────────────────────────────────────────
 const StaffTab = () => {
     const [staff, setStaff] = React.useState([]);
@@ -201,13 +240,25 @@ const StaffTab = () => {
 };
 
 // ── Vessel detail (rotations) ────────────────────────────────────────
-const VesselDetail = ({ vessel, staff, onBack }) => {
+const VesselDetail = ({ vessel, staff, onBack, onVesselChanged, onVesselDeleted }) => {
     const [assignments, setAssignments] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [assigning, setAssigning] = React.useState(false);
     const [form, setForm] = React.useState({ seafarer_id: '', rank: '', embark_date: todayStr(), disembark_date: '' });
     const [error, setError] = React.useState('');
     const [saving, setSaving] = React.useState(false);
+
+    // Edit / delete the vessel itself
+    const [editingVessel, setEditingVessel] = React.useState(false);
+    const [vesselForm, setVesselForm] = React.useState(() => vesselToForm(vessel));
+    const [vesselSaving, setVesselSaving] = React.useState(false);
+    const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+    const [deleting, setDeleting] = React.useState(false);
+
+    // Edit one assignment (rank / dates / status / notes — the fields PATCH accepts)
+    const [editingAssignmentId, setEditingAssignmentId] = React.useState(null);
+    const [assignmentForm, setAssignmentForm] = React.useState(null);
+    const [assignmentSaving, setAssignmentSaving] = React.useState(false);
 
     const load = React.useCallback(() => {
         setLoading(true);
@@ -220,6 +271,7 @@ const VesselDetail = ({ vessel, staff, onBack }) => {
     React.useEffect(() => { load(); }, [load]);
 
     const activeStaff = staff.filter((s) => s.status === 'active');
+    const openAssignments = assignments.filter((a) => a.status === 'scheduled' || a.status === 'aboard');
 
     const submitAssignment = (e) => {
         e.preventDefault();
@@ -244,6 +296,85 @@ const VesselDetail = ({ vessel, staff, onBack }) => {
             .finally(() => setSaving(false));
     };
 
+    const onVesselPhotoChange = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+            const dataUrl = await fileToResizedDataUrl(file, 640);
+            setVesselForm((f) => Object.assign({}, f, { photo_b64: dataUrl }));
+        } catch {
+            setError('No se pudo procesar la imagen.');
+        }
+    };
+
+    const startEditVessel = () => {
+        setVesselForm(vesselToForm(vessel));
+        setConfirmingDelete(false);
+        setError('');
+        setEditingVessel(true);
+    };
+
+    const submitVesselEdit = (e) => {
+        e.preventDefault();
+        if (!vesselForm.name.trim()) return;
+        setVesselSaving(true);
+        setError('');
+        const body = {
+            name: vesselForm.name.trim(),
+            vessel_type: vesselForm.vessel_type,
+            flag_country: vesselForm.flag_country || null,
+            imo_number: vesselForm.imo_number || null,
+            mmsi_number: vesselForm.mmsi_number || null,
+            crew_capacity: vesselForm.crew_capacity ? parseInt(vesselForm.crew_capacity, 10) : null,
+        };
+        // The photo is a big base64 string: only send it when it actually changed.
+        if (vesselForm.photo_b64 !== (vessel.photo_b64 || null)) body.photo_b64 = vesselForm.photo_b64;
+        authedJson('/api/company/vessels/' + vessel.id, { method: 'PATCH', body: JSON.stringify(body) })
+            .then(() => { setEditingVessel(false); onVesselChanged(); })
+            .catch((err) => setError(err.message || 'No se pudo guardar el barco.'))
+            .finally(() => setVesselSaving(false));
+    };
+
+    const deleteVessel = () => {
+        setDeleting(true);
+        setError('');
+        authedJson('/api/company/vessels/' + vessel.id, { method: 'DELETE' })
+            .then(() => onVesselDeleted())
+            .catch((err) => { setError(err.message || 'No se pudo eliminar el barco.'); setConfirmingDelete(false); })
+            .finally(() => setDeleting(false));
+    };
+
+    const startEditAssignment = (a) => {
+        setEditingAssignmentId(a.id);
+        setAssignmentForm({
+            rank: a.rank || '', embark_date: a.embark_date || '', disembark_date: a.disembark_date || '',
+            status: a.status, notes: a.notes || '',
+        });
+        setError('');
+    };
+
+    const submitAssignmentEdit = (e) => {
+        e.preventDefault();
+        if (!assignmentForm.rank.trim() || !assignmentForm.embark_date) return;
+        setAssignmentSaving(true);
+        setError('');
+        authedJson('/api/company/assignments/' + editingAssignmentId, {
+            method: 'PATCH',
+            body: JSON.stringify({
+                rank: assignmentForm.rank.trim(),
+                embark_date: assignmentForm.embark_date,
+                disembark_date: assignmentForm.disembark_date || null,
+                status: assignmentForm.status,
+                notes: assignmentForm.notes.trim() || null,
+            }),
+        })
+            .then(() => { setEditingAssignmentId(null); load(); })
+            .catch((err) => setError(err.message || 'No se pudo guardar la rotación.'))
+            .finally(() => setAssignmentSaving(false));
+    };
+
+    const setAF = (key) => (e) => setAssignmentForm((f) => Object.assign({}, f, { [key]: e.target.value }));
+
     return (
         <div className={styles['tab-content']}>
             <button className={styles['btn-ghost']} onClick={onBack}>← Volver a Mis Barcos</button>
@@ -254,7 +385,43 @@ const VesselDetail = ({ vessel, staff, onBack }) => {
                     {vessel.vessel_type_label}{vessel.flag_country ? ' · ' + vessel.flag_country : ''}
                     {vessel.imo_number ? ' · IMO ' + vessel.imo_number : ''}
                 </div>
+                <div className={styles['row-right']}>
+                    <button className={styles['btn-small']} onClick={() => (editingVessel ? setEditingVessel(false) : startEditVessel())}>
+                        {editingVessel ? 'Cancelar edición' : 'Editar barco'}
+                    </button>
+                    <button className={styles['btn-ghost']} onClick={() => { setEditingVessel(false); setConfirmingDelete((v) => !v); }}>
+                        Eliminar barco
+                    </button>
+                </div>
             </div>
+
+            {error && <div className={styles['error-banner']}>{error}</div>}
+
+            {confirmingDelete && (
+                <div className={styles['form-panel']}>
+                    <div className={styles['row-title']}>¿Eliminar "{vessel.name}"?</div>
+                    <div className={styles['row-sub']}>
+                        {openAssignments.length > 0
+                            ? 'No se puede eliminar: tiene ' + openAssignments.length + (openAssignments.length === 1 ? ' rotación programada' : ' rotaciones programadas') + ' o a bordo. Complétalas o cancélalas primero (botón Editar en cada rotación).'
+                            : 'El barco dejará de aparecer en Mis Barcos.'}
+                    </div>
+                    <div className={styles['row-right']}>
+                        <button className={styles['btn-danger']} disabled={deleting || openAssignments.length > 0} onClick={deleteVessel}>
+                            {deleting ? 'Eliminando…' : 'Sí, eliminar'}
+                        </button>
+                        <button className={styles['btn-ghost']} disabled={deleting} onClick={() => setConfirmingDelete(false)}>Cancelar</button>
+                    </div>
+                </div>
+            )}
+
+            {editingVessel && (
+                <form className={styles['form-panel']} onSubmit={submitVesselEdit}>
+                    <VesselFormFields form={vesselForm} setForm={setVesselForm} onPhotoChange={onVesselPhotoChange} />
+                    <button className={styles['btn-primary']} type="submit" disabled={vesselSaving}>
+                        {vesselSaving ? 'Guardando…' : 'Guardar cambios'}
+                    </button>
+                </form>
+            )}
 
             <div className={styles['tab-header-row']}>
                 <div className={styles['section-label']}>Rotaciones</div>
@@ -262,8 +429,6 @@ const VesselDetail = ({ vessel, staff, onBack }) => {
                     {assigning ? 'Cerrar' : '+ Asignar tripulante'}
                 </button>
             </div>
-
-            {error && <div className={styles['error-banner']}>{error}</div>}
 
             {assigning && (
                 <form className={styles['form-panel']} onSubmit={submitAssignment}>
@@ -310,7 +475,40 @@ const VesselDetail = ({ vessel, staff, onBack }) => {
             )}
 
             <div className={styles['card-list']}>
-                {assignments.map((a) => (
+                {assignments.map((a) => (editingAssignmentId === a.id ? (
+                    <form key={a.id} className={styles['form-panel']} onSubmit={submitAssignmentEdit}>
+                        <div className={styles['row-title']}>{a.seafarer_name}</div>
+                        <input className={styles['text-input']} placeholder="Puesto/rango a cubrir (ej. 2nd-mate)"
+                            value={assignmentForm.rank} onChange={setAF('rank')} required />
+                        <div className={styles['form-row']}>
+                            <label className={styles['form-field']}>
+                                <span className={styles['form-label']}>Fecha de embarque</span>
+                                <input type="date" className={styles['text-input']} value={assignmentForm.embark_date}
+                                    onChange={setAF('embark_date')} required />
+                            </label>
+                            <label className={styles['form-field']}>
+                                <span className={styles['form-label']}>Fecha de desembarque (vacío = permanente)</span>
+                                <input type="date" className={styles['text-input']} value={assignmentForm.disembark_date}
+                                    onChange={setAF('disembark_date')} />
+                            </label>
+                            <label className={styles['form-field']}>
+                                <span className={styles['form-label']}>Estado</span>
+                                <select className={styles['text-input']} value={assignmentForm.status} onChange={setAF('status')}>
+                                    {Object.entries(ASSIGNMENT_STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                                </select>
+                            </label>
+                        </div>
+                        <input className={styles['text-input']} placeholder="Notas (opcional)"
+                            value={assignmentForm.notes} onChange={setAF('notes')} />
+                        <div className={styles['row-right']}>
+                            <button className={styles['btn-primary']} type="submit" disabled={assignmentSaving}>
+                                {assignmentSaving ? 'Guardando…' : 'Guardar cambios'}
+                            </button>
+                            <button className={styles['btn-ghost']} type="button" disabled={assignmentSaving}
+                                onClick={() => setEditingAssignmentId(null)}>Cancelar</button>
+                        </div>
+                    </form>
+                ) : (
                     <div key={a.id} className={styles['assignment-card']}>
                         <div>
                             <div className={styles['row-title']}>{a.seafarer_name} — {a.rank}</div>
@@ -319,10 +517,14 @@ const VesselDetail = ({ vessel, staff, onBack }) => {
                                 {' · '}
                                 {a.disembark_date ? 'Desembarca ' + formatDate(a.disembark_date) : 'Permanente'}
                             </div>
+                            {a.notes && <div className={styles['row-sub']}>{a.notes}</div>}
                         </div>
-                        <span className={styles['status-chip']} data-status={a.status}>{a.status}</span>
+                        <div className={styles['row-right']}>
+                            <span className={styles['status-chip']} data-status={a.status}>{a.status}</span>
+                            <button className={styles['btn-small']} onClick={() => startEditAssignment(a)}>Editar</button>
+                        </div>
                     </div>
-                ))}
+                )))}
             </div>
         </div>
     );
@@ -390,7 +592,15 @@ const VesselsTab = ({ staff }) => {
 
     const selected = vessels.find((v) => v.id === selectedId);
     if (selected) {
-        return <VesselDetail vessel={selected} staff={staff} onBack={() => { setSelectedId(null); load(); }} />;
+        return (
+            <VesselDetail
+                vessel={selected}
+                staff={staff}
+                onBack={() => { setSelectedId(null); load(); }}
+                onVesselChanged={load}
+                onVesselDeleted={() => { setSelectedId(null); load(); }}
+            />
+        );
     }
 
     return (
@@ -406,29 +616,7 @@ const VesselsTab = ({ staff }) => {
 
             {creating && (
                 <form className={styles['form-panel']} onSubmit={submitVessel}>
-                    <input className={styles['text-input']} placeholder="Nombre del barco"
-                        value={form.name} onChange={(e) => setForm((f) => Object.assign({}, f, { name: e.target.value }))} required />
-                    <div className={styles['form-row']}>
-                        <select className={styles['text-input']} value={form.vessel_type}
-                            onChange={(e) => setForm((f) => Object.assign({}, f, { vessel_type: e.target.value }))}>
-                            {Object.entries(CATEGORY_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-                        </select>
-                        <input className={styles['text-input']} placeholder="Bandera / país"
-                            value={form.flag_country} onChange={(e) => setForm((f) => Object.assign({}, f, { flag_country: e.target.value }))} />
-                    </div>
-                    <div className={styles['form-row']}>
-                        <input className={styles['text-input']} placeholder="Número IMO"
-                            value={form.imo_number} onChange={(e) => setForm((f) => Object.assign({}, f, { imo_number: e.target.value }))} />
-                        <input className={styles['text-input']} placeholder="MMSI"
-                            value={form.mmsi_number} onChange={(e) => setForm((f) => Object.assign({}, f, { mmsi_number: e.target.value }))} />
-                        <input className={styles['text-input']} type="number" min="0" placeholder="Capacidad de tripulación"
-                            value={form.crew_capacity} onChange={(e) => setForm((f) => Object.assign({}, f, { crew_capacity: e.target.value }))} />
-                    </div>
-                    <label className={styles['form-field']}>
-                        <span className={styles['form-label']}>Foto del barco</span>
-                        <input type="file" accept="image/*" onChange={onPhotoChange} />
-                    </label>
-                    {form.photo_b64 && <img src={form.photo_b64} alt="" className={styles['photo-preview']} />}
+                    <VesselFormFields form={form} setForm={setForm} onPhotoChange={onPhotoChange} />
                     <button className={styles['btn-primary']} type="submit" disabled={saving}>
                         {saving ? 'Guardando…' : 'Guardar barco'}
                     </button>

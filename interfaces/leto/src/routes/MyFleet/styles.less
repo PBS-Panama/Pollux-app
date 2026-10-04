@@ -141,6 +141,22 @@
     &:disabled { opacity: 0.5; cursor: default; }
 }
 
+.btn-danger {
+    background: fade(#e74c3c, 10%);
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover:not(:disabled) { opacity: 0.8; }
+    &:disabled { opacity: 0.5; cursor: default; }
+}
+
 .btn-ghost {
     background: none;
     border: none;
@@ -294,4 +310,6 @@
         color: var(--content-text-color, #061237);
         margin: 0;
     }
+
+    .row-right { margin-top: 0.6rem; }
 }

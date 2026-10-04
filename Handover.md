@@ -14644,3 +14644,72 @@ Camino feliz del fetch a Castor con un archivo real → re-probar en el primer d
 **Siguiente — T19:** UI de empresa para editar y borrar buques y para editar asignaciones. Los endpoints ya existen sin consumidor: `PATCH/DELETE /company/vessels/{id}` y `PATCH /company/assignments/{id}`. Solo hay que hacer el front, sin migraciones.
 
 **Queda para Rick:** T17 (bucket propio), Drive en Pollux, Calendar/entrevistas con backend real (necesita una tabla nueva en la DB compartida, o sea migración en los dos repos y coordinación con Castor) y el OK de deploy.
+
+
+## (65) Dev — T18 commiteada + T19 Mi Flota: editar/borrar barco y editar asignación — 2026-10-04 · T19 SIN commit · SIN deploy
+
+### T18 — commit hecho (autorizado en nota 64)
+`PBS-Panama/Pollux-app` `main`: `ls-remote` ANTES `06a0a9d3…` → DESPUÉS **`619e70a024800939dc24a50c0276c8ce4a02e524`**. Fast-forward, sin `--force`; 22 archivos (el paquete `routers/admin/`, `admin.py` borrado, `castor_files.py`, `company.py`, `doc_analyzer.py`, `test_t18_logic.py`, Handover); gitleaks limpio.
+
+### T19 — reglas reales leídas en `company.py` antes de escribir
+- `PATCH /company/vessels/{id}` (`VesselPatch`): parcial (`exclude_unset`), campos `name, vessel_type, flag_country, imo_number, mmsi_number, crew_capacity, photo_b64, is_active`; 404 si el barco no es de la empresa. **No valida `name`** (un `null` reventaría la columna) → el front exige nombre no vacío.
+- `DELETE /company/vessels/{id}`: **soft delete** (`is_active = FALSE`), 204, 404 si no es de la empresa. **Nunca rechaza por tener asignaciones** (la orden suponía que podía).
+- `PATCH /company/assignments/{id}` (`AssignmentPatch`): `rank, embark_date, disembark_date, status, notes`; `status` ∈ `scheduled|aboard|completed|cancelled` (400 si no); **no permite cambiar el marino ni el barco**.
+
+### Qué se hizo (solo `interfaces/leto/src/routes/MyFleet/MyFleet.js` + `styles.less`; backend, migraciones y nginx sin cambios)
+- **Editar barco:** botón "Editar barco" en el detalle → panel inline precargado (mismos campos que el alta). Se extrajo `VesselFormFields` (los inputs del alta, sin cambios de contenido) y lo usan **alta y edición** (−~35 líneas duplicadas). El PATCH manda los campos de texto y `photo_b64` **solo si cambió** (es un base64 grande). Al guardar se recarga la lista y el encabezado se actualiza.
+- **Eliminar barco:** "Eliminar barco" abre un panel de confirmación inline (`¿Eliminar "X"?` / `Sí, eliminar` / `Cancelar`); si el barco tiene rotaciones programadas o a bordo, el texto lo avisa con el conteo. Si el backend rechaza, se muestra **su** `detail` en el banner y se queda en el detalle; si borra, vuelve a la lista. Estilo nuevo `btn-danger`.
+- **Editar asignación:** botón "Editar" por tarjeta → el formulario reemplaza la tarjeta (rango, embarque, desembarque —vacío = permanente—, estado, notas). Las tarjetas ahora muestran las notas.
+- **Patrón:** MyFleet **no tiene modales** — usa paneles inline (`form-panel`) y banners de error; seguí eso en vez de inventar un modal. Mismos componentes y clases (`btn-primary/small/ghost`, `text-input`, `form-row`, `error-banner`).
+
+### ⚠️ Dos hallazgos de backend (NO los toqué: la orden era solo front salvo bug real; te toca decidir)
+1. **El `PATCH` de asignación no repite el chequeo de solapamiento que sí hace el `POST`** (`409 … already covers <rank> … overlapping period`). Con la UI nueva un usuario puede editar rango/fechas y dejar a dos personas cubriendo el mismo puesto en fechas que se cruzan, algo que al crear está prohibido. Es la incoherencia real. Arreglo propuesto (backend, ~15 líneas): extraer la consulta de conflicto a un helper y llamarlo también en el PATCH cuando cambien `rank/embark_date/disembark_date` (excluyendo la propia asignación). Dime si lo hago.
+2. **Borrar un barco no toca sus asignaciones abiertas** (`scheduled`/`aboard` siguen así, huérfanas, y `GET …/assignments` del barco borrado aún responde). El front lo avisa en la confirmación, pero lo correcto es decidir: cancelar en cascada, o rechazar el borrado mientras haya rotaciones abiertas (409, y el front ya mostraría ese mensaje sin cambios).
+
+### Pruebas
+- **Build de leto OK** (Docker, webpack production). Backend sin cambios → `pytest` no se re-corrió; la suite no cubre front.
+- **Smoke 11/11** en :4001.
+- **Prueba a mano en :4001 (Playwright) como `Demo Shipping Co.`** (no hay otra empresa aprobada+verificada en dev; la de prueba que registraría quedaría sin acceso hasta aprobarla): 12/12 OK — alta de barco (con el componente compartido); **(1) editar barco**: precargado, encabezado con nombre/bandera nuevos, el PATCH real no incluye `photo_b64` y sí `crew_capacity: 12`; **(3) editar asignación**: precargada, la tarjeta muestra rango, notas y estado nuevos, PATCH con `rank`/`status`; **(2) eliminar barco**: aparece la confirmación (con el aviso de la rotación abierta), **Cancelar no envía ningún DELETE**, un `409` simulado muestra **su** mensaje y sigue en el detalle, confirmar vuelve a la lista y el barco desaparece (2 DELETE: 1 simulado + 1 real). El rechazo del backend se simuló porque el backend real nunca rechaza.
+- **Datos de prueba:** para asignar hubo que contratar a un marino (el demo no tenía personal). Listé por id y **borré** la asignación `4761e43d…` y el barco `85253520…`; la relación `1cd50df3…` ya existía (2026-09-28, `ended`) y mi prueba la reactivó, así que la **volví a `ended` con el PATCH de la propia app**, como hace el smoke. Verificado: 0 barcos, 0 asignaciones, relación `ended` (y de nuevo tras el smoke).
+- code-review: sin HIGH; los dos hallazgos de arriba son de backend (MEDIUM). ponytail-review: nada que recortar (la extracción de `VesselFormFields` ya elimina duplicación).
+
+### LISTA para Castor
+Nada replicable: es UI de Pollux (la flota de empresas no existe en Castor). El hallazgo 1 (PATCH sin chequeo de solapamiento) aplica solo si Castor tiene copia de `company.py`.
+
+---
+
+## (66) PM — T19 ACEPTADA + decisiones de backend — 2026-10-04
+
+Verificado: `Pollux-app` `main` = `619e70a0` (T18). **T19 aceptada; commit autorizado** (sin `--force`).
+Decisiones sobre los 2 hallazgos (T19b, en el mismo commit que T19):
+1. **Solapamiento en PATCH de asignación:** sí, arreglarlo con un helper compartido con el POST, excluyendo la propia asignación → 409.
+2. **DELETE de buque con rotaciones abiertas (`scheduled`/`aboard`):** **rechazar con 409** y un mensaje claro. No cancelar en cascada: tocaría datos del marino sin que la empresa lo vea. Si Rick prefiere la cascada, es una decisión de producto aparte.
+Si Castor tiene estos mismos handlers de `company.py`, agregar ambos puntos a su lista.
+
+
+## (67) Dev — T19b: solapamiento en el PATCH de asignación + borrado de barco con 409 — 2026-10-04 · commit de T19 + T19b juntos (el hash va en la línea final) · SIN deploy
+
+**Decisiones del PM (nota 66):** (1) chequeo de solapamiento también en `PATCH /company/assignments/{id}`, helper compartido con el `POST`, excluyendo la propia → 409. (2) `DELETE /company/vessels/{id}` rechaza con 409 mientras haya asignaciones `scheduled`/`aboard`; sin cascada.
+
+### Backend (`backend/app/routers/company.py`)
+- **`_raise_if_assignment_conflict(db, vessel_id, rank, embark, disembark, exclude_id="")`**: la consulta que antes estaba en línea dentro de `create_assignment`, extraída tal cual (misma regla: mismo rango y barco, estados que no sean `cancelled`/`completed`, `NULL` en desembarque = abierto/`infinity`) + `a.id <> :exclude_id`. Mismo texto de 409 (`<nombre> already covers <rank> on this vessel for an overlapping period`). `POST` ahora la llama (comportamiento idéntico).
+- **`PATCH` de asignación:** lee la fila actual y comprueba conflicto con los valores resultantes **solo si el cambio toca `rank`, `embark_date`, `disembark_date` o `status`** respecto de lo guardado, y el estado resultante no es `cancelled`/`completed`. Consecuencias deliberadas: una edición de solo notas (o un PATCH que reenvía los mismos valores, como hace la UI) nunca falla por un solapamiento que ya existía antes de este chequeo; cerrar una asignación libera el hueco; **reabrir** una cancelada vuelve a validarse.
+- **`DELETE` de barco:** 404 si no es de la empresa; 409 si `COUNT(*)` de asignaciones `scheduled`/`aboard` > 0, con `Vessel has N open assignment(s) (scheduled or aboard). Complete or cancel them before deleting the vessel.`; si no, soft delete como antes (204). Idempotente sobre un barco ya inactivo, como antes.
+- Sin migraciones; el resto de rutas intacto (el OpenAPI no cambia: mismas rutas y esquemas).
+
+### Front (`interfaces/leto/.../MyFleet.js`)
+Con el 409 real, la confirmación de borrado de T19 pasó de "avisa" a **bloquea**: si el detalle tiene rotaciones abiertas muestra `No se puede eliminar: tiene N rotaciones programadas o a bordo. Complétalas o cancélalas primero (botón Editar en cada rotación).` y deshabilita "Sí, eliminar" (si la lista estuviera desactualizada, el backend responde 409 y la UI muestra su mensaje, ya probado). **Bug propio encontrado y corregido en la prueba a mano:** el plural salía "rotaciónes"; ahora "rotación"/"rotaciones".
+
+### Tests (`backend/tests/test_fleet_rules_db.py`, 9, contra **Postgres real** — el SQL usa `'infinity'::date`, no corre en SQLite)
+Cada test corre dentro de una transacción con savepoints que se **revierte al final** (no deja nada): empresa aprobada + usuario verificado + 2 marinos contratados + barco. Casos: PATCH a periodo solapado → 409; PATCH a un rango que otro ya cubre → 409; PATCH sin solapamiento y extender la propia (se ignora a sí misma) → 200; abierta (sin desembarque) vs una posterior → 409; solo notas / cerrar → 200 y el hueco queda libre; **reabrir una cancelada se valida (409)**; DELETE con abiertas → 409 y el barco sigue activo; DELETE OK una vez cerradas (204, `is_active=false`); DELETE sin asignaciones → 204 y desconocido → 404. Se omiten solos si no hay Postgres: hay que correr `docker compose run --rm backend …` (sin `--no-deps`).
+- **Prueba en rojo:** montando el `company.py` del commit anterior, **5 de los 9 fallan** (los 4 de regla nueva + el de borrado) y 4 pasan (los caminos OK, que ya funcionaban); con el código nuevo, **9/9**.
+
+### Pruebas
+- `pytest tests` → **340 passed** (331 + 9). `pyflakes company.py` limpio. `test_secret_*`, `test_ocr_mock_guard`, `test_compliance_engine` verdes.
+- Build de leto OK. **Smoke 11/11.**
+- **Prueba a mano en :4001 (Playwright) como `Demo Shipping Co.`, 13/13 OK:** editar barco, editar asignación, **editar a fechas solapadas → el backend responde 409 y la UI muestra su mensaje**, **borrar con 2 rotaciones abiertas → mensaje claro + botón deshabilitado + cero DELETE enviados**, cerrar ambas (Completada) → la confirmación vuelve a ser normal, 409 simulado → muestra su mensaje, confirmar → vuelve a la lista.
+- **Datos de prueba:** las corridas (hubo 4 por el bug del plural y mi script) dejaron 4 asignaciones + 2 barcos + la relación `1cd50df3…` reactivada; listé por id y **borré exactamente esas filas** y volví la relación a `ended` con el PATCH de la app. Verificado: **0 barcos, 0 asignaciones, relación `ended`** (también tras el smoke).
+- code-review: sin HIGH. Anotados (MEDIUM, ya existían en el `POST`): el chequeo y el `UPDATE` no están bajo un candado (dos peticiones simultáneas podrían colarse), y un `embark_date: null` explícito en el PATCH rompería la columna NOT NULL (500, no validado en `AssignmentPatch`). ponytail-review: nada que recortar.
+
+### ¿Tiene Castor esos handlers? **Sí** — `Castor-app/backend/app/routers/company.py` (lectura, no toqué su repo): `delete_vessel` (L775), `create_assignment` con el 409 en línea (L847–886) y `update_assignment` (L912), todos **sin** el chequeo en el PATCH ni el 409 de borrado.
+**LISTA para Castor (vía Dandy):** (1) extraer `_raise_if_assignment_conflict` y llamarlo en `POST` y `PATCH` (solo si cambia rank/fechas/status, excluyendo la propia); (2) `DELETE /company/vessels/{id}` → 409 si hay `scheduled`/`aboard`; (3) copiar `tests/test_fleet_rules_db.py` (necesita su Postgres); (4) si su front de flota tiene editar/borrar, bloquear la confirmación igual. El front de Pollux (T19) no aplica a Castor.
