@@ -12,3 +12,5 @@
 /backend/.devsecrets
 __pycache__/
 *.pyc
+# graphify knowledge graph output (local, regenerable)
+graphify-out/

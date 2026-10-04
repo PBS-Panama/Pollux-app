@@ -14713,3 +14713,60 @@ Cada test corre dentro de una transacción con savepoints que se **revierte al f
 
 ### ¿Tiene Castor esos handlers? **Sí** — `Castor-app/backend/app/routers/company.py` (lectura, no toqué su repo): `delete_vessel` (L775), `create_assignment` con el 409 en línea (L847–886) y `update_assignment` (L912), todos **sin** el chequeo en el PATCH ni el 409 de borrado.
 **LISTA para Castor (vía Dandy):** (1) extraer `_raise_if_assignment_conflict` y llamarlo en `POST` y `PATCH` (solo si cambia rank/fechas/status, excluyendo la propia); (2) `DELETE /company/vessels/{id}` → 409 si hay `scheduled`/`aboard`; (3) copiar `tests/test_fleet_rules_db.py` (necesita su Postgres); (4) si su front de flota tiene editar/borrar, bloquear la confirmación igual. El front de Pollux (T19) no aplica a Castor.
+
+**Commit de T19 + T19b:** `PBS-Panama/Pollux-app` `main`: `ls-remote` ANTES `619e70a0…` → DESPUÉS **`7fe8a4a436baca596b61c990eee229e106491d95`**. Fast-forward, sin `--force`; 5 archivos (+506/−58): `company.py`, `test_fleet_rules_db.py`, `MyFleet.js`, `styles.less`, `Handover.md`; gitleaks `protect --staged` limpio. *(Esta línea del hash se añadió después del commit: queda sin commitear hasta el próximo.)*
+
+---
+
+## (68) PM — T19/T19b ACEPTADAS · cierre de la ronda — 2026-10-04
+
+Verificado: `Pollux-app` `main` = `7fe8a4a4` (T19 + T19b). **Aceptadas.** La línea del hash en la nota (67) quedó sin commitear; va en el próximo commit.
+
+### Hecho en esta ronda (todo en `main`, sin deploy)
+T14 seguridad (`a8660539`) · T15 robustez (`208d8071`) · T16 conexiones del front (`03d3301e`) · T16b caché (`06a0a9d3`) · T18 `admin.py` partido (`619e70a0`) · T19/T19b flota (`7fe8a4a4`). pytest 340 en verde, smoke 11/11.
+
+### Backlog técnico (sin bloqueo)
+- `AssignmentPatch` con `embark_date: null` explícito da 500 → validar en el esquema (422).
+- Sin candado entre el chequeo de solapamiento y el UPDATE (también en el POST) → `SELECT … FOR UPDATE` si hay concurrencia real.
+- Migraciones compartidas: impedir `downgrade` en prod y agregar un check de igualdad de `alembic/versions` entre Pollux y Castor.
+
+### Para Castor (vía Dandy)
+Las listas de las notas (55), (57) y (67): auth, rate limit, seeds/health, y las reglas de flota (`company.py` L775, L847-886, L912 en Castor).
+
+### Espera a Rick
+1. **OK de deploy** (checklist de las notas 58, 60 y 64; primero en un servicio de prueba).
+2. **Bucket GCS propio de Pollux** → habilita T17 (las referencias de OCR hoy se pierden en cada deploy).
+3. **Drive en Pollux:** ¿se usa o se apaga?
+4. **Calendar/entrevistas con backend real:** tabla nueva en la DB compartida, coordinar con Castor.
+
+---
+
+## (69) PM — Mapa del proyecto con graphify — 2026-10-04
+
+**Orden de Rick via Dandy.** Corrido `graphify` sobre `pbsds-pollux-app`. Salidas en `graphify-out/`: `graph.html` (interactivo), `GRAPH_REPORT.md` y `graph.json`. Consultas con `graphify query "..."`.
+
+**Alcance:** solo el **código** (407 archivos, análisis estático AST, 0 tokens). Quedaron fuera las 437 imágenes y los 111 documentos: el corpus completo era de 955 archivos y 2,1 M palabras, sobre todo `Handover.md`, y lo pedido es estructura, backend y conexiones.
+**Resultado:** 3316 nodos · 6992 aristas · 237 comunidades (82 muy chicas).
+**Salud del grafo:** 417 aristas colgantes (llamadas a librerías externas), 79 auto-referencias y ~600 aristas duplicadas fusionadas. Es normal en el análisis estático de JS minificado y no afecta la lectura de la estructura. Las 150 relaciones de `User` son **inferidas** y no están verificadas una por una.
+
+### Estructura (comunidades principales)
+| Capa | Comunidades | Contenido |
+|---|---|---|
+| **Backend – núcleo** | auth/JWT/sesión · deps/DB/`require_admin` · config y secretos | `core/deps.py` (`get_current_user`, `load_active_user`), `security.py`, `session.py`, `config_secrets.py` |
+| **Backend – dominio** | empresa (buques/asignaciones) · flota y analítica admin · embarques (admin + servicio + modelos) · motor de compliance | `routers/company.py`, `routers/admin/*` (15 módulos), `embarkation_service.py`, `compliance_engine.py` |
+| **Backend – datos** | migraciones Alembic y modelos | `alembic/versions` 0001→0013, `app/models` |
+| **Admin SPA** | cliente API y páginas · App y rutas | `interfaces/admin/src/lib/api.ts` (axios, `REAUTH`), `pages/admin/*` |
+| **Leto (empresa)** | iconos/hooks UI · contextos y modales · `common/index` y tema · idioma y perfil | `interfaces/leto/src` |
+| **Landing SPA** | rutas y API | `landing/src` (`App.tsx`, `ProtectedRoute`, `lib/api.ts`) |
+| **Ruido de terceros** | ~12 comunidades | jQuery/Bootstrap minificados en `Reference/` y `landing/Landing Reference/`, más `landing/site/js` (vendor) |
+
+### Nodos centrales (más conexiones)
+`User` (180) · `Embarkation` (30) · `Seafarer` (30) · `get_db()` (29) · `SecretVersion` (25) · `_require_company()` (22) · `open_verification()` (22). Es lo esperado: el modelo `User` y la guardia de empresa son el eje de la autorización. Coincide con la revisión de la nota 54.
+
+### Hallazgos nuevos del grafo
+1. **Ciclos de import en `leto`** (3): `components/index.ts` ↔ `MultiselectMenu` / `Dropdown` / `HorizontalNavBar`. El barrel `components/index.ts` se re-importa desde sus propios hijos. **LOW**: hoy funciona, pero es frágil ante cambios de orden. Arreglo: que los hijos importen por ruta directa, no por el barrel.
+2. **Plantillas de referencia versionadas:** `Reference/` (79 MB) y `landing/Landing Reference/` (16 MB) son copias de plantillas que no usa el build (`Dockerfile.prod` solo copia `landing/site/`). Son ~40 % de los nodos del grafo y peso muerto en el repo. **Decisión de Rick** (es borrar contenido): sacarlas del repo o moverlas fuera.
+3. Cohesión baja en "Backend: servicios y validación" (0,04) y en migraciones (0,04): esperable, son archivos independientes. No requiere acción.
+
+### Nota
+`graphify-out/` (~10 MB) **no está en `.gitignore`**: no debe commitearse. Se agrega a `.gitignore` en el próximo commit del dev.
