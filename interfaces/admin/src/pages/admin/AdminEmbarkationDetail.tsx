@@ -147,6 +147,36 @@ export default function AdminEmbarkationDetail() {
     }
   }
 
+  // A plain <a href> can't send the Bearer token (the endpoint answered 403), so
+  // fetch the file as a blob and open it from an object URL — same as
+  // AdminReviewQueue's document viewer. The tab is opened synchronously first so
+  // the popup blocker allows it, then pointed at the blob once it arrives.
+  const openAttachment = async (attemptId: string) => {
+    const tab = window.open('', '_blank')
+    try {
+      const res = await api.get<Blob>(
+        `/admin/embarkations/${id}/contact-attempts/${attemptId}/attachment`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      // A blob URL shares this origin, so only types that cannot run script are
+      // shown inline; anything else (html, svg, …) is downloaded instead.
+      const t = res.data.type
+      if (t === 'application/pdf' || (t.startsWith('image/') && t !== 'image/svg+xml')) {
+        if (tab) tab.location.href = url
+        else window.location.assign(url)
+      } else {
+        tab?.close()
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'adjunto'
+        a.click()
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch {
+      tab?.close()
+      setError('No se pudo abrir el adjunto')
+    }
+  }
+
   // ── State-change actions ────────────────────────────────────────────
   const openVerification = async () => {
     if (!id) return
@@ -533,10 +563,10 @@ export default function AdminEmbarkationDetail() {
                 </p>
                 {c.comments && <p className="text-white/40 mt-1">{c.comments}</p>}
                 {c.attachment_ref && (
-                  <a href={`/api/admin/embarkations/${e.id}/contact-attempts/${c.id}/attachment`} target="_blank" rel="noreferrer"
+                  <button type="button" onClick={() => openAttachment(c.id)}
                     className="inline-block mt-1.5 text-cyan-400/70 hover:text-cyan-300">
                     📎 Ver adjunto
-                  </a>
+                  </button>
                 )}
               </div>
             ))}

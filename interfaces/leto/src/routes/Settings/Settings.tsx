@@ -2,7 +2,7 @@ import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from '
 import classnames from 'classnames';
 import throttle from 'lodash.throttle';
 import { useRouteFocused } from 'pollux/common/router';
-import { usePlatform, withCoreSuspender } from 'pollux/common';
+import { usePlatform } from 'pollux/common';
 import { MainNavBars } from 'pollux/components';
 import { SECTIONS } from './constants';
 import Menu from './Menu';
@@ -108,8 +108,4 @@ const Settings = () => {
     );
 };
 
-const SettingsFallback = () => (
-    <MainNavBars className={styles['settings-container']} route={'settings'} />
-);
-
-export default withCoreSuspender(Settings, SettingsFallback);
+export default Settings;

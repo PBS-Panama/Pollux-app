@@ -1568,42 +1568,11 @@ def rollback_secret(
         db.commit()
         raise HTTPException(status_code=500, detail=f"Rollback failed, nothing was changed: {exc}")
 
-class CatalogEntryCreate(BaseModel):
-    rank: str
-    fleet_cat: Optional[str] = None
-    doc_name: str
-    cert: Optional[str] = None
-    level: str = "standard"
-    cert_type: str = "D/P"
-    validity_years: Optional[int] = None
-    is_required: bool = True
 
-
-class CatalogEntryUpdate(BaseModel):
-    doc_name: Optional[str] = None
-    cert: Optional[str] = None
-    level: Optional[str] = None
-    cert_type: Optional[str] = None
-    validity_years: Optional[int] = None
-    is_required: Optional[bool] = None
-
-
-# Fase 2 (2026-09-14, nota (25) del PM): el repunte de GET /api/compliance/catalog/{rank}
-# a required_docs_for_profile() + DOC_METADATA dejó a esta tabla sin ningún lector real —
-# nada en el cálculo de compliance la consulta. Este CRUD hoy deja a un admin creer que
-# edita el catálogo real cuando no cambia nada en el producto. GET queda de solo lectura
-# (informativo, mismo shape — nada que lea hoy este endpoint se rompe) mientras se decide
-# el resto de la Fase 2 (migrar a metadata-por-título, ~90 filas en vez de las de hoy).
-# Las 3 mutaciones quedan deshabilitadas con 410 y un detail explícito: "editable sin
-# efecto" es peor que "no editable ahora mismo" (mismo principio que discoverable/paso 3
-# del registro — una UI no confirma lo que no hace).
-_CATALOG_DEPRECATED_DETAIL = (
-    "Este catálogo ya no es la fuente de verdad del cálculo de compliance — la membership "
-    "vive en document_requirements.py (backend). Edición deshabilitada hasta la Fase 2 "
-    "(migrar esta tabla a metadata por título). Ver Handover.md, nota (25)."
-)
-
-
+# Read-only: since Fase 2 (2026-09-14, nota (25)) nothing in the compliance
+# calculation reads this table — membership lives in document_requirements.py.
+# Its create/update/delete endpoints answered 410 and no UI calls them anymore
+# (T16), so they were deleted.
 @router.get("/config/catalog")
 def get_rank_catalog_admin(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     rows = db.execute(text("""
@@ -1627,21 +1596,6 @@ def get_rank_catalog_admin(admin: User = Depends(require_admin), db: Session = D
         })
         result[rank]["count"] = len(result[rank]["docs"])
     return result
-
-
-@router.post("/config/catalog", status_code=410)
-def add_catalog_entry(payload: CatalogEntryCreate, admin: User = Depends(require_admin)):
-    raise HTTPException(status_code=410, detail=_CATALOG_DEPRECATED_DETAIL)
-
-
-@router.patch("/config/catalog/{entry_id}")
-def update_catalog_entry(entry_id: int, payload: CatalogEntryUpdate, admin: User = Depends(require_admin)):
-    raise HTTPException(status_code=410, detail=_CATALOG_DEPRECATED_DETAIL)
-
-
-@router.delete("/config/catalog/{entry_id}")
-def delete_catalog_entry(entry_id: int, admin: User = Depends(require_admin)):
-    raise HTTPException(status_code=410, detail=_CATALOG_DEPRECATED_DETAIL)
 
 
 # ─── Module 8 — Analytics ────────────────────────────────────────────────────

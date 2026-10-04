@@ -17,6 +17,7 @@
  * ║  /login, /register → Login / Register (company auth)            ║
  * ║  /forgot-password   → request a reset link (Handover.md nota 58) ║
  * ║  /reset-password    → set a new password from that link's token ║
+ * ║  /verify-email      → confirms the emailed verification token   ║
  * ║  /dashboard         → Dashboard (seafarer/company — crewing)     ║
  * ║  *                  → back to "/" (the static site, outside      ║
  * ║                       this SPA's control)                        ║
@@ -33,6 +34,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import VerifyEmail from './pages/VerifyEmail'
 import Dashboard from './pages/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -45,6 +47,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* ── Seafarer / Company ─────────────────────────────── */}
         <Route path="/dashboard" element={

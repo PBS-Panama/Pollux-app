@@ -34,11 +34,16 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Sent by password-reauth calls (ApiKeysTab, AdminSecretsManager): the backend
+// answers a wrong password with 401 too, which must show an error in the modal
+// instead of logging the admin out.
+export const REAUTH = { headers: { 'X-Reauth': '1' } }
+
 // On 401 → logout and redirect to login
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.headers?.['X-Reauth']) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

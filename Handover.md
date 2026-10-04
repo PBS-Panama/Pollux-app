@@ -14485,3 +14485,56 @@ Verificado: `Pollux-app` `main` = `a8660539` (T14). La nota (57) existe y las ve
 6. Probar el rate limit por XFF: 6 logins con `X-Forwarded-For` falso → el 6º debe dar 429.
 7. Revisar la consola en prod por violaciones de CSP (admin, landing, company).
 8. Castor coordinado (backend duplicado y DB compartida): Dandy.
+
+
+## (59) Dev — T15 commiteada + T16 Conexiones rotas del front — 2026-10-04 · T16 SIN commit · SIN deploy
+
+### T15 — commit hecho (autorizado en nota 58)
+`PBS-Panama/Pollux-app` `main`: `ls-remote` ANTES `a8660539…` → DESPUÉS **`208d807193726a17e8722d19286400e4ce76d737`**. Fast-forward, sin `--force`; 16 archivos (+283/-35), solo T15 + Handover; gitleaks `protect --staged` sin hallazgos. Mismo método que T14 (clon limpio, `diff -r`, CRLF preservado).
+
+### T16 — qué se hizo
+| Ítem | Cambio | Archivos |
+|---|---|---|
+| (a) | `ApiKeysTab` abre `ReauthModal` (el de `AdminSecretsManager`, ahora exportado) antes del PATCH y manda `current_password`. Contraseña mala → error en el modal, la clave tipeada se conserva; solo se limpia al guardar | `ApiKeysTab.tsx`, `AdminSecretsManager.tsx` |
+| (a, bug heredado) | **Una contraseña mala daba 401 y el interceptor de `api.ts` hacía logout + redirect a `/login`** — también en Rotar/Rollback de secretos (nota T10) y habría pasado con (a). Las llamadas de reauth mandan `X-Reauth: 1` (`REAUTH` en `api.ts`) y el interceptor no desloguea en ese caso | `lib/api.ts` + los 3 llamadores |
+| (b) | El adjunto de embarques se baja con `api.get(..., {responseType:'blob'})` (lleva Bearer) y se abre desde un object URL, pestaña abierta antes del `await` para el popup blocker. **Solo PDF/imagen (no SVG) se abren inline; cualquier otro tipo se descarga** (un blob comparte origen: un `.html` subido como adjunto ejecutaría script en el panel; el backend deduce el content-type de la extensión) | `AdminEmbarkationDetail.tsx` |
+| (c) | Catálogo de rangos quedó **solo lectura** (borrada la UI de alta/edición/baja y su estado: −~230 líneas). Borrados los 3 endpoints 410 (`POST/PATCH/DELETE /admin/config/catalog`) y sus 2 modelos; el `GET` queda. Nada más los llamaba | `AdminConfig.tsx`, `admin.py` |
+| (d) | Nueva página `/verify-email` en landing: llama `GET /api/auth/verify-email?token=` **una sola vez** (ref contra el doble efecto de StrictMode, que quemaría el token) y muestra éxito, el error del backend, o "sin token". `auth.py` ahora manda `{FRONTEND_URL}/verify-email?token=…`. nginx: `location = /verify-email` → app-shell en `nginx-cloudrun.conf` y `landing/nginx.conf` | `VerifyEmail.tsx`, `App.tsx`, `auth.py`, 2 nginx |
+| (e) | Borrados: `crewDocData.js` (sin importadores), `infra/nginx/nginx-integrated.conf` (solo lo citaban docs), `interfaces/leto/supervisord.prod.conf` (nada lo referencia; `Dockerfile.prod` usa el de la raíz), `backend/app/main.py.bak` (no estaba en git). `CoreSuspender.js` borrado **y quitados sus 3 usos** (`App.js`, `Settings.tsx`, `NavMenuContent.js`) + el export de `common/index.js` + los 2 fallbacks que quedaron sin uso. El HOC solo retrasaba el montaje un tick | varios |
+| (e) `http_server.js` | Línea del index: `max-age: 7200` → `max-age=7200` | `http_server.js` |
+
+### ⚠️ Avisos
+1. **`http_server.js`: solo arreglé la línea del index, la de assets NO, a propósito.** Ambas tienen el mismo typo (`max-age: N`), pero arreglar la de assets pondría `max-age=2629744` (30 días) en los bundles de leto. En el build de Docker `COMMIT_HASH` cae a la constante `"build"` (no hay `.git`), así que las URLs de `/build/scripts/*.js` **no cambian entre deploys**: con 30 días de caché, los usuarios verían JS viejo hasta un mes tras un deploy. Hoy el header malformado hace que el navegador revalide. Lo dejé con comentario. Arreglo real = hash por build (p. ej. pasar el commit como build-arg a webpack) y entonces sí `max-age` largo + `immutable`. **Decisión del PM.**
+2. **Prueba (b) con respuesta simulada:** el dev local no tiene un embarque con adjunto (no hay bucket GCS en dev). Interceptando la red probé lo que depende del front: que el GET lleve `Authorization: Bearer` y que se abra una pestaña `blob:`; el backend real del adjunto no se ejercitó (no cambió).
+3. El flujo (d) se probó con el link real que imprime el `LoggingEmailSender` (`EMAIL_PROVIDER=logger` en dev), no con un correo entregado.
+4. Quitar `CoreSuspender` cambia el montaje de Settings/NavMenu/router: render inmediato en vez de un tick de fallback vacío. El smoke 11/11 lo cubre; no vi regresión visual pero es lo más "de comportamiento" de (e).
+5. `(a)` deja de funcionar si alguien llama el PATCH sin `current_password`: ahora es obligatorio (T14); la UI ya lo manda → **el requisito de deploy de la nota 56 queda cumplido**.
+
+### Pruebas
+- `tsc` admin: **0 errores**. Builds por Docker OK: **leto (webpack), landing (`tsc && vite build`), admin (`tsc && vite build`), backend**, y `Dockerfile.prod` completo.
+- `pytest` → **329 passed** (338 − 9: los 3 endpoints borrados × [401 + 403 seafarer + 403 company]; `test_authz` se ajusta solo vía OpenAPI).
+- **Smoke 11/11** en :4001 y también 11/11 sobre la imagen de `Dockerfile.prod` (:4002, con CSP real); barrido de consola de `/login` y `/verify-email` sin violaciones de CSP (solo el 400 esperado del token falso).
+- **Prueba a mano en :4001 (Playwright, script de scratchpad):** (a) modal aparece → contraseña mala: error en el modal, sigue en `/admin/config`, la clave se conserva → contraseña buena: guarda y limpia el campo. (b) GET con Bearer + pestaña `blob:`; (b2) un adjunto `text/html` se descarga y no se abre como blob. (d) link real → "Correo verificado"; segundo uso → "already used" visible; token falso → "Invalid verification link"; sin token → mensaje local.
+- code-review: **1 HIGH propio, ya corregido** (el de `max-age` de assets, arriba); el del blob/HTML también salió en esta pasada y quedó arreglado. ponytail-review: nada que recortar más allá de lo borrado.
+- **Datos de prueba en la DB local de dev:** creé 3 empresas/usuarios `t16-manual*@example.com` + tokens y escribí un valor dummy en `api_key_config.GOOGLE_DRIVE_CLIENT_SECRET`. Listé por id y **borré exactamente esas filas** (verificado: 0 restantes; la clave volvió a "No configurada"). No toqué datos reales.
+
+### LISTA para Castor
+1. Interceptor de 401: no desloguear en llamadas de reauth (`X-Reauth`) si su front tiene el mismo patrón.
+2. `PATCH api-keys` con `current_password` + modal de reauth (su UI, si la tiene).
+3. Página `/verify-email` y link del correo apuntando a ella (hoy el link devuelve JSON crudo); ruta en su nginx.
+4. Adjuntos abiertos desde un blob: solo PDF/imagen no-SVG inline.
+5. Borrar endpoints 410 de catálogo si existen y nada los usa.
+6. ⚠️ Si su Express/webpack usa el mismo `COMMIT_HASH='build'` + `max-age` malformado, **no** arreglar el de assets sin hash por build.
+
+---
+
+## (60) PM — T16 ACEPTADA — 2026-10-04
+
+Verificado: `Pollux-app` `main` = `208d8071` (T15) y nota (59) presente. **T16 aceptada. Commit autorizado** (solo sus archivos, sin `--force`).
+- El arreglo de `X-Reauth` (una contraseña mala en el reauth ya no desloguea al admin) se acepta.
+- Adjuntos: solo PDF e imágenes no-SVG se abren inline; el resto se descarga. Correcto.
+- (b) se probó con una respuesta simulada: re-probar con un adjunto real en el primer deploy (agregado a la checklist de la nota 58, punto 9).
+- **Caché de bundles de `leto`:** queda como está a propósito (el header mal formado obliga a revalidar, así que hoy no se sirve JS viejo). El arreglo real es `[contenthash]` en los nombres de webpack y después caché larga válida → **T16b**, chica.
+- El requisito de deploy de la nota 56 (ApiKeysTab) queda cumplido.
+
+**Próximo:** T16b (contenthash) → T18 (partir `admin.py`, mecánico). T17 (OCR refs a GCS) espera la decisión de Rick sobre el bucket propio.

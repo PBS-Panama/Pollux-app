@@ -1,6 +1,5 @@
 const { PlatformProvider, usePlatform } = require('./Platform');
 const { ShortcutsProvider, useShortcuts } = require('./Shortcuts');
-const { withCoreSuspender } = require('./CoreSuspender');
 const interfaceLanguages = require('./interfaceLanguages.json');
 const routesRegexp = require('./routesRegexp');
 const useBinaryState = require('./useBinaryState');
@@ -14,7 +13,6 @@ module.exports = {
     usePlatform,
     ShortcutsProvider,
     useShortcuts,
-    withCoreSuspender,
     interfaceLanguages,
     routesRegexp,
     useBinaryState,

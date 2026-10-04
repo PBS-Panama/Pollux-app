@@ -14,13 +14,13 @@ const React = require('react');
 const { Router } = require('pollux/common/router');
 const { useKeyboardShortcuts } = require('pollux/services');
 const { NotFound } = require('pollux/routes');
-const { PlatformProvider, ShortcutsProvider, withCoreSuspender, useBinaryState } = require('pollux/common');
+const { PlatformProvider, ShortcutsProvider, useBinaryState } = require('pollux/common');
 const { default: ShortcutsModal } = require('./ShortcutsModal');
 const withProtectedRoutes = require('./withProtectedRoutes');
 const routerViewsConfig = require('./routerViewsConfig');
 const styles = require('./styles');
 
-const RouterWithProtectedRoutes = withCoreSuspender(withProtectedRoutes(Router));
+const RouterWithProtectedRoutes = withProtectedRoutes(Router);
 
 const App = () => {
     const onPathNotMatch = React.useCallback(() => {

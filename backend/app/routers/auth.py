@@ -42,7 +42,7 @@ def _send_verification_email(user: User, db: Session) -> None:
         "id": str(uuid.uuid4()), "uid": user.id, "token": token,
         "now": now, "expires": now + _VERIFICATION_TOKEN_TTL,
     })
-    verify_url = f"{settings.FRONTEND_URL}/api/auth/verify-email?token={token}"
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
     get_email_sender().send(
         to=user.email,
         template="verify_email",
@@ -60,11 +60,11 @@ def _send_reset_email(user: User, db: Session) -> None:
         "id": str(uuid.uuid4()), "uid": user.id, "token": token,
         "now": now, "expires": now + _RESET_TOKEN_TTL,
     })
-    # Unlike verify-email (a self-contained GET that fully completes the
-    # action), completing a reset needs a new password — that has to come
-    # from a real form, so this points at a FRONTEND route (landing's own
-    # /reset-password page), not `/api/...` like verify-email's link does.
-    # That page POSTs {token, new_password} to /api/auth/reset-password.
+    # Completing a reset needs a new password, so this points at a FRONTEND
+    # route (landing's own /reset-password page). That page POSTs
+    # {token, new_password} to /api/auth/reset-password. verify-email's link
+    # (above) is also a frontend page now (/verify-email, T16) that calls the
+    # GET endpoint and shows the result.
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
     get_email_sender().send(
         to=user.email,

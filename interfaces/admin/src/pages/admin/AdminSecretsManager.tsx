@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import api from '../../lib/api'
+import api, { REAUTH } from '../../lib/api'
 
 // Infra secrets panel (T8/T9/T10 — docs/specs/secrets-panel.md). Covers the
 // 3 secrets backed by Secret Manager (SECRET_KEY, DRIVE_TOKEN_SECRET,
@@ -66,7 +66,7 @@ function fmtDate(epochSeconds: number | null): string {
 
 // ─── Reauth modal — required before Rotar / Rollback, never before Probar ──
 
-function ReauthModal({ title, warning, onConfirm, onCancel }: {
+export function ReauthModal({ title, warning, onConfirm, onCancel }: {
   title: string
   warning: string
   onConfirm: (password: string) => Promise<void>
@@ -158,7 +158,7 @@ export default function AdminSecretsManager() {
   }
 
   const doRotate = async (name: string, password: string) => {
-    await api.post(`/admin/secrets/${name}/rotate`, { current_password: password })
+    await api.post(`/admin/secrets/${name}/rotate`, { current_password: password }, REAUTH)
     setModal(null)
     showToast('ok', `${name}: rotación aplicada.`)
     load()
@@ -166,7 +166,7 @@ export default function AdminSecretsManager() {
   }
 
   const doRollback = async (name: string, password: string) => {
-    await api.post(`/admin/secrets/${name}/rollback`, { current_password: password })
+    await api.post(`/admin/secrets/${name}/rollback`, { current_password: password }, REAUTH)
     setModal(null)
     showToast('ok', `${name}: rollback aplicado.`)
     load()

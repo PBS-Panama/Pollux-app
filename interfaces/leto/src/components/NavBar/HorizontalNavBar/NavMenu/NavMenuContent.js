@@ -12,7 +12,6 @@ const { default: Icon } = require('pollux/common/Icon');
 const { Button } = require('pollux/components');
 const { default: useFullscreen } = require('pollux/common/useFullscreen');
 const usePWA = require('pollux/common/usePWA');
-const { withCoreSuspender } = require('pollux/common/CoreSuspender');
 const styles = require('./styles');
 
 const readStoredUser = () => {
@@ -103,8 +102,4 @@ NavMenuContent.propTypes = {
     onClick: PropTypes.func
 };
 
-const NavMenuContentFallback = () => (
-    <div className={styles['nav-menu-container']} />
-);
-
-module.exports = withCoreSuspender(NavMenuContent, NavMenuContentFallback);
+module.exports = NavMenuContent;

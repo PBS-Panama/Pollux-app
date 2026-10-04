@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import api from '../../lib/api'
+import api, { REAUTH } from '../../lib/api'
+import { ReauthModal } from './AdminSecretsManager'
 
 // "API Keys" tab of Platform Config (AdminConfig.tsx) — load/rotate the OCR
 // provider keys without touching env vars. The backend is write-only by
@@ -7,8 +8,8 @@ import api from '../../lib/api'
 // hint, so this screen can replace a key but never show one.
 //
 // Rules this file must keep (they are the point of the feature):
-//  - the typed key lives ONLY in ApiKeyRow's local state, and is cleared the
-//    moment it is sent — never a store, localStorage/sessionStorage or the URL;
+//  - the typed key lives ONLY in ApiKeyRow's local state, and is cleared as soon
+//    as it is saved — never a store, localStorage/sessionStorage or the URL;
 //  - never console.log an axios error here: `error.config.data` is the request
 //    body, i.e. the key. Use errorMessage() and nothing else from the error.
 
@@ -68,24 +69,27 @@ function ApiKeyRow({ status, onSaved }: { status: ApiKeyStatus; onSaved: () => P
   const [value, setValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
 
   const meta = KEY_META[status.key_name]
   const inputId = `api-key-${status.key_name}`
 
-  const save = async () => {
+  // Runs from ReauthModal: it throws on a wrong password so the modal shows the
+  // error and keeps the typed key for a retry; the key is cleared only once saved.
+  const save = async (password: string) => {
     const submitted = value.trim()
     if (!submitted) return
-    setValue('') // out of the field as soon as it is sent, whatever the outcome
     setSaving(true)
     setNotice(null)
     try {
-      await api.patch('/admin/config/api-keys', { key_name: status.key_name, value: submitted })
-      await onSaved()
-      setNotice({ kind: 'ok', text: 'Clave guardada. Usa "Probar" para confirmar que el proveedor la acepta.' })
-    } catch (e: any) {
-      setNotice({ kind: 'error', text: errorMessage(e, 'No se pudo guardar la clave.') })
+      await api.patch('/admin/config/api-keys',
+        { key_name: status.key_name, value: submitted, current_password: password }, REAUTH)
     } finally { setSaving(false) }
+    setValue('')
+    setConfirming(false)
+    await onSaved()
+    setNotice({ kind: 'ok', text: 'Clave guardada. Usa "Probar" para confirmar que el proveedor la acepta.' })
   }
 
   const test = async () => {
@@ -134,10 +138,10 @@ function ApiKeyRow({ status, onSaved }: { status: ApiKeyStatus; onSaved: () => P
             placeholder="Pega la clave aquí"
             value={value}
             onChange={e => setValue(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') save() }}
+            onKeyDown={e => { if (e.key === 'Enter' && value.trim()) setConfirming(true) }}
           />
         </div>
-        <button onClick={save} disabled={saving || !value.trim()} className={btnPrimary}>
+        <button onClick={() => setConfirming(true)} disabled={saving || !value.trim()} className={btnPrimary}>
           {saving ? 'Guardando…' : status.configured ? 'Reemplazar' : 'Guardar'}
         </button>
         <button onClick={test} disabled={testing || saving} className={btnQuiet}
@@ -145,6 +149,15 @@ function ApiKeyRow({ status, onSaved }: { status: ApiKeyStatus; onSaved: () => P
           {testing ? 'Probando…' : 'Probar'}
         </button>
       </div>
+
+      {confirming && (
+        <ReauthModal
+          title={`${status.configured ? 'Reemplazar' : 'Guardar'} ${meta?.label ?? status.key_name}`}
+          warning="Cambiar una clave de terceros afecta al análisis de documentos de inmediato. Confirma con tu contraseña."
+          onConfirm={save}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
 
       {notice && (
         <p role={notice.kind === 'error' ? 'alert' : 'status'}
