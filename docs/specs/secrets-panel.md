@@ -329,9 +329,9 @@ de su Handover, verificado leyendo su código, no solo su reporte):
    de `alembic upgrade head` contra `leto-postgres`).
 
 **Punto nuevo que no estaba en la lista original, aviso de Castor (nota 140):** los nombres de
-los secretos NUEVOS que cree Pollux en Secret Manager tienen que ser el nombre **literal** de la
-constante (`DRIVE_TOKEN_SECRET`, `DRIVE_STATE_SECRET`), no un alias con prefijo `leto-` — ver
-§8.1, corregido en T14. El código de los dos repos (`_secret_path()`) no soporta ningún mapeo.
+los secretos NUEVOS no compartidos que cree Pollux en Secret Manager llevan el nombre **literal** de la
+constante (`DRIVE_STATE_SECRET`); el compartido `DRIVE_TOKEN_SECRET` se resuelve a
+`leto-drive-token-secret` por alias — ver §8.1, corregido en T20.
 
 ---
 
@@ -346,23 +346,19 @@ secreto. Lo que sigue es el plan para que sí lo tenga, de forma acotada, cuando
 
 ### 8.1 Secretos — crear o reutilizar
 
-**Corrección (T14, 2026-10-03, decisión de Rick vía Dandy, aviso de Castor nota 140):** la
-versión anterior de esta tabla proponía nombres con prefijo `leto-` (`leto-drive-token-secret`,
-`leto-drive-state-secret`, `leto-google-drive-client-secret`) para los secretos NUEVOS. Es
-**incorrecto contra el código real**: `GcpSecretManagerStore._secret_path()` (en los dos
-repos, Pollux y Castor, confirmado línea por línea) arma el ID del secreto en Secret Manager
-como `f"projects/{project}/secrets/{name}"` usando el **nombre literal de la constante**
-(`DRIVE_TOKEN_SECRET`, `DRIVE_STATE_SECRET`) — no hay alias ni mapeo en ningún lado del código.
-Si alguien hubiera creado `leto-drive-token-secret` siguiendo la tabla vieja, **ningún backend lo
-habría encontrado nunca** (Castor lo detectó primero porque implementó el lado lectura antes de
-que esto se corrigiera acá). Decisión: los secretos nuevos se crean con el nombre **literal** de
-la constante, sin excepción.
+**Corrección (T14, 2026-10-03, decisión de Rick vía Dandy, aviso de Castor nota 140; reemplazada en T20):**
+el código resuelve el ID del secreto en Secret Manager con `SECRET_ID_OVERRIDES` /
+`_secret_id_for()` en `secret_loader.py` (mismo dict que Castor, T20): `SECRET_KEY` →
+`leto-secret-key` y `DRIVE_TOKEN_SECRET` → `leto-drive-token-secret`, los compartidos, que usan
+la convención `leto-*` del proyecto. `DRIVE_STATE_SECRET` **no es compartido y no tiene alias**:
+se crea con el nombre literal. Un test (`backend/tests/test_secret_id_overrides.py`) compara el
+dict con el de Castor si el repo está al lado.
 
 | Secreto | Acción | Nota |
 |---|---|---|
-| `SECRET_KEY` | **No se toca todavía** — sigue bloqueado en el panel (`ROTATION_DISABLED`, Castor no tiene doble clave para este). El secreto `leto-secret-key` que ya existe en `pollux-app-507503` **no se renombra ni se reutiliza** — es infraestructura previa a este panel (§1.2), con un nombre que no coincide con lo que el código buscaría si se lo activara (`SECRET_KEY` literal). **Dejar anotado para cuando se desbloquee:** en ese momento hace falta crear un secreto nuevo llamado literalmente `SECRET_KEY` (mismo criterio que los dos de abajo) — `leto-secret-key` queda como está, sin usarse por este código, salvo que alguien decida limpiarlo aparte. | Alto riesgo — compartido, bloqueado |
+| `SECRET_KEY` | **No se toca todavía** — sigue bloqueado en el panel (`ROTATION_DISABLED`, Castor no tiene doble clave para este). Existe como `leto-secret-key` (infraestructura previa, §1.2) y el código ya lo resuelve por alias (T20), así que al desbloquearlo no hace falta crear ningún secreto nuevo. | Alto riesgo — compartido, bloqueado |
 | `DATABASE_URL` | **No se toca** — fuera de alcance del panel (§3.3), esta tarea no la rota ni la lee vía `secret_loader`. `leto-database-url` queda como está, sin relación con este panel. | — |
-| `DRIVE_TOKEN_SECRET` | **Crear nuevo con este nombre literal**, en `pollux-app-507503`, sembrado con el valor actual del env var de `pb-pollux` (copiarlo tal cual, no generar uno nuevo en la creación). Castor ya lee de acá (Handover nota 140) con el mismo nombre literal — confirmado. | Alto riesgo — compartido |
+| `DRIVE_TOKEN_SECRET` | **Usar `leto-drive-token-secret`** (ya creado, vacío; falta sembrarlo), en `pollux-app-507503`, sembrado con el valor actual del env var de `pb-pollux` (copiarlo tal cual, no generar uno nuevo en la creación). Castor ya lo lee con ese nombre vía su `SECRET_ID_OVERRIDES`. | Alto riesgo — compartido |
 | `DRIVE_STATE_SECRET` | **Crear nuevo con este nombre literal**, en `pollux-app-507503`, mismo criterio. **No compartido** — confirmado por los dos lados independientemente (Pollux: nota 41, solo `SECRET_KEY`/`DRIVE_TOKEN_SECRET` se igualaron; Castor: nota 137/138, mismo hallazgo) — Castor mantiene el suyo propio en `castor-app-506901`, también con nombre literal. | Bajo riesgo |
 
 **`GOOGLE_DRIVE_CLIENT_SECRET` ya no va en esta tabla** — se movió fuera de este panel en T13
@@ -397,11 +393,12 @@ gcloud iam roles create polluxSecretRotator \
 ```
 
 Concedido **por secreto**, nunca a nivel de proyecto — para los 2 nuevos (nombres literales,
-corregido en T14; `SECRET_KEY`/`leto-secret-key` queda fuera de esta lista mientras siga
-bloqueado, ver §8.1):
+corregido en T20: el compartido usa `leto-drive-token-secret`, `DRIVE_STATE_SECRET` sigue
+literal; `SECRET_KEY`/`leto-secret-key` queda fuera de esta lista mientras siga bloqueado,
+ver §8.1):
 
 ```bash
-for s in DRIVE_TOKEN_SECRET DRIVE_STATE_SECRET; do
+for s in leto-drive-token-secret DRIVE_STATE_SECRET; do
   gcloud secrets add-iam-policy-binding "$s" \
     --project=pollux-app-507503 \
     --member="serviceAccount:pollux-run@pollux-app-507503.iam.gserviceaccount.com" \
@@ -413,11 +410,10 @@ Esto reemplaza los dos roles predefinidos que había propuesto antes (`secretAcc
 `secretVersionAdder`) — el rol custom ya incluye `versions.access` (lectura de payload), así que
 no hace falta `secretAccessor` aparte para `pollux-run@`.
 
-`castor-run@` — necesita lectura en `DRIVE_TOKEN_SECRET` (el que de verdad usa hoy, nota 140 de
-Castor ya está leyendo de acá con este nombre):
+`castor-run@` — necesita lectura en `leto-drive-token-secret` (Castor lo lee con ese nombre, nota 140):
 
 ```bash
-gcloud secrets add-iam-policy-binding DRIVE_TOKEN_SECRET \
+gcloud secrets add-iam-policy-binding leto-drive-token-secret \
   --project=pollux-app-507503 \
   --member="serviceAccount:castor-run@castor-app-506901.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"

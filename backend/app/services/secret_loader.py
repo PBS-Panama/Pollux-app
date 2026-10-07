@@ -219,6 +219,21 @@ _dev_store = DevFileSecretStore(_DEV_STORE_FILE)
 
 # ─── Real Google Secret Manager store (T10) ─────────────────────────────────
 
+# Los secretos compartidos con Castor viven en pollux-app-507503 bajo la
+# convencion `leto-*` (creados antes del panel). Mismo dict que
+# Castor-app/backend/app/services/secret_loader.py (SECRET_ID_OVERRIDES);
+# tests/test_secret_id_overrides.py los compara. DRIVE_STATE_SECRET no es
+# compartido: nombre literal.
+SECRET_ID_OVERRIDES: dict[str, str] = {
+    "SECRET_KEY": "leto-secret-key",
+    "DRIVE_TOKEN_SECRET": "leto-drive-token-secret",
+}
+
+
+def _secret_id_for(name: str) -> str:
+    return SECRET_ID_OVERRIDES.get(name, name)
+
+
 class GcpSecretManagerStore:
     """Application Default Credentials only — no key file, matching every
     other GCP client in this codebase (google_drive.py, embarkation_storage.py,
@@ -253,7 +268,7 @@ class GcpSecretManagerStore:
         return self._client
 
     def _secret_path(self, name: str) -> str:
-        return f"projects/{self._project_id}/secrets/{name}"
+        return f"projects/{self._project_id}/secrets/{_secret_id_for(name)}"
 
     def _version_path(self, name: str, version: str) -> str:
         return f"{self._secret_path(name)}/versions/{version}"
@@ -272,7 +287,7 @@ class GcpSecretManagerStore:
         self._get_client().create_secret(
             request={
                 "parent": f"projects/{self._project_id}",
-                "secret_id": name,
+                "secret_id": _secret_id_for(name),
                 "secret": {"replication": {"automatic": {}}},
             }
         )

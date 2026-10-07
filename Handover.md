@@ -14770,3 +14770,44 @@ Las listas de las notas (55), (57) y (67): auth, rate limit, seeds/health, y las
 
 ### Nota
 `graphify-out/` (~10 MB) **no está en `.gitignore`**: no debe commitearse. Se agrega a `.gitignore` en el próximo commit del dev.
+
+---
+
+## (70) Dev — T20: alias de secretos compartidos con Castor — 2026-10-07 · SIN commit, SIN deploy, sin tocar GCP ni Castor-app
+
+**Problema:** `GcpSecretManagerStore._secret_path()` usaba el nombre literal (`DRIVE_TOKEN_SECRET`), que no existe en `pollux-app-507503`; el compartido real es `leto-drive-token-secret`.
+
+**Hecho:**
+- `backend/app/services/secret_loader.py`: `SECRET_ID_OVERRIDES = {SECRET_KEY: leto-secret-key, DRIVE_TOKEN_SECRET: leto-drive-token-secret}` + `_secret_id_for()`, usados en `_secret_path` y también en `secret_id` de `_ensure_secret_exists` (si no, un auto-create habría creado el nombre literal). `DRIVE_STATE_SECRET` sin alias.
+- `backend/tests/test_secret_id_overrides.py` (nuevo): (1) `_secret_path('DRIVE_TOKEN_SECRET')` termina en `/secrets/leto-drive-token-secret` y `DRIVE_STATE_SECRET` queda literal; (2) el dict es igual al de `Castor-app/.../secret_loader.py` (skip si el repo no está al lado; aquí corrió, no se saltó).
+- `docs/specs/secrets-panel.md`: §8.1 y §8.2 (y la nota de §7 y la fila de `SECRET_KEY`) — IAM con `leto-drive-token-secret`; `DRIVE_STATE_SECRET` sigue literal.
+
+**pytest** (`DATABASE_URL` ficticia en el entorno): `pytest tests` → **333 passed, 9 skipped**. El nuevo: 2 passed.
+
+**No hecho / ojo:**
+- `leto-drive-token-secret` está vacío: falta sembrarlo (con el valor actual del env var) antes de que Pollux lo lea en prod. No lo hice (GCP).
+- Los `test_*.py` sueltos en `backend/` (raíz) son scripts, no pytest (hacen `sys.exit` al importarse): `pytest` a secas los rompe en colección; hay que correr `pytest tests`. `test_secret_rotation.py` y `test_secret_store.py` piden env real (`ADMIN_SEED_EMAIL`, `DRIVE_TOKEN_SECRET`) y no los corrí; `test_secret_loader_production_gate.py` y `test_compliance_engine.py` pasan.
+- Entorno: solo hay Python 3.14, los pins de `requirements.txt` (pydantic 2.10.1) no compilan; probé en un venv temporal con versiones sin pin. `requirements.txt` sin tocar.
+- Castor guarda un `SECRET_ID_OVERRIDES` espejo en JS (`secretKeyLoader.js`) con su propio test; no lo toqué.
+
+---
+
+## (71) Dev — T21: Reference/ fuera del repo — 2026-10-07 · SIN commit, SIN deploy
+
+Orden de Rick vía Dandy (07-oct 14:38). **Movida, no borrada:** `Reference/` (79 MB, 1278 archivos, incluye `AdminPanel/OCR References/` sin trackear —los documentos personales del OCR— y el `dist/` de approx) → `~/Projects/_to_delete/Pollux-Reference-2026-10-07/` (79 MB, 1278 archivos: mismo tamaño y conteo). Rollback: mover la carpeta de vuelta a `Reference` y `git reset -q HEAD -- Reference`.
+Sacada del índice con `git rm -r --cached`: 95 borrados staged (siguen en el historial). `landing/Landing Reference/` intacto (no estaba en la orden).
+**Nada del build la usa:** grep en Dockerfiles, cloudbuild.yaml, compose, package.json, vite/webpack/tsconfig y `backend/app`: solo comentarios (`cloudbuild.yaml`, `theme.ts`, `MainNavBars.tsx`, admin `main.tsx`) y las reglas de `.dockerignore`/`.gcloudignore`, que se dejaron. Verificado: `pytest tests` 333 passed, 9 skipped; `npm run build` leto (webpack, 3 warnings) y admin (tsc + vite) OK.
+**Ojo:** el cambio queda staged (95 `D`) sin commitear; el resto del working tree sigue como estaba. Las carpetas en `_to_delete/` las borra Rick, no yo.
+
+---
+
+## (72) Dev — T20b: `leto-drive-token-secret` sembrado + IAM — 2026-10-07 · autorizado por Rick · SIN deploy, SIN rotación
+
+1. **Comparación (solo sha256, nunca el valor):** `DRIVE_TOKEN_SECRET` de `pb-pollux` (pollux-app-507503) y de `pb-castor` (castor-app-506901) → ambos `171cd4ef…` (8 chars). Iguales, así que se sembró. Ninguno es el hash de la cadena vacía.
+2. **Siembra:** `gcloud secrets versions add leto-drive-token-secret` con un temporal 600 sin salto de línea final, borrado después (`shred -u`). Versión **1**, `ENABLED`, creada 2026-10-07T21:40:04Z. Verificado: `versions access latest | sha256sum` == hash del paso 1 (`171cd4ef…`). No se generó ningún valor nuevo ni se rotó nada.
+3. **IAM por secreto** (no a nivel de proyecto), estado final de `get-iam-policy`:
+   - `roles/secretmanager.secretAccessor`: `castor-run@castor-app-506901`, `pollux-run@pollux-app-507503`
+   - `roles/secretmanager.viewer`: `castor-run@castor-app-506901`
+4. **No tocado:** `leto-secret-key`, Cloud Run (sin deploy), env vars de ambos servicios, Castor-app (código).
+5. **Notas:** `gcloud` no está en el PATH de Patch; usé `/snap/bin/gcloud`. Con `--format=table` los `list`/`get-iam-policy` salen con código 120 y sin salida en esta shell; con `--format=json | jq` funcionan.
+6. **Siguiente:** commit de T20 + T21 (tarea aparte, autorizado). Pollux sigue leyendo `DRIVE_TOKEN_SECRET` del env var hasta el próximo despliegue; el secreto sembrado se usa cuando el loader desplegado lo consulte.
